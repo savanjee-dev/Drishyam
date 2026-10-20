@@ -16,8 +16,7 @@ jobs:
       - name: Extract Android project
         run: |
           mkdir source
-          unzip -o drishyam-android-project.zip -d source
-
+          unzip -o drishyam-android-project-corrected.zip -d source
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
