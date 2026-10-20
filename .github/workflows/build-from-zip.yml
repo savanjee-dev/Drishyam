@@ -1,0 +1,45 @@
+name: Build Drishyam APK from ZIP
+on:
+  push:
+    paths:
+      - '*.zip'
+      - '.github/workflows/build-from-zip.yml'
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+      - name: Find and extract project ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          zips=( *.zip )
+          if [ "${#zips[@]}" -eq 0 ]; then
+            echo 'No project ZIP found in repository root.' >&2
+            exit 1
+          fi
+          mkdir -p /tmp/drishyam-project
+          unzip -q "${zips[0]}" -d /tmp/drishyam-project
+          project_dir="$(find /tmp/drishyam-project -name settings.gradle.kts -printf '%h\n' -quit)"
+          if [ -z "$project_dir" ]; then
+            echo 'Could not find settings.gradle.kts inside the ZIP.' >&2
+            find /tmp/drishyam-project -maxdepth 3 -type f | head -80
+            exit 1
+          fi
+          echo "PROJECT_DIR=$project_dir" >> "$GITHUB_ENV"
+      - name: Build debug APK
+        run: gradle -p "$PROJECT_DIR" assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Drishyam-APK
+          path: /tmp/drishyam-project/**/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
