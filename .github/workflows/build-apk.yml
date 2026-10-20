@@ -14,7 +14,7 @@ jobs:
       - name: Extract Android project
         run: |
           mkdir source
-          unzip -o drishyam-android-project-v1.2-prepared.zip -d source
+          unzip -o drishyam-android-project-v1.3-prepared.zip -d source
 
       - name: Configure Firebase
         env:
