@@ -12,6 +12,17 @@ jobs:
       - name: Download repository
         uses: actions/checkout@v4
 
+      - name: Find and extract project zip
+        run: |
+          ZIP=$(ls drishyam-android-project-*.zip 2>/dev/null | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "No drishyam-android-project zip found in repository root" >&2
+            exit 1
+          fi
+          echo "Using $ZIP"
+          mkdir -p source
+          unzip -q "$ZIP" -d source
+
       - name: Configure Firebase
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
@@ -20,8 +31,8 @@ jobs:
             echo "Missing repository secret GOOGLE_SERVICES_JSON" >&2
             exit 1
           fi
-          mkdir -p app
-          printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          mkdir -p source/app
+          printf '%s' "$GOOGLE_SERVICES_JSON" > source/app/google-services.json
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -35,10 +46,11 @@ jobs:
           gradle-version: 8.7
 
       - name: Build APK
+        working-directory: source
         run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Drishyam-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: source/app/build/outputs/apk/debug/app-debug.apk
