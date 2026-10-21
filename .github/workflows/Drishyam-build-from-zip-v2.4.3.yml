@@ -84,6 +84,46 @@ jobs:
           printf '%s' "$GOOGLE_SERVICES_JSON" > "$PROJECT_DIR/app/google-services.json"
           python3 -m json.tool "$PROJECT_DIR/app/google-services.json" > /dev/null
 
+      - name: Fix duplicate Android resource
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/app/src/main/res/values" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          res = Path(sys.argv[1])
+          base = res / "strings.xml"
+          v21 = res / "strings_v21.xml"
+
+          if base.exists() and v21.exists():
+              base_root = ET.parse(base).getroot()
+              v21_tree = ET.parse(v21)
+              v21_root = v21_tree.getroot()
+
+              base_names = {
+                  item.get("name")
+                  for item in base_root
+                  if item.tag in ("string", "item", "plurals", "string-array")
+              }
+
+              for item in list(v21_root):
+                  if (
+                      item.get("name") == "settings_version"
+                      and item.get("name") in base_names
+                  ):
+                      v21_root.remove(item)
+
+              v21_tree.write(
+                  v21,
+                  encoding="utf-8",
+                  xml_declaration=True
+              )
+
+          print("Duplicate resource check completed.")
+          PY
+          
       - name: Build release APK
         shell: bash
         env:
