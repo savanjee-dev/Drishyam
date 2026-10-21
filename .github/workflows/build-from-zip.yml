@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          zips=(drishyam-android-project-v2.2.zip)
+          drishyam-android-project-v2.3.zip
           if [ "${#zips[@]}" -eq 0 ]; then
             echo 'No project ZIP found in repository root.' >&2
             exit 1
