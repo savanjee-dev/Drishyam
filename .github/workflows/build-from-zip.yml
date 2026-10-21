@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "drishyam-android-project-v2.4.1.zip"
+      - "drishyam-android-project-v2.4.2-styled.zip"
       - ".github/workflows/build-from-zip.yml"
 
 permissions:
@@ -30,11 +30,11 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: Extract v2.4.1 source
+      - name: Extract v2.4.2 source
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE="drishyam-android-project-v2.4.1.zip"
+          ZIP_FILE="drishyam-android-project-v2.4.2-styled.zip"
           test -f "$ZIP_FILE" || {
             echo "::error::Source ZIP not found: $ZIP_FILE"
             exit 1
@@ -57,18 +57,18 @@ jobs:
         run: |
           set -euo pipefail
           GRADLE_FILE="$PROJECT_DIR/app/build.gradle.kts"
-          CHANGELOG="$PROJECT_DIR/DRISHYAM-2.4.1-CHANGELOG.txt"
+          CHANGELOG="$PROJECT_DIR/DRISHYAM-2.4.2-CHANGELOG.txt"
 
           test -f "$GRADLE_FILE"
           test -f "$CHANGELOG"
 
-          grep -q 'versionName = "2.4.1"' "$GRADLE_FILE" || {
-            echo "::error::Expected versionName 2.4.1"
+          grep -q 'versionName = "2.4.2"' "$GRADLE_FILE" || {
+            echo "::error::Expected versionName 2.4.2"
             exit 1
           }
 
-          grep -q 'versionCode = 12' "$GRADLE_FILE" || {
-            echo "::error::Expected versionCode 12"
+          grep -q 'versionCode = 13' "$GRADLE_FILE" || {
+            echo "::error::Expected versionCode 13"
             exit 1
           }
 
@@ -149,6 +149,8 @@ jobs:
 
       - name: Build release APK
         shell: bash
+        env:
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
@@ -161,13 +163,13 @@ jobs:
           }
 
           mkdir -p "$RUNNER_TEMP/drishyam-output"
-          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-output/Drishyam-2.4.1.apk"
+          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-output/Drishyam-2.4.2.apk"
 
       - name: Verify APK signature
         shell: bash
         run: |
           set -euo pipefail
-          APK="$RUNNER_TEMP/drishyam-output/Drishyam-2.4.1.apk"
+          APK="$RUNNER_TEMP/drishyam-output/Drishyam-2.4.2.apk"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
@@ -175,18 +177,19 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Drishyam-v2.4.1-release
-          path: ${{ runner.temp }}/drishyam-output/Drishyam-2.4.1.apk
+          name: Drishyam-v2.4.2-release
+          path: ${{ runner.temp }}/drishyam-output/Drishyam-2.4.2.apk
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.4.1
-          name: Drishyam 2.4.1
-          body_path: ${{ env.PROJECT_DIR }}/DRISHYAM-2.4.1-CHANGELOG.txt
+          tag_name: v2.4.2
+          name: Drishyam 2.4.2
+          files: |
+            DRISHYAM-2.4.2-CHANGELOG.txt
+            ${{ runner.temp }}/drishyam-output/Drishyam-2.4.2.apk
           target_commitish: ${{ github.sha }}
-          files: ${{ runner.temp }}/drishyam-output/Drishyam-2.4.1.apk
           make_latest: true
           fail_on_unmatched_files: true
