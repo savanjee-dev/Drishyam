@@ -1,0 +1,7 @@
+Drishyam 2.4.5
+
+- Prepared the Android project for direct-source builds from GitHub.
+- Updated the app version to 2.4.5 (version code 16).
+- Preserved the existing application ID and release-signing configuration.
+
+Note: Visual improvements and update-checker fixes are not included unless implemented and verified in this release.
