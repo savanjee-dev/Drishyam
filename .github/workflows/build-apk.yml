@@ -14,7 +14,7 @@ jobs:
 
       - name: Find and extract project zip
         run: |
-          ZIP=$(ls drishyam-android-project-*.zip 2>/dev/null | head -n 1)
+          ZIP=$(for f in drishyam-android-project-*.zip; do [ -f "$f" ] && echo "$(echo "$f" | tr '_' '.')|$f"; done | sort -V | tail -n 1 | cut -d'|' -f2)
           if [ -z "$ZIP" ]; then
             echo "No drishyam-android-project zip found in repository root" >&2
             exit 1
