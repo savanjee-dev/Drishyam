@@ -188,7 +188,7 @@ jobs:
           tag_name: v2.4.2
           name: Drishyam 2.4.2
           files: |
-            DRISHYAM-2.4.2-CHANGELOG.txt
+            ${{ runner.temp }}/drishyam-source/DRISHYAM-2.4.2-CHANGELOG.txt
             ${{ runner.temp }}/drishyam-output/Drishyam-2.4.2.apk
           target_commitish: ${{ github.sha }}
           make_latest: true
