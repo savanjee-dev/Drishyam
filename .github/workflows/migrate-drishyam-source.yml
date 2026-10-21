@@ -1,0 +1,54 @@
+name: Migrate Drishyam source into repository
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract project into android-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE="drishyam-android-project-source.zip"
+          test -f "$ZIP_FILE" || { echo "::error::Could not find $ZIP_FILE in repository root."; exit 1; }
+          mkdir -p "$RUNNER_TEMP/drishyam-migration"
+          unzip -q "$ZIP_FILE" -d "$RUNNER_TEMP/drishyam-migration"
+          PROJECT_DIR="$(find "$RUNNER_TEMP/drishyam-migration" -name settings.gradle.kts -print -quit | xargs -r dirname)"
+          test -n "$PROJECT_DIR" || { echo "::error::No settings.gradle.kts found inside source ZIP."; exit 1; }
+          test -f "$PROJECT_DIR/app/build.gradle.kts" || { echo "::error::No app/build.gradle.kts found."; exit 1; }
+
+          rm -rf android-app
+          mkdir -p android-app
+          cp -a "$PROJECT_DIR"/. android-app/
+
+          # Do not migrate local credentials or build output into the repository.
+          rm -f android-app/app/google-services.json android-app/app/release-key.jks android-app/local.properties
+          find android-app -type d \( -name build -o -name .gradle \) -prune -exec rm -rf {} +
+          find android-app -type f \( -name '*.jks' -o -name '*.keystore' \) -delete
+
+          echo "Migrated project version details:"
+          grep -E 'versionName|versionCode' android-app/app/build.gradle.kts
+
+      - name: Commit migrated source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android-app
+          if git diff --cached --quiet; then
+            echo "android-app already matches the source archive; no changes to commit."
+            exit 0
+          fi
+          git commit -m "Migrate Drishyam Android source into repository"
+          git push
