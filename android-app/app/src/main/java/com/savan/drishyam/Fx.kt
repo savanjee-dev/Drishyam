@@ -1,0 +1,288 @@
+package com.savan.drishyam
+
+import android.app.Activity
+import android.content.Context
+import android.content.res.ColorStateList
+import android.content.res.Resources
+import android.graphics.Typeface
+import android.view.Gravity
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.view.animation.OvershootInterpolator
+import android.view.inputmethod.InputMethodManager
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+
+const val PREFS_SETTINGS = "drishyam_settings"
+
+fun Int.dp(): Int = (this * Resources.getSystem().displayMetrics.density).toInt()
+
+fun hapticsOn(c: Context): Boolean =
+    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("haptics", true)
+
+/** Low-effects mode switches off live blur and the animated backdrop. */
+fun lowFx(c: Context): Boolean =
+    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
+
+/** Press feedback: the control squishes while touched and springs back on release. */
+fun View.pressFx() {
+    setOnTouchListener { v, e ->
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                v.animate().cancel()
+                v.animate().scaleX(0.92f).scaleY(0.92f).alpha(0.84f).setDuration(105).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                if (hapticsOn(v.context)) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(240)
+                    .setInterpolator(OvershootInterpolator(2.7f)).setDuration(330).start()
+        }
+        false // keep click handling intact
+    }
+}
+
+fun ImageView.setHeart(liked: Boolean) {
+    setImageResource(if (liked) R.drawable.ic_heart_fill else R.drawable.ic_heart_outline)
+    imageTintList = ColorStateList.valueOf(if (liked) 0xFFFF7AB6.toInt() else 0xFFFFFFFF.toInt())
+}
+
+/** Pill segment: gradient when selected, frosted glass when not. */
+fun TextView.styleSeg(on: Boolean) {
+    background = ContextCompat.getDrawable(context, if (on) R.drawable.accent_pill else R.drawable.glass_pill)
+    setTextColor(if (on) ContextCompat.getColor(context, android.R.color.white)
+        else com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, ContextCompat.getColor(context, R.color.fg)))
+}
+
+/** Points every glass panel inside [root] at the view whose picture they should blur. */
+fun bindGlass(root: View, source: View, tickMs: Long) {
+    if (root is GlassLayout) {
+        root.source = source
+        root.tickMs = tickMs
+    }
+    if (root is ViewGroup) {
+        for (i in 0 until root.childCount) bindGlass(root.getChildAt(i), source, tickMs)
+    }
+}
+
+// ---------- In-app glass pop-ups ----------
+
+/** Remembers the open pop-up so the Back button can close it first. */
+object PopupStack {
+    private var closer: (() -> Unit)? = null
+    fun set(c: (() -> Unit)?) { closer = c }
+    fun dismiss(): Boolean {
+        val c = closer ?: return false
+        c()
+        return true
+    }
+}
+
+fun hideKeyboard(activity: Activity, v: View) {
+    val imm = activity.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    imm.hideSoftInputFromWindow(v.windowToken, 0)
+}
+
+/**
+ * Shows a floating glass card over a dimmed screen. The card blurs [source] behind it,
+ * keeps a margin from every screen edge, and pops in with a small spring.
+ * [build] fills the card; call the given function to close it.
+ */
+fun showGlassPopup(
+    activity: Activity,
+    source: View,
+    topOffsetDp: Int = -1,
+    build: (LinearLayout, () -> Unit) -> Unit
+) {
+    PopupStack.dismiss()
+    val host = activity.findViewById<ViewGroup>(android.R.id.content)
+    val scrim = FrameLayout(activity).apply {
+        setBackgroundColor(0x66000000)
+        isClickable = true
+        alpha = 0f
+    }
+    val card = GlassLayout(activity).apply {
+        radiusPx = 32.dp().toFloat()
+        this.source = source
+        tickMs = 90
+        isClickable = true
+    }
+    val box = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+    card.addView(box, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+
+    val top = topOffsetDp >= 0
+    val lp = FrameLayout.LayoutParams(
+        MATCH_PARENT, WRAP_CONTENT,
+        if (top) Gravity.TOP or Gravity.CENTER_HORIZONTAL else Gravity.CENTER
+    ).apply { setMargins(22.dp(), if (top) topOffsetDp.dp() else 0, 22.dp(), 0) }
+    scrim.addView(card, lp)
+    host.addView(scrim, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+
+    var closed = false
+    val close: () -> Unit = {
+        if (!closed) {
+            closed = true
+            PopupStack.set(null)
+            hideKeyboard(activity, scrim)
+            card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150).start()
+            scrim.animate().alpha(0f).setDuration(170).withEndAction { host.removeView(scrim) }.start()
+        }
+    }
+    scrim.setOnClickListener { close() }
+    PopupStack.set(close)
+    build(box, close)
+
+    card.scaleX = 0.9f
+    card.scaleY = 0.9f
+    card.alpha = 0f
+    scrim.animate().alpha(1f).setDuration(180).start()
+    card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(280)
+        .setInterpolator(OvershootInterpolator(1.3f)).start()
+}
+
+private fun popupTitle(a: Activity, text: String) = TextView(a).apply {
+    this.text = text
+    typeface = ResourcesCompat.getFont(a, R.font.montserrat_semibold)
+    textSize = 28f
+    setTextColor(ContextCompat.getColor(a, R.color.fg))
+}
+
+private fun popupButton(a: Activity, label: String, primary: Boolean, onClick: () -> Unit) = TextView(a).apply {
+    text = label
+    gravity = Gravity.CENTER
+    textSize = 15f
+    typeface = ResourcesCompat.getFont(a, R.font.poppins_medium) ?: Typeface.DEFAULT
+    setTextColor(ContextCompat.getColor(a, if (primary) android.R.color.white else R.color.fg))
+    background = ContextCompat.getDrawable(a, if (primary) R.drawable.accent_pill else R.drawable.glass_pill)
+    isClickable = true
+    isFocusable = true
+    pressFx()
+    setOnClickListener { onClick() }
+}
+
+fun messagePopup(activity: Activity, source: View, title: String, message: String) {
+    showGlassPopup(activity, source) { box, close ->
+        box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
+        box.addView(popupTitle(activity, title))
+        box.addView(TextView(activity).apply {
+            text = message
+            textSize = 15f
+            setLineSpacing(4.dp().toFloat(), 1f)
+            setTextColor(ContextCompat.getColor(activity, R.color.fg))
+            setPadding(0, 10.dp(), 0, 0)
+        })
+        box.addView(
+            popupButton(activity, activity.getString(R.string.ok), true) { close() },
+            LinearLayout.LayoutParams(MATCH_PARENT, 50.dp()).apply { topMargin = 20.dp() }
+        )
+    }
+}
+
+fun choicePopup(activity: Activity, source: View, title: String, options: List<String>, onPick: (Int) -> Unit) {
+    showGlassPopup(activity, source) { box, close ->
+        box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
+        box.addView(popupTitle(activity, title))
+        options.forEachIndexed { i, label ->
+            box.addView(
+                popupButton(activity, label, false) { close(); onPick(i) },
+                LinearLayout.LayoutParams(MATCH_PARENT, 52.dp()).apply { topMargin = if (i == 0) 16.dp() else 10.dp() }
+            )
+        }
+        box.addView(
+            popupButton(activity, activity.getString(R.string.cancel), false) { close() },
+            LinearLayout.LayoutParams(MATCH_PARENT, 48.dp()).apply { topMargin = 14.dp() }
+        )
+    }
+}
+
+/** Spring-like edge feedback for scroll containers; touch handling remains with the child views. */
+fun installScrollBounce(view: View) {
+    if (lowFx(view.context)) return
+    var downX = 0f
+    var downY = 0f
+    view.setOnTouchListener { v, event ->
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                val dx = event.x - downX
+                val dy = event.y - downY
+                val horizontal = v is android.widget.HorizontalScrollView
+                val atStart = if (horizontal) !v.canScrollHorizontally(-1) else !v.canScrollVertically(-1)
+                val atEnd = if (horizontal) !v.canScrollHorizontally(1) else !v.canScrollVertically(1)
+                val draggedTowardStart = if (horizontal) dx > 12.dp() else dy > 12.dp()
+                val draggedTowardEnd = if (horizontal) dx < -12.dp() else dy < -12.dp()
+                if ((atStart && draggedTowardStart) || (atEnd && draggedTowardEnd)) {
+                    val distance = if (horizontal) 10.dp().toFloat() else 12.dp().toFloat()
+                    val target = if (horizontal) {
+                        if (atStart) distance else -distance
+                    } else {
+                        if (atStart) distance else -distance
+                    }
+                    if (horizontal) v.translationX = target else v.translationY = target
+                    v.animate().translationX(0f).translationY(0f).setDuration(430)
+                        .setInterpolator(OvershootInterpolator(1.25f)).start()
+                    if (hapticsOn(v.context)) v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                }
+            }
+        }
+        false
+    }
+}
+
+/** Overscroll on the photo feed stretches the content briefly and springs back instead of glowing. */
+class SpringEdgeEffectFactory : androidx.recyclerview.widget.RecyclerView.EdgeEffectFactory() {
+    override fun createEdgeEffect(view: androidx.recyclerview.widget.RecyclerView, direction: Int): android.widget.EdgeEffect {
+        return object : android.widget.EdgeEffect(view.context) {
+            override fun onPull(deltaDistance: Float) {
+                super.onPull(deltaDistance)
+                val amount = (view.height * deltaDistance * 0.32f).coerceIn(0f, 34.dp().toFloat())
+                view.translationY = if (direction == DIRECTION_TOP) amount else -amount
+            }
+            override fun onPull(deltaDistance: Float, displacement: Float) {
+                super.onPull(deltaDistance, displacement)
+                val amount = (view.height * deltaDistance * 0.32f).coerceIn(0f, 34.dp().toFloat())
+                view.translationY = if (direction == DIRECTION_TOP) amount else -amount
+            }
+            override fun onRelease() {
+                super.onRelease()
+                view.animate().translationY(0f).setDuration(420)
+                    .setInterpolator(OvershootInterpolator(1.2f)).start()
+            }
+            override fun onAbsorb(velocity: Int) {
+                super.onAbsorb(velocity)
+                val amount = (velocity / 90f).coerceIn(4f, 24f)
+                view.animate().translationY(if (direction == DIRECTION_TOP) amount else -amount)
+                    .setDuration(110).withEndAction {
+                        view.animate().translationY(0f).setDuration(390)
+                            .setInterpolator(OvershootInterpolator(1.35f)).start()
+                    }.start()
+            }
+        }
+    }
+}
+
+/** Short staggered entrance used by each page; disabled when Low-effects mode is enabled. */
+fun animatePageEntrance(root: View) {
+    if (lowFx(root.context) || root !is ViewGroup) return
+    var container: ViewGroup = root
+    if (container.childCount == 1 && container.getChildAt(0) is ViewGroup) {
+        container = container.getChildAt(0) as ViewGroup
+    }
+    if (container.childCount == 1 && container.getChildAt(0) is ViewGroup) {
+        container = container.getChildAt(0) as ViewGroup
+    }
+    for (i in 0 until container.childCount) {
+        val child = container.getChildAt(i)
+        child.alpha = 0f
+        child.translationY = 14.dp().toFloat()
+        child.animate().alpha(1f).translationY(0f).setStartDelay((i * 24L).coerceAtMost(180L))
+            .setDuration(360).setInterpolator(OvershootInterpolator(0.65f)).start()
+    }
+}

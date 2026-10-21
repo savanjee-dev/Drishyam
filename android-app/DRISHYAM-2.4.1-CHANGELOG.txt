@@ -1,0 +1,9 @@
+Drishyam 2.4.1 — Release notes
+
+• Corrected the app version labels so Android settings and the in-app About/settings screens agree.
+• Includes the in-app GitHub Releases update checker and manual “Check for updates” action.
+• Publishes the APK and changelog as a GitHub Release so supported app versions can detect a newer release.
+• Retains the existing gallery, creator profile, styling, fonts, and feed behavior from the prepared source project.
+• Version name: 2.4.1; version code: 12. Application ID: com.savan.drishyam.
+
+Installation requires the same signing certificate as the currently installed app and a higher version code.

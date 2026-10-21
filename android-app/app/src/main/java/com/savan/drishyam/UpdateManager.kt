@@ -1,0 +1,165 @@
+package com.savan.drishyam
+
+import android.app.DownloadManager
+import android.app.Activity
+import android.content.Context
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import android.os.Environment
+import android.view.Gravity
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
+
+/** Checks the public GitHub Releases page and offers a user-approved APK download. */
+object UpdateManager {
+    private const val RELEASE_API = "https://api.github.com/repos/savanjee-dev/Drishyam/releases/latest"
+    private val main = Handler(Looper.getMainLooper())
+    @Volatile private var checking = false
+
+    fun check(context: Activity, popupSource: View, manual: Boolean = false) {
+        if (checking) return
+        checking = true
+        Thread {
+            var release: JSONObject? = null
+            try {
+                val connection = URL(RELEASE_API).openConnection() as HttpURLConnection
+                connection.connectTimeout = 9000
+                connection.readTimeout = 12000
+                connection.setRequestProperty("Accept", "application/vnd.github+json")
+                connection.setRequestProperty("User-Agent", "Drishyam-Android")
+                connection.setRequestProperty("Cache-Control", "no-cache")
+                try {
+                    if (connection.responseCode != 200) throw Exception("GitHub returned HTTP ${connection.responseCode}")
+                    release = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                } finally { connection.disconnect() }
+            } catch (_: Exception) { }
+            val result = release
+            main.post {
+                checking = false
+                if (context.isFinishing || context.isDestroyed) return@post
+                if (result == null) {
+                    if (manual) Toast.makeText(context, "Update check failed. Check your internet and GitHub Releases.", Toast.LENGTH_LONG).show()
+                    return@post
+                }
+                val tag = result.optString("tag_name", "").ifBlank { "Latest release" }
+                val version = tag.removePrefix("v").trim()
+                val current = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0" } catch (_: Exception) { "0" }
+                if (!manual && compareVersions(version, current) <= 0) return@post
+                val asset = result.optJSONArray("assets")
+                var apkUrl: String? = null
+                var apkName = "Drishyam-$tag.apk"
+                if (asset != null) for (i in 0 until asset.length()) {
+                    val a = asset.optJSONObject(i) ?: continue
+                    val name = a.optString("name", "")
+                    if (name.lowercase(Locale.ROOT).endsWith(".apk")) {
+                        apkUrl = a.optString("browser_download_url").takeIf { it.startsWith("https://") }
+                        apkName = "Drishyam-$version.apk"
+                        if (apkUrl != null) break
+                    }
+                }
+                if (apkUrl == null) {
+                    if (manual) Toast.makeText(context, "Release found, but no APK asset is attached yet.", Toast.LENGTH_LONG).show()
+                    return@post
+                }
+                val safeSource = context.findViewById<View>(android.R.id.content)
+                try { showReleaseDialog(context, safeSource, tag, result.optString("body", "No changelog was provided."), result.optString("html_url"), apkUrl!!, apkName, manual) }
+                catch (_: Exception) { if (manual) Toast.makeText(context, "Update found, but the dialog could not open. Open the release page instead.", Toast.LENGTH_LONG).show() }
+            }
+        }.start()
+    }
+
+    private fun compareVersions(a: String, b: String): Int {
+        val aa = Regex("\\d+").findAll(a).mapNotNull { it.value.toIntOrNull() }.toList()
+        val bb = Regex("\\d+").findAll(b).mapNotNull { it.value.toIntOrNull() }.toList()
+        for (i in 0 until maxOf(aa.size, bb.size)) {
+            val x = aa.getOrElse(i) { 0 }; val y = bb.getOrElse(i) { 0 }
+            if (x != y) return x.compareTo(y)
+        }
+        return 0
+    }
+
+    private fun showReleaseDialog(a: Activity, source: View, version: String, notes: String, pageUrl: String?, apkUrl: String, apkName: String, manual: Boolean) {
+        showGlassPopup(a, source) { box, close ->
+            box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
+            box.addView(TextView(a).apply {
+                text = if (manual) "Drishyam updates" else "Drishyam $version is here"
+                textSize = 25f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(a, R.font.montserrat_bold)
+                setTextColor(ContextCompat.getColor(a, R.color.fg))
+            })
+            box.addView(TextView(a).apply {
+                text = "What's new"
+                textSize = 15f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(a, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(a, R.color.accent))
+                setPadding(0, 14.dp(), 0, 5.dp())
+            })
+            val formatted = notes.lineSequence().map { it.trim() }.filter { it.isNotBlank() }
+                .map { line -> if (line.startsWith("-") || line.startsWith("•") || line.startsWith("*")) "•  ${line.drop(1).trim()}" else "•  $line" }
+                .joinToString("\n")
+            box.addView(TextView(a).apply {
+                text = formatted.ifBlank { "• Bug fixes and visual improvements." }
+                textSize = 14f
+                setLineSpacing(4.dp().toFloat(), 1f)
+                setTextColor(ContextCompat.getColor(a, R.color.fg))
+                maxHeight = 260.dp()
+                isVerticalScrollBarEnabled = true
+                movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
+                setPadding(0, 0, 0, 8.dp())
+            })
+            box.addView(TextView(a).apply {
+                text = "Download the APK, then approve installation in Android. Your app data is retained when the signing key matches."
+                textSize = 12f
+                setLineSpacing(2.dp().toFloat(), 1f)
+                setTextColor(ContextCompat.getColor(a, R.color.mute))
+                setPadding(0, 8.dp(), 0, 0)
+            })
+            val download = TextView(a).apply {
+                text = "Download update"
+                gravity = Gravity.CENTER
+                textSize = 15f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(a, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(a, android.R.color.white))
+                background = ContextCompat.getDrawable(a, R.drawable.accent_pill)
+                pressFx()
+                setOnClickListener {
+                    try {
+                        val request = DownloadManager.Request(Uri.parse(apkUrl))
+                            .setTitle("Drishyam $version")
+                            .setDescription("Downloading Drishyam update")
+                            .setMimeType("application/vnd.android.package-archive")
+                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                            .setAllowedOverMetered(true)
+                            .setAllowedOverRoaming(false)
+                            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, apkName)
+                        (a.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                        Toast.makeText(a, "Download started. Open the completed download to install.", Toast.LENGTH_LONG).show()
+                        close()
+                    } catch (_: Exception) {
+                        Toast.makeText(a, "Couldn't start the download. Opening the release page.", Toast.LENGTH_LONG).show()
+                        try { a.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(pageUrl ?: apkUrl))) } catch (_: Exception) { }
+                        close()
+                    }
+                }
+            }
+            box.addView(download, LinearLayout.LayoutParams(-1, 52.dp()).apply { topMargin = 18.dp() })
+            box.addView(TextView(a).apply {
+                text = "Not now"
+                gravity = Gravity.CENTER
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(a, R.color.mute))
+                isClickable = true
+                setPadding(0, 14.dp(), 0, 0)
+                setOnClickListener { close() }
+            }, LinearLayout.LayoutParams(-1, 42.dp()))
+        }
+    }
+}

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sort_hot">Hot</string>
+    <string name="sort_new">Latest</string>
+    <string name="sort_top">Top</string>
+    <string name="search_sub">Search Unsplash by topic, such as forest, hiking, architecture or night sky.</string>
+    <string name="settings_appearance">APPEARANCE</string>
+    <string name="settings_effects">EFFECTS</string>
+    <string name="settings_feed">FEED</string>
+    <string name="settings_about">ABOUT</string>
+    <string name="theme_desc">Follow your phone, or pick Dark or Light.</string>
+    <string name="haptic_title">Tap feedback</string>
+    <string name="haptic_desc">A light vibration when you press a control.</string>
+    <string name="lowfx_title">Low-effects mode</string>
+    <string name="lowfx_desc">Turns off live blur and animation. Use it if the app feels slow.</string>
+    <string name="sort_title">Default feed order</string>
+    <string name="sort_desc">Latest shows the newest uploads first. Top shows the best of the week.</string>
+    <string name="clear_title">Clear image cache</string>
+    <string name="clear_desc">Frees storage used by saved thumbnails.</string>
+    <string name="whats_new_row">What’s new</string>
+    <string name="credits_row">Credits and licences</string>
+</resources>

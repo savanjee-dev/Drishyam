@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="transparent">#00000000</color>
+    <!-- Warm light palette with readable ink and restrained champagne/plum accents. -->
+    <color name="bg">#FFF8F4</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="fg">#251B2A</color>
+    <color name="mute">#62576A</color>
+    <color name="accent">#87500D</color>
+    <color name="accent2">#9A3C83</color>
+    <color name="glassFill">#F0E7F0</color>
+    <color name="glassHighlight">#CCFFFFFF</color>
+    <color name="glassClear">#00000000</color>
+    <color name="glassStroke">#998B9E</color>
+    <color name="glassDialog">#FFFDFB</color>
+    <color name="glassTint">#26DDB6A0</color>
+    <color name="glassRimStart">#FFFFFFFF</color>
+    <color name="glassRimEnd">#66A58CB5</color>
+</resources>

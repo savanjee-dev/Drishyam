@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="transparent">#00000000</color>
+    <color name="bg">#111016</color>
+    <color name="surface">#211F26</color>
+    <color name="fg">#F1EFF7</color>
+    <color name="mute">#C4C0D0</color>
+    <color name="accent">#D0BCFF</color>
+    <color name="accent2">#F0B4D5</color>
+    <color name="glassFill">#D9222029</color>
+    <color name="glassHighlight">#2AFFFFFF</color>
+    <color name="glassClear">#00FFFFFF</color>
+    <color name="glassStroke">#55FFFFFF</color>
+    <color name="glassDialog">#F2222029</color>
+    <color name="glassTint">#12FFFFFF</color>
+    <color name="glassRimStart">#BFFFFFFF</color>
+    <color name="glassRimEnd">#22FFFFFF</color>
+</resources>

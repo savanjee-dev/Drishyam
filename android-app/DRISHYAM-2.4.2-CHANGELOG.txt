@@ -1,0 +1,9 @@
+Drishyam 2.4.2 — design refresh
+
+- Updated app-wide palette to midnight black, amber, coral, pink and violet.
+- Replaced light/grey glass surfaces with darker translucent surfaces and brighter rims.
+- Kept the Unsplash access key as a build-time GitHub Actions secret.
+- Retained existing spring press feedback and scroll bounce utilities.
+- Version code 13; application ID remains com.savan.drishyam.
+
+Please build and test the APK using GitHub Actions before installing. This source ZIP is not a compiled or verified APK.

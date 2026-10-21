@@ -1,0 +1,7 @@
+Drishyam 2.4.4 — UI Refinement
+
+• Refined Settings page hierarchy, spacing and interactive cards.
+• Improved light-mode colour contrast for text, cards and controls.
+• Updated “What’s new” and app version labels.
+• Improved manual update-check feedback where no newer release is available.
+• Existing package ID, signing configuration, Firebase integration and Unsplash fetching implementation are retained.

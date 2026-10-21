@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="?attr/colorSurface">
+
+    <!-- Everything the glass bars blur lives in here -->
+    <FrameLayout
+        android:id="@+id/glassSource"
+        android:layout_width="match_parent" android:layout_height="match_parent">
+
+        <com.savan.drishyam.GlowBackground
+            android:layout_width="match_parent" android:layout_height="match_parent" />
+
+        <FrameLayout
+            android:id="@+id/content"
+            android:layout_width="match_parent" android:layout_height="match_parent">
+
+            <FrameLayout
+                android:id="@+id/home"
+                android:layout_width="match_parent" android:layout_height="match_parent">
+                <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+                    android:id="@+id/swipe"
+                    android:layout_width="match_parent" android:layout_height="match_parent">
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv"
+                        android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:paddingStart="14dp" android:paddingEnd="14dp"
+                        android:clipToPadding="false" />
+                </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+            </FrameLayout>
+
+            <ScrollView
+                android:id="@+id/about"
+                android:layout_width="match_parent" android:layout_height="match_parent"
+                android:clipToPadding="false" android:visibility="gone">
+                <include
+                    layout="@layout/page_about"
+                    android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </ScrollView>
+        </FrameLayout>
+    </FrameLayout>
+
+    <!-- Floating glass bars -->
+    <FrameLayout
+        android:id="@+id/overlay"
+        android:layout_width="match_parent" android:layout_height="match_parent">
+
+        <com.savan.drishyam.GlassLayout
+            android:id="@+id/glassTop"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="top"
+            android:layout_marginStart="10dp" android:layout_marginEnd="10dp" android:layout_marginTop="6dp"
+            app:glassRadius="30dp">
+
+            <LinearLayout
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:paddingTop="5dp" android:paddingBottom="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:paddingStart="14dp" android:paddingEnd="12dp" android:paddingBottom="3dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView
+                            android:id="@+id/title"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:fontFamily="@font/ericaone" android:text="@string/app_name"
+                            android:textSize="27sp" android:textColor="?attr/colorPrimary" />
+                        <TextView
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginStart="2dp" android:fontFamily="@font/poppins_medium"
+                            android:text="@string/tagline" android:textSize="10sp" android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/searchButton"
+                        android:layout_width="42dp" android:layout_height="42dp"
+                        android:background="@drawable/glass_pill_purple" android:padding="12dp"
+                        android:src="@drawable/ic_search" android:scaleType="fitCenter"
+                        android:contentDescription="@string/search_desc"
+                        android:clickable="true" android:focusable="true" />
+                    <ImageView
+                        android:id="@+id/settingsButton"
+                        android:layout_width="42dp" android:layout_height="42dp"
+                        android:layout_marginStart="10dp"
+                        android:background="@drawable/glass_pill_pink" android:padding="12dp"
+                        android:src="@drawable/ic_settings" android:scaleType="fitCenter"
+                        android:contentDescription="@string/settings_desc"
+                        android:clickable="true" android:focusable="true" />
+                </LinearLayout>
+
+                <HorizontalScrollView
+                    android:id="@+id/chipScroll"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:scrollbars="none">
+                    <LinearLayout
+                        android:id="@+id/chips"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingBottom="3dp" />
+                </HorizontalScrollView>
+
+                <LinearLayout
+                    android:id="@+id/sortBar"
+                    android:visibility="gone"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingBottom="3dp">
+                    <TextView android:id="@+id/sortHot" style="@style/Segment" android:text="@string/sort_hot" />
+                    <TextView android:id="@+id/sortNew" style="@style/Segment"
+                        android:layout_marginStart="8dp" android:text="@string/sort_new" />
+                    <TextView android:id="@+id/sortTop" style="@style/Segment"
+                        android:layout_marginStart="8dp" android:text="@string/sort_top" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/savedBar"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:visibility="gone"
+                    android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingBottom="3dp">
+                    <TextView android:id="@+id/segFav" style="@style/Segment"
+                        android:text="@string/seg_favourites" />
+                    <TextView android:id="@+id/segBook" style="@style/Segment"
+                        android:layout_marginStart="10dp" android:text="@string/seg_bookmarks" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.savan.drishyam.GlassLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="vertical" android:gravity="center_horizontal">
+
+            <com.savan.drishyam.GlassLayout
+                android:id="@+id/statusPill"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp" android:visibility="gone"
+                android:paddingStart="18dp" android:paddingEnd="18dp"
+                android:paddingTop="9dp" android:paddingBottom="9dp"
+                app:glassRadius="100dp">
+                <TextView
+                    android:id="@+id/status"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:fontFamily="@font/poppins_medium" android:gravity="center"
+                    android:maxWidth="300dp"
+                    android:textColor="?attr/colorOnSurface" android:textSize="13sp" />
+            </com.savan.drishyam.GlassLayout>
+
+            <com.savan.drishyam.GlassLayout
+                android:id="@+id/glassNav"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginStart="24dp" android:layout_marginEnd="24dp" android:layout_marginBottom="10dp"
+                android:padding="6dp"
+                app:glassRadius="100dp">
+                <LinearLayout
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView android:id="@+id/n0" style="@style/NavTab" android:text="@string/nav_explore" />
+                    <TextView android:id="@+id/n1" style="@style/NavTab" android:text="@string/nav_saved" />
+                    <TextView android:id="@+id/n2" style="@style/NavTab" android:text="@string/nav_about" />
+                </LinearLayout>
+            </com.savan.drishyam.GlassLayout>
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>

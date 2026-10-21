@@ -1,0 +1,14 @@
+Drishyam 2.4.3 — Immersive Photography Redesign
+
+• Restored Drishyam branding with “by Savan”.
+• Rebuilt the home feed around Unsplash-only photo discovery; Reddit and subreddit categories are removed from the home experience.
+• Added a compact glass header and one horizontal row of curated categories: For You, Forest, Nature, Earth, Hiking, Mountains, Wildlife, Architecture, Abstract, Minimalism, Travel, Street, Ocean and Night Sky.
+• Reduced the vertical footprint of the header and floating bottom navigation to give photographs more screen space.
+• Added floating navigation that hides while scrolling down and returns as soon as upward scrolling begins.
+• Redesigned the Settings icon and retained rich glass effects on interactive controls.
+• Added subtle card entrance motion and refined transitions.
+• Redesigned the About page with Savan Jee’s portrait, three supplied friendship photographs, and a heartfelt story featuring Akshat Jha as second developer and creative collaborator.
+• Retained photo attribution, original photo links, favourites, saved items and wallpaper actions.
+• Bumped version to 2.4.3 (versionCode 14).
+
+Photos remain credited to their creators. Unsplash search requires the repository secret UNSPLASH_ACCESS_KEY at build time.
