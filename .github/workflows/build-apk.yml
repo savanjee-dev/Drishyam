@@ -11,10 +11,12 @@ jobs:
       - name: Download repository
         uses: actions/checkout@v4
 
+
       - name: Extract Android project
         run: |
           mkdir source
-          unzip -o drishyam-android-project-v1.5-glass-ui-candidate.zip -d source
+          unzip -q Drishyam-v1.6.1-integrated-glass-update.zip -d source
+
       - name: Configure Firebase
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
