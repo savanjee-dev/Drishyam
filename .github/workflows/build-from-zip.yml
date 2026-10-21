@@ -90,6 +90,7 @@ jobs:
 
           KEYSTORE_PATH="$RUNNER_TEMP/drishyam-release-key.jks"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          cp "$KEYSTORE_PATH" "$PROJECT_DIR/app/release-key.jks"
 
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
           echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
