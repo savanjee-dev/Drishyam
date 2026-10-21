@@ -1,0 +1,153 @@
+name: Build and Release Drishyam APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "drishyam-android-project-source.zip"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+
+      - name: Extract source and read version automatically
+        id: app
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE="drishyam-android-project-source.zip"
+          test -f "$ZIP_FILE" || { echo "::error::Upload the source ZIP as $ZIP_FILE to the repository root."; exit 1; }
+          mkdir -p "$RUNNER_TEMP/drishyam-source"
+          unzip -q "$ZIP_FILE" -d "$RUNNER_TEMP/drishyam-source"
+          PROJECT_DIR="$(find "$RUNNER_TEMP/drishyam-source" -name settings.gradle.kts -print -quit | xargs -r dirname)"
+          test -n "$PROJECT_DIR" || { echo "::error::Could not find settings.gradle.kts in source ZIP"; exit 1; }
+          GRADLE_FILE="$PROJECT_DIR/app/build.gradle.kts"
+          test -f "$GRADLE_FILE" || { echo "::error::Could not find app/build.gradle.kts"; exit 1; }
+          VERSION_NAME="$(sed -nE 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$GRADLE_FILE" | head -n 1)"
+          VERSION_CODE="$(sed -nE 's/.*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$GRADLE_FILE" | head -n 1)"
+          [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Invalid/missing versionName in app/build.gradle.kts: $VERSION_NAME"; exit 1; }
+          [[ "$VERSION_CODE" =~ ^[0-9]+$ ]] || { echo "::error::Invalid/missing versionCode in app/build.gradle.kts: $VERSION_CODE"; exit 1; }
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
+          CHANGELOG="$PROJECT_DIR/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
+          if [[ -f "$CHANGELOG" ]]; then
+            cp "$CHANGELOG" "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
+          else
+            printf 'Drishyam %s\n\nRelease notes are available in the app under Settings -> About Drishyam -> What’s new.\n' "$VERSION_NAME" > "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
+          fi
+          echo "Detected Drishyam $VERSION_NAME (versionCode $VERSION_CODE)."
+
+      - name: Configure Android signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64" || { echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret"; exit 1; }
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret"; exit 1; }
+          test -n "$ANDROID_KEY_ALIAS" || { echo "::error::Missing ANDROID_KEY_ALIAS secret"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Missing ANDROID_KEY_PASSWORD secret"; exit 1; }
+          KEYSTORE_PATH="$RUNNER_TEMP/drishyam-release-key.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          cp "$KEYSTORE_PATH" "$PROJECT_DIR/app/release-key.jks"
+          echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Configure Firebase
+        shell: bash
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$GOOGLE_SERVICES_JSON" || { echo "::error::Missing GOOGLE_SERVICES_JSON secret"; exit 1; }
+          printf '%s' "$GOOGLE_SERVICES_JSON" > "$PROJECT_DIR/app/google-services.json"
+          python3 -m json.tool "$PROJECT_DIR/app/google-services.json" > /dev/null
+
+      - name: Fix duplicate Android resource
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/app/src/main/res/values" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          res = Path(sys.argv[1])
+          base, v21 = res / "strings.xml", res / "strings_v21.xml"
+          if base.exists() and v21.exists():
+              base_root = ET.parse(base).getroot()
+              v21_tree = ET.parse(v21)
+              v21_root = v21_tree.getroot()
+              base_names = {item.get("name") for item in base_root if item.tag in ("string", "item", "plurals", "string-array")}
+              for item in list(v21_root):
+                  if item.get("name") == "settings_version" and item.get("name") in base_names:
+                      v21_root.remove(item)
+              v21_tree.write(v21, encoding="utf-8", xml_declaration=True)
+          print("Duplicate resource check completed.")
+          PY
+
+      - name: Build release APK
+        shell: bash
+        env:
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          gradle --no-daemon assembleRelease
+          APK_SOURCE="$PROJECT_DIR/app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK_SOURCE" || { echo "::error::Release APK was not generated"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/drishyam-output"
+          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
+
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drishyam-v${{ steps.app.outputs.version_name }}-release
+          path: ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.app.outputs.version_name }}
+          name: Drishyam ${{ steps.app.outputs.version_name }}
+          files: |
+            DRISHYAM-${{ steps.app.outputs.version_name }}-CHANGELOG.txt
+            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          fail_on_unmatched_files: true
