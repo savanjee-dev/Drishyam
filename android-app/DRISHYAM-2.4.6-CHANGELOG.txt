@@ -1,0 +1,8 @@
+Drishyam 2.4.6
+
+- Corrected stale version labels in Settings and About.
+- Added top spacing so the floating header does not cover About content.
+- Made the Settings hub footer use the actual installed app version.
+- Kept the existing GitHub Releases update-check entry point.
+
+The in-app update download/install flow still needs device testing.

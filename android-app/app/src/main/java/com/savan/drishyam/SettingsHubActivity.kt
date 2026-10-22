@@ -40,7 +40,7 @@ class SettingsHubActivity : AppCompatActivity() {
         addCategory(root, "Preferences", "Default feed order and browsing preferences", "preferences")
         addCategory(root, "Storage & cache", "Clear temporary image thumbnails", "storage")
         addCategory(root, "About Drishyam", "What's new, credits and licences", "about")
-        addText(root, "Drishyam 2.4.3 · Designed and built by Savan", 12f, R.color.mute, 24, 0).gravity = Gravity.CENTER
+        addText(root, "Drishyam ${BuildConfig.VERSION_NAME} · Designed and built by Savan", 12f, R.color.mute, 24, 0).gravity = Gravity.CENTER
     }
 
     private fun addCategory(root: LinearLayout, title: String, desc: String, section: String) {

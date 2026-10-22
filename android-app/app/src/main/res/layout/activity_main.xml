@@ -35,7 +35,7 @@
             <ScrollView
                 android:id="@+id/about"
                 android:layout_width="match_parent" android:layout_height="match_parent"
-                android:clipToPadding="false" android:visibility="gone">
+                android:clipToPadding="false" android:visibility="gone" android:paddingTop="104dp">
                 <include
                     layout="@layout/page_about"
                     android:layout_width="match_parent" android:layout_height="wrap_content" />
