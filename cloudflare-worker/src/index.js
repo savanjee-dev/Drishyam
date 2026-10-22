@@ -34,8 +34,11 @@ async function upstream(path, params, env, ctx, ttl=0) {
     res=await fetch(target.toString(),{headers:{"Authorization":`Client-ID ${env.UNSPLASH_ACCESS_KEY}`,"Accept-Version":"v1","Accept":"application/json"}});
   } catch { return fail(502,"Photo service is temporarily unavailable."); }
   if (!res.ok) {
+    // Log only the upstream status; never log credentials or authorization headers.
+    console.error("Drishyam Unsplash upstream failure", { status: res.status, path });
     const status=res.status===404?404:res.status===429?429:res.status>=500?502:res.status;
-    return fail(status,status===404?"Photo not found.":status===429?"Photo service rate limit reached. Try again shortly.":"Photo service request failed.");
+    const message=status===404?"Photo not found.":status===429?"Photo service rate limit reached. Try again shortly.":"Photo service request failed.";
+    return json({error:message,upstream_status:res.status},status,{"cache-control":"no-store"});
   }
   const response=new Response(await res.text(),{status:200,headers:{...CORS,"content-type":"application/json; charset=utf-8","cache-control":ttl>0?`public, max-age=${ttl}`:"no-store"}});
   if (ttl>0) ctx.waitUntil(caches.default.put(key,response.clone()));
