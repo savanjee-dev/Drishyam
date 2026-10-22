@@ -1,3 +1,4 @@
+// Drishyam Cloudflare proxy deployment trigger.
 const API = "https://api.unsplash.com";
 const CORS = {
   "access-control-allow-origin": "*",
