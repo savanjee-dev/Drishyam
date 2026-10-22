@@ -124,7 +124,7 @@ class GlassLayout @JvmOverloads constructor(
         val r = min(radiusPx, min(w, h) / 2f)
         rect.set(0f, 0f, w, h)
 
-        val live = !disabled && !lowEffects && source != null
+        val live = !solid && !disabled && !lowEffects && source != null
         if (live) {
             val now = SystemClock.uptimeMillis()
             if (dirty || now - lastCapture >= max(30L, tickMs - 10)) {
@@ -134,22 +134,33 @@ class GlassLayout @JvmOverloads constructor(
             }
         }
 
-        val s = shader
-        if (live && s != null) {
-            bodyPaint.shader = s
-            bodyPaint.colorFilter = satFilter
-            canvas.drawRoundRect(rect, r, r, bodyPaint)
-            tintPaint.color = if (dark) 0x66000000 else tintColor
-        } else {
-            tintPaint.color = if (dark) 0x80101018.toInt() else fillColor
-        }
-        canvas.drawRoundRect(rect, r, r, tintPaint)
-        canvas.drawRoundRect(rect, r, r, sheenPaint)
+        
+val s = shader
+if (solid) {
+    tintPaint.color = ContextCompat.getColor(context, R.color.accent)
+    tintPaint.shader = null
+    bodyPaint.shader = null
+    bodyPaint.colorFilter = null
+} else if (live && s != null) {
+    bodyPaint.shader = s
+    bodyPaint.colorFilter = satFilter
+    canvas.drawRoundRect(rect, r, r, bodyPaint)
+    tintPaint.color = if (dark) 0x66000000 else tintColor
+} else {
+    tintPaint.color = if (dark) 0x80101018.toInt() else fillColor
+}
 
-        val half = rimPaint.strokeWidth / 2f
-        rimRect.set(half, half, w - half, h - half)
-        val rr = max(0f, r - half)
-        canvas.drawRoundRect(rimRect, rr, rr, rimPaint)
+        canvas.drawRoundRect(rect, r, r, tintPaint)
+
+if (!solid) {
+    canvas.drawRoundRect(rect, r, r, sheenPaint)
+
+    val half = rimPaint.strokeWidth / 2f
+    rimRect.set(half, half, w - half, h - half)
+    val rr = max(0f, r - half)
+    canvas.drawRoundRect(rimRect, rr, rr, rimPaint)
+}
+    
 
         if (live && tickMs > 0 && isShown) postInvalidateDelayed(tickMs)
     }
