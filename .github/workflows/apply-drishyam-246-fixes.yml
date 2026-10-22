@@ -12,86 +12,110 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
-      - name: Apply verified source edits
+      - name: Apply guarded source edits
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
           from pathlib import Path
+          import re
 
           root = Path("android-app")
           gradle = root / "app/build.gradle.kts"
-          strings = root / "app/src/main/res/values/strings.xml"
-          main_layout = root / "app/src/main/res/layout/activity_main.xml"
+          strings_file = root / "app/src/main/res/values/strings.xml"
+          layout = root / "app/src/main/res/layout/activity_main.xml"
           hub = root / "app/src/main/java/com/savan/drishyam/SettingsHubActivity.kt"
 
-          for p in (gradle, strings, main_layout, hub):
-              if not p.is_file():
-                  raise SystemExit(f"Required source file not found: {p}")
+          for path in (gradle, strings_file, layout, hub):
+              if not path.is_file():
+                  raise SystemExit(f"Required source file not found: {path}")
 
-          # Version must move forward from the current 2.4.5 release.
+          # Validate all source targets before writing any files.
           g = gradle.read_text()
-          if 'versionName = "2.4.5"' not in g or "versionCode = 16" not in g:
-              raise SystemExit("Version guard failed: expected version 2.4.5 / code 16. No files changed.")
-          g = g.replace("versionCode = 16", "versionCode = 17", 1)
-          g = g.replace('versionName = "2.4.5"', 'versionName = "2.4.6"', 1)
-          gradle.write_text(g)
-
-          # Remove stale labels and replace the inaccurate 2.4.4 changelog.
-          s = strings.read_text()
-          replacements = [
-              ("DRISHYAM · VERSION 2.4.4\\nBuilt with friendship · Made for curious eyes",
-               "DRISHYAM · VERSION 2.4.6\\nBuilt with friendship · Made for curious eyes"),
-              ("Drishyam 2.4.4 · Designed and built by Savan",
-               "Drishyam 2.4.6 · Designed and built by Savan"),
-              ("What’s new in 2.4.4", "What’s new in 2.4.6"),
-              ("• Refined Settings hierarchy, spacing and interactive cards\\n• Improved light-mode contrast for cards, controls and text\\n• Improved homepage navigation readability over photography\\n• Check for Updates now gives a clear result when no newer release is available\\n• Version 2.4.4 visual refinement release",
-               "• Corrected outdated version labels across Settings and About\\n• Added spacing below the floating header on the About page\\n• Retained the GitHub Releases update-check entry point\\n• Version 2.4.6 maintenance and readability fixes")
-          ]
-          for old, new in replacements:
-              if old not in s:
-                  raise SystemExit("String replacement guard failed; no release should be built from partially updated strings. Missing text: " + old[:70])
-              s = s.replace(old, new, 1)
-          strings.write_text(s)
-
-          # About is drawn under the floating top glass bar; reserve space for it.
-          m = main_layout.read_text()
-          old = 'android:id="@+id/about"\n                android:layout_width="match_parent" android:layout_height="match_parent"\n                android:clipToPadding="false" android:visibility="gone">'
-          new = 'android:id="@+id/about"\n                android:layout_width="match_parent" android:layout_height="match_parent"\n                android:clipToPadding="false" android:paddingTop="104dp" android:visibility="gone">'
-          if old not in m:
-              raise SystemExit("About layout guard failed; expected ScrollView block was not found.")
-          main_layout.write_text(m.replace(old, new, 1))
-
-          # Make the Settings hub footer follow the actual build version.
+          if 'versionName = "2.4.5"' not in g or not re.search(r'\bversionCode\s*=\s*16\b', g):
+              raise SystemExit("Version guard failed: expected version 2.4.5 / code 16.")
+          s = strings_file.read_text()
+          m = layout.read_text()
           h = hub.read_text()
-          old = 'addText(root, "Drishyam 2.4.3 · Designed and built by Savan", 12f, R.color.mute, 24, 0).gravity = Gravity.CENTER'
-          new = 'addText(root, "Drishyam ${BuildConfig.VERSION_NAME} · Designed and built by Savan", 12f, R.color.mute, 24, 0).gravity = Gravity.CENTER'
-          if old not in h:
-              raise SystemExit("Settings hub version-label guard failed.")
-          hub.write_text(h.replace(old, new, 1))
 
-          Path("android-app/DRISHYAM-2.4.6-CHANGELOG.txt").write_text(
-              "Drishyam 2.4.6\\n\\n"
-              "- Corrected stale version labels in Settings and About.\\n"
-              "- Added top spacing so the floating header does not cover About content.\\n"
-              "- Made the Settings hub footer use the actual installed app version.\\n"
-              "- Kept the existing GitHub Releases update-check entry point.\\n\\n"
-              "The in-app update download/install flow still needs device testing.\\n"
+          def replace_string(xml, name, expected_old, new_value):
+              # Match the named Android string regardless of how \n is escaped in XML.
+              pattern = re.compile(r'(<string\s+name="' + re.escape(name) + r'">)(.*?)(</string>)', re.S)
+              match = pattern.search(xml)
+              if not match:
+                  raise SystemExit(f"Missing Android string resource: {name}")
+              current = match.group(2)
+              if expected_old not in current:
+                  raise SystemExit(f"Guard failed for string resource {name}; found unexpected content.")
+              return xml[:match.start(2)] + new_value + xml[match.end(2):]
+
+          s = replace_string(s, "footer", "VERSION 2.4.4",
+              r"DRISHYAM · VERSION 2.4.6\nBuilt with friendship · Made for curious eyes")
+          s = replace_string(s, "settings_version", "Drishyam 2.4.4",
+              "Drishyam 2.4.6 · Designed and built by Savan")
+          s = replace_string(s, "whats_new_title", "2.4.4",
+              "What’s new in 2.4.6")
+          s = replace_string(s, "whats_new_body", "Version 2.4.4",
+              r"• Corrected outdated version labels across Settings and About\n• Added spacing below the floating header on the About page\n• Retained the GitHub Releases update-check entry point\n• Version 2.4.6 maintenance and readability fixes")
+
+          old_about = re.compile(
+              r'(<ScrollView\b(?=[^>]*android:id="@\\+id/about")[^>]*?)>',
+              re.S
+          )
+          match = old_about.search(m)
+          if not match:
+              # More tolerant fallback: locate the About ScrollView by its ID.
+              marker = 'android:id="@+id/about"'
+              pos = m.find(marker)
+              if pos < 0:
+                  raise SystemExit("About layout guard failed: ScrollView ID not found.")
+              start = m.rfind("<ScrollView", 0, pos)
+              end = m.find(">", pos)
+              if start < 0 or end < 0:
+                  raise SystemExit("About layout guard failed: could not locate ScrollView opening tag.")
+              tag = m[start:end+1]
+              if 'android:paddingTop=' not in tag:
+                  m = m[:end] + ' android:paddingTop="104dp"' + m[end:]
+          else:
+              tag = match.group(1)
+              if 'android:paddingTop=' not in tag:
+                  m = m[:match.end(1)] + ' android:paddingTop="104dp"' + m[match.end(1):]
+
+          old_footer = 'addText(root, "Drishyam 2.4.3 · Designed and built by Savan", 12f, R.color.mute, 24, 0).gravity = Gravity.CENTER'
+          if old_footer not in h:
+              raise SystemExit("Settings hub version-label guard failed.")
+          h = h.replace(old_footer,
+              'addText(root, "Drishyam ${BuildConfig.VERSION_NAME} · Designed and built by Savan", 12f, R.color.mute, 24, 0).gravity = Gravity.CENTER',
+              1)
+
+          # Write only after every guard has passed.
+          gradle.write_text(g.replace("versionCode = 16", "versionCode = 17", 1)
+                              .replace('versionName = "2.4.5"', 'versionName = "2.4.6"', 1))
+          strings_file.write_text(s)
+          layout.write_text(m)
+          hub.write_text(h)
+          (root / "DRISHYAM-2.4.6-CHANGELOG.txt").write_text(
+              "Drishyam 2.4.6\n\n"
+              "- Corrected stale version labels in Settings and About.\n"
+              "- Added top spacing so the floating header does not cover About content.\n"
+              "- Made the Settings hub footer use the actual installed app version.\n"
+              "- Kept the existing GitHub Releases update-check entry point.\n\n"
+              "The in-app update download/install flow still needs device testing.\n"
           )
           print("Applied guarded source changes for Drishyam 2.4.6.")
           PY
 
       - name: Review changes
         run: |
+          set -euo pipefail
           git diff --check
           git diff --stat
           git diff -- android-app/app/build.gradle.kts android-app/app/src/main/res/values/strings.xml android-app/app/src/main/res/layout/activity_main.xml android-app/app/src/main/java/com/savan/drishyam/SettingsHubActivity.kt
 
       - name: Commit source changes
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add android-app/app/build.gradle.kts \
