@@ -3,5 +3,6 @@
     <declare-styleable name="GlassLayout">
         <attr name="glassRadius" format="dimension" />
         <attr name="glassDark" format="boolean" />
+    <attr name="glassSolid" format="boolean" />
     </declare-styleable>
 </resources>
