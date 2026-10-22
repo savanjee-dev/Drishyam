@@ -516,7 +516,7 @@ class MainActivity : AppCompatActivity() {
                 val m = e.message ?: ""
                 error = when {
                     m.contains("429") -> "Unsplash is temporarily rate-limiting requests. Please wait and try again."
-                    m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied this request. Check the Access Key and try again."
+                    m.contains("403") || m.contains("Forbidden", true) -> "Photo proxy returned HTTP 403. Check the Cloudflare UNSPLASH_ACCESS_KEY secret and Unsplash API permissions; never add the key to the app."
                     m.contains("404") -> "This feed was not found."
                     m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet."
                     else -> "Couldn’t load photos from Unsplash ($m)."
