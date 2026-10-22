@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -126,7 +127,6 @@ jobs:
 
       - name: Build release APK
         shell: bash
-        env:
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
