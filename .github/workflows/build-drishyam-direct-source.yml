@@ -27,6 +27,30 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Normalize and validate Android XML resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          import xml.etree.ElementTree as ET
+
+          root = Path("android-app/app/src/main/res")
+          repaired = []
+          for path in root.rglob("*.xml"):
+              text = path.read_text(encoding="utf-8-sig")
+              normalized = re.sub(r"^\\s+(?=<\\?xml\\s)", "", text)
+              if normalized != text:
+                  path.write_text(normalized, encoding="utf-8")
+                  repaired.append(str(path))
+              ET.parse(path)
+          if repaired:
+              print("Normalized leading whitespace before XML declarations:")
+              print("\\n".join(repaired))
+          print("All Android resource XML files parsed successfully.")
+          PY
+
       - name: Read app version and changelog
         id: app
         shell: bash
