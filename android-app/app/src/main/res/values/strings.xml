@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Drishyam</string>
-    <string name="tagline">by Savan · A world of photographs</string>
+    <string name="tagline">by Savan</string>
     <string name="search_desc">Search Unsplash photographs</string>
     <string name="settings_desc">Settings and updates</string>
     <string name="nav_explore">Explore</string>
