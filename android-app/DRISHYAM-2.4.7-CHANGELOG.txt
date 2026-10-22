@@ -1,0 +1,8 @@
+Drishyam 2.4.7
+
+- Introduces the Forest Editorial visual refresh.
+- Refines the navigation dock and theme colours.
+- Fixes Android XML resource parsing and validates resource XML during release builds.
+- Includes build and signing verification for the release APK.
+
+Note: This release is built from the isolated automation branch pending review and merge.

@@ -47,6 +47,8 @@ class GlassLayout @JvmOverloads constructor(
         set(v) { field = v; invalidate() }
     var dark: Boolean = false
         set(v) { field = v; invalidate() }
+    var solid: Boolean = false
+        set(v) { field = v; invalidate() }
 
     private val density = Resources.getSystem().displayMetrics.density
     private val tintColor = ContextCompat.getColor(context, R.color.glassTint)
@@ -86,6 +88,7 @@ class GlassLayout @JvmOverloads constructor(
             val a = context.obtainStyledAttributes(attrs, R.styleable.GlassLayout)
             radiusPx = a.getDimension(R.styleable.GlassLayout_glassRadius, radiusPx)
             dark = a.getBoolean(R.styleable.GlassLayout_glassDark, false)
+            solid = a.getBoolean(R.styleable.GlassLayout_glassSolid, false)
             a.recycle()
         }
     }
