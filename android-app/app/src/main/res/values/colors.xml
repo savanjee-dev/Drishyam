@@ -1,19 +1,23 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="transparent">#00000000</color>
-    <!-- Warm light palette with readable ink and restrained champagne/plum accents. -->
-    <color name="bg">#FFF8F4</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="fg">#251B2A</color>
-    <color name="mute">#62576A</color>
-    <color name="accent">#87500D</color>
-    <color name="accent2">#9A3C83</color>
-    <color name="glassFill">#F0E7F0</color>
+
+    <!-- Forest Editorial light palette -->
+    <color name="bg">#F2EEE4</color>
+    <color name="surface">#FFFCF5</color>
+    <color name="fg">#252B27</color>
+    <color name="mute">#626D63</color>
+    <color name="accent">#263C32</color>
+    <color name="accent2">#819581</color>
+
+    <!-- Glass surfaces adapted to the editorial palette -->
+    <color name="glassFill">#E8E8DC</color>
     <color name="glassHighlight">#CCFFFFFF</color>
     <color name="glassClear">#00000000</color>
-    <color name="glassStroke">#998B9E</color>
-    <color name="glassDialog">#FFFDFB</color>
-    <color name="glassTint">#26DDB6A0</color>
+    <color name="glassStroke">#99819581</color>
+    <color name="glassDialog">#FFFCF5</color>
+    <color name="glassTint">#26D8C6A1</color>
     <color name="glassRimStart">#FFFFFFFF</color>
-    <color name="glassRimEnd">#66A58CB5</color>
+    <color name="glassRimEnd">#66819581</color>
 </resources>
