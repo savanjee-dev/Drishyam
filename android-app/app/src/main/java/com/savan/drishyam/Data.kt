@@ -10,7 +10,7 @@ import java.net.URL
 object Config {
     // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
     // Do not add an Unsplash key to the Android app.
-    const val UNSPLASH_PROXY_BASE_URL = "https://REPLACE-WITH-YOUR-WORKER.workers.dev"
+    const val UNSPLASH_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
