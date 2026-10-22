@@ -8,8 +8,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object Config {
-    // Injected at build time from the UNSPLASH_ACCESS_KEY GitHub Actions secret.
-    val UNSPLASH_KEY: String get() = BuildConfig.UNSPLASH_ACCESS_KEY
+    // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
+    // Do not add an Unsplash key to the Android app.
+    const val UNSPLASH_PROXY_BASE_URL = "https://REPLACE-WITH-YOUR-WORKER.workers.dev"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -99,8 +100,17 @@ object Api {
         return c.inputStream.bufferedReader().use { it.readText() }
     }
 
-    fun ping(url: String) {
-        try { get(url, mapOf("Authorization" to "Client-ID " + Config.UNSPLASH_KEY)) } catch (e: Exception) { }
+    fun ping(downloadLocation: String) {
+        // Unsplash requires its download endpoint to be triggered when a user downloads a photo.
+        // Extract only the photo ID; never proxy a caller-supplied arbitrary URL.
+        try {
+            val id = Regex("/photos/([A-Za-z0-9_-]+)/download").find(downloadLocation)?.groupValues?.get(1)
+                ?: return
+            get(
+                Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') + "/photos/" + id + "/download",
+                emptyMap()
+            )
+        } catch (_: Exception) { }
     }
 
     /** Returns photos and the "after" token ("" when there is no more). */
@@ -197,9 +207,12 @@ object Api {
 
     /** Returns photos and whether this was the last page. */
     fun unsplash(query: String, page: Int): Pair<List<Photo>, Boolean> {
-        val url = "https://api.unsplash.com/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
+        require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
+        require(page in 1..10000) { "Invalid page." }
+        val url = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') +
+            "/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
             "&orientation=portrait&per_page=20&page=$page"
-        val j = JSONObject(get(url, mapOf("Authorization" to "Client-ID " + Config.UNSPLASH_KEY, "Accept-Version" to "v1")))
+        val j = JSONObject(get(url, emptyMap()))
         val arr = j.getJSONArray("results")
         val out = ArrayList<Photo>()
         for (i in 0 until arr.length()) {
@@ -208,7 +221,7 @@ object Api {
             val raw = urls.getString("raw")
             val full = raw + (if (raw.contains("?")) "&" else "?") + "w=1440&q=85&fm=jpg&fit=max"
             val user = p.getJSONObject("user")
-            val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (e: Exception) { 0xFF222222.toInt() }
+            val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
             out.add(Photo(p.getString("id"), urls.getString("small"), full,
                 p.optString("alt_description", "Photo").let { if (it == "null") "Photo" else it },
                 "📷 " + user.optString("name"),
@@ -218,5 +231,4 @@ object Api {
                 p.optString("created_at", "").take(10)))
         }
         return Pair(out, page >= j.optInt("total_pages", 1) || arr.length() == 0)
-    }
-}
+    }}
