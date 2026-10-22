@@ -231,4 +231,5 @@ object Api {
                 p.optString("created_at", "").take(10)))
         }
         return Pair(out, page >= j.optInt("total_pages", 1) || arr.length() == 0)
-    }}
+    }
+}
