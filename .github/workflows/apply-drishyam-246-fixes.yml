@@ -43,8 +43,8 @@ jobs:
           # Remove stale labels and replace the inaccurate 2.4.4 changelog.
           s = strings.read_text()
           replacements = [
-              ("DRISHYAM · VERSION 2.4.4\\\\nBuilt with friendship · Made for curious eyes",
-               "DRISHYAM · VERSION 2.4.6\\\\nBuilt with friendship · Made for curious eyes"),
+              ("DRISHYAM · VERSION 2.4.4\\nBuilt with friendship · Made for curious eyes",
+               "DRISHYAM · VERSION 2.4.6\\nBuilt with friendship · Made for curious eyes"),
               ("Drishyam 2.4.4 · Designed and built by Savan",
                "Drishyam 2.4.6 · Designed and built by Savan"),
               ("What’s new in 2.4.4", "What’s new in 2.4.6"),
