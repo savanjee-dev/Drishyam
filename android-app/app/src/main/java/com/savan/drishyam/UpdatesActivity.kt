@@ -286,9 +286,17 @@ class UpdatesActivity : AppCompatActivity() {
 
                 val rawNotes = result.opt("body")
                 val releaseNotes = (rawNotes as? String)?.trim().orEmpty()
-                notes.text = releaseNotes.takeUnless {
-                    it.isBlank() || it.equals("null", ignoreCase = true)
-                } ?: "No release notes were provided for this version."
+                notes.text = "Loading notes for v$version…"
+                Thread {
+                    val exactNotes = ReleaseChangelog.fetch(version)
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        if (latestVersion != version) return@runOnUiThread
+                        notes.text = exactNotes
+                            ?: releaseNotes.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+                            ?: "The changelog for v$version is unavailable. Open the official release to review its details."
+                    }
+                }.start()
 
                 val assets = result.optJSONArray("assets")
                 if (assets != null) {
