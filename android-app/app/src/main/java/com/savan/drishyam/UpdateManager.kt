@@ -151,6 +151,33 @@ object UpdateManager {
                 }
             }
             box.addView(download, LinearLayout.LayoutParams(-1, 52.dp()).apply { topMargin = 18.dp() })
+
+            // Secondary highlighted option: let users browse the official v2.7.0 release and choose its APK asset.
+            val githubRelease = TextView(a).apply {
+                text = "⌘  Download from GitHub Releases\\n       Open official v2.7.0 release page  ↗"
+                gravity = Gravity.CENTER_VERTICAL
+                textSize = 14f
+                setLineSpacing(3.dp().toFloat(), 1f)
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(a, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(a, R.color.fg))
+                setPadding(16.dp(), 12.dp(), 16.dp(), 12.dp())
+                background = ContextCompat.getDrawable(a, R.drawable.glass_pill)
+                isClickable = true
+                isFocusable = true
+                pressFx()
+                contentDescription = "Download from GitHub Releases. Opens the official Drishyam v2.7.0 release page."
+                setOnClickListener {
+                    try {
+                        a.startActivity(android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            Uri.parse("https://github.com/savanjee-dev/Drishyam/releases/tag/v2.7.0")
+                        ))
+                    } catch (_: Exception) {
+                        Toast.makeText(a, "Couldn't open GitHub Releases. Please try again.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            box.addView(githubRelease, LinearLayout.LayoutParams(-1, 68.dp()).apply { topMargin = 10.dp() })
             box.addView(TextView(a).apply {
                 text = "Not now"
                 gravity = Gravity.CENTER
