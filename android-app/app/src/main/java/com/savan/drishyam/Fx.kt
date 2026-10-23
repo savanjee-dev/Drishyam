@@ -51,7 +51,7 @@ fun View.pressFx() {
 
 fun ImageView.setHeart(liked: Boolean) {
     setImageResource(if (liked) R.drawable.ic_heart_fill else R.drawable.ic_heart_outline)
-    imageTintList = ColorStateList.valueOf(if (liked) 0xFFFF7AB6.toInt() else 0xFFFFFFFF.toInt())
+    imageTintList = ColorStateList.valueOf(if (liked) ContextCompat.getColor(context, R.color.accent2) else 0xFFFFFFFF.toInt())
 }
 
 /** Pill segment: gradient when selected, frosted glass when not. */
