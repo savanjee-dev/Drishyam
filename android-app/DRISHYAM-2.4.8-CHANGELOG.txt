@@ -1,0 +1,6 @@
+Drishyam 2.4.8
+
+- Keep Cloudflare proxy-backed photo loading from the proxy integration branch.
+- Improve photo attribution legibility.
+- Preserve the existing package ID and release signing configuration for in-place updates.
+- Increment Android version code to 19.
