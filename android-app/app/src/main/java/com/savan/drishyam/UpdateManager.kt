@@ -76,18 +76,9 @@ object UpdateManager {
                     }
                     return@post
                 }
-                val asset = result.optJSONArray("assets")
-                var apkUrl: String? = null
-                var apkName = "Drishyam-$tag.apk"
-                if (asset != null) for (i in 0 until asset.length()) {
-                    val a = asset.optJSONObject(i) ?: continue
-                    val name = a.optString("name", "")
-                    if (name.lowercase(Locale.ROOT).endsWith(".apk")) {
-                        apkUrl = a.optString("browser_download_url").takeIf { it.startsWith("https://") }
-                        apkName = "Drishyam-$version.apk"
-                        if (apkUrl != null) break
-                    }
-                }
+                val verifiedAsset = VerifiedReleaseApk.fromRelease(result, version)
+                val apkUrl = verifiedAsset?.url
+                val apkName = verifiedAsset?.fileName ?: "Drishyam-$version.apk"
                 if (apkUrl == null) {
                     if (manual) Toast.makeText(context, "Release found, but no APK asset is attached yet.", Toast.LENGTH_LONG).show()
                     return@post
