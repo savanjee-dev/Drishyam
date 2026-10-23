@@ -1,0 +1,7 @@
+Drishyam 2.7.6
+
+- Automatic update checks are limited to once every 24 hours after a successful release check.
+- Manual update checks remain available in Settings.
+- Update prompts can be deferred with Later for the current app session.
+- Prevents duplicate downloads while a previous update download is pending, running, or paused.
+- Uses the current official GitHub release page as the fallback link.
