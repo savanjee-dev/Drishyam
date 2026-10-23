@@ -7,15 +7,15 @@
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp"
         android:orientation="vertical" android:background="@drawable/glass_card" android:padding="12dp">
 
-        <FrameLayout android:layout_width="match_parent" android:layout_height="520dp"
+        <FrameLayout android:layout_width="match_parent" android:layout_height="560dp"
             android:background="@drawable/glass_card" android:clipToOutline="true">
             <ImageView android:id="@+id/aboutBlur" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:scaleType="centerCrop" android:alpha="0.34" android:contentDescription="@null" />
             <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/scrim" />
             <View android:layout_width="match_parent" android:layout_height="190dp"
                 android:layout_gravity="bottom" android:background="@drawable/developer_card_bottom_scrim" />
-            <ImageView android:id="@+id/aboutPhoto" android:layout_width="match_parent" android:layout_height="300dp"
-                android:layout_gravity="center_horizontal|top" android:layout_marginStart="22dp" android:layout_marginEnd="22dp" android:layout_marginTop="78dp"
+            <ImageView android:id="@+id/aboutPhoto" android:layout_width="match_parent" android:layout_height="320dp"
+                android:layout_gravity="center_horizontal|top" android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="78dp"
                 android:background="@drawable/glass_card" android:clipToOutline="true"
                 android:scaleType="centerCrop" android:contentDescription="@string/about_name" />
             <LinearLayout android:id="@+id/ig" android:layout_width="wrap_content" android:layout_height="42dp"
@@ -48,7 +48,7 @@
         </FrameLayout>
 
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="30dp" android:text="TWO FRIENDS. ONE VISION."
+            android:layout_marginTop="42dp" android:text="TWO FRIENDS. ONE VISION."
             android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.14"
             android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
