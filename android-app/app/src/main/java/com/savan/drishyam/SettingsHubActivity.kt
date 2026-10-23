@@ -14,7 +14,6 @@ import androidx.core.content.res.ResourcesCompat
 class SettingsHubActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
 
         val root = LinearLayout(this).apply {
