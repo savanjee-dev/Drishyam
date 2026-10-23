@@ -50,7 +50,7 @@ class ViewerActivity : AppCompatActivity() {
         iv.setOnClickListener { openFullscreen() }
 
         findViewById<View>(R.id.expand).apply { pressFx(); setOnClickListener { openFullscreen() } }
-        findViewById<View>(R.id.back).apply {\n            pressFx()\n            findViewById<ImageView>(R.id.back).imageTintList = ColorStateList.valueOf(0xFFFFFFFF.toInt())\n            setOnClickListener { finish() }\n        }
+        findViewById<View>(R.id.back).apply { pressFx(); setOnClickListener { finish() } }
         findViewById<View>(R.id.shareTop).apply { pressFx(); setOnClickListener { sharePhoto() } }
 
         findViewById<TextView>(R.id.credit).text = p.credit.ifBlank { getString(R.string.unknown_photographer) }
