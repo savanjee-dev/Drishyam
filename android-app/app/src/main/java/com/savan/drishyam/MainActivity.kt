@@ -227,7 +227,9 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
-        if (!PopupStack.dismiss()) super.onBackPressed()
+        if (PopupStack.dismiss()) return
+        if (tab == 2) { showTab(0); return }
+        super.onBackPressed()
     }
 
     // ---------- Floating glass bars ----------
@@ -341,7 +343,7 @@ class MainActivity : AppCompatActivity() {
         glassNav.visibility = View.VISIBLE
         glassNav.translationY = 0f
         glassNav.alpha = 1f
-        val selectedNav = when (n) { 0 -> 0; 1 -> 2; else -> 3 }
+        val selectedNav = when (n) { 0 -> 0; 1 -> 2; else -> -1 }
         listOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3).forEachIndexed { i, id ->
             val v = findViewById<ImageView>(id)
             val on = i == selectedNav
