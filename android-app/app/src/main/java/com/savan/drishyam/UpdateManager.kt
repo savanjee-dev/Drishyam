@@ -23,8 +23,15 @@ object UpdateManager {
     private const val RELEASE_API = "https://api.github.com/repos/savanjee-dev/Drishyam/releases/latest"
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var checking = false
+    private const val PREFS_UPDATES = "drishyam_update_state"
+    private const val KEY_LAST_SUCCESSFUL_CHECK = "last_successful_check_ms"
+    private const val KEY_DOWNLOAD_ID = "active_download_id"
+    private const val CHECK_INTERVAL_MS = 24L * 60L * 60L * 1000L
+    private val dismissedThisSession = mutableSetOf<String>()
 
     fun check(context: Activity, popupSource: View, manual: Boolean = false) {
+        val prefs = context.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE)
+        if (!manual && System.currentTimeMillis() - prefs.getLong(KEY_LAST_SUCCESSFUL_CHECK, 0L) < CHECK_INTERVAL_MS) return
         if (checking) return
         checking = true
         Thread {
@@ -49,8 +56,17 @@ object UpdateManager {
                     if (manual) Toast.makeText(context, "Update check failed. Check your internet and GitHub Releases.", Toast.LENGTH_LONG).show()
                     return@post
                 }
-                val tag = result.optString("tag_name", "").ifBlank { "Latest release" }
+                val tag = result.optString("tag_name", "").trim()
                 val version = tag.removePrefix("v").trim()
+                if (version.isBlank() || Regex("\\d+").find(version) == null) {
+                    if (manual) Toast.makeText(context, "GitHub did not return a valid release version.", Toast.LENGTH_LONG).show()
+                    return@post
+                }
+                // A valid release response is the successful check; failed network/API calls never reset the interval.
+                prefs.edit().putLong(KEY_LAST_SUCCESSFUL_CHECK, System.currentTimeMillis()).apply()
+                synchronized(dismissedThisSession) {
+                    if (!manual && dismissedThisSession.contains(version)) return@post
+                }
                 val current = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0" } catch (_: Exception) { "0" }
                 if (!manual && compareVersions(version, current) <= 0) return@post
                 val asset = result.optJSONArray("assets")
@@ -70,10 +86,23 @@ object UpdateManager {
                     return@post
                 }
                 val safeSource = context.findViewById<View>(android.R.id.content)
-                try { showReleaseDialog(context, safeSource, tag, result.optString("body", "No changelog was provided."), result.optString("html_url"), apkUrl!!, apkName, manual) }
+                try { showReleaseDialog(context, safeSource, tag, version, result.optString("body", "No changelog was provided."), result.optString("html_url"), apkUrl!!, apkName, manual) }
                 catch (_: Exception) { if (manual) Toast.makeText(context, "Update found, but the dialog could not open. Open the release page instead.", Toast.LENGTH_LONG).show() }
             }
         }.start()
+    }
+
+    private fun hasActiveDownload(context: Context, manager: DownloadManager): Boolean {
+        val id = context.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE).getLong(KEY_DOWNLOAD_ID, -1L)
+        if (id < 0L) return false
+        val cursor = manager.query(DownloadManager.Query().setFilterById(id)) ?: return false
+        cursor.use {
+            if (!it.moveToFirst()) return false
+            return when (it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))) {
+                DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> true
+                else -> false
+            }
+        }
     }
 
     private fun compareVersions(a: String, b: String): Int {
@@ -86,7 +115,7 @@ object UpdateManager {
         return 0
     }
 
-    private fun showReleaseDialog(a: Activity, source: View, version: String, notes: String, pageUrl: String?, apkUrl: String, apkName: String, manual: Boolean) {
+    private fun showReleaseDialog(a: Activity, source: View, tag: String, version: String, notes: String, pageUrl: String?, apkUrl: String, apkName: String, manual: Boolean) {
         showGlassPopup(a, source) { box, close ->
             box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
             box.addView(TextView(a).apply {
@@ -132,6 +161,12 @@ object UpdateManager {
                 pressFx()
                 setOnClickListener {
                     try {
+                        val manager = a.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                        if (hasActiveDownload(a, manager)) {
+                            Toast.makeText(a, "A Drishyam update download is already in progress.", Toast.LENGTH_LONG).show()
+                            close()
+                            return@setOnClickListener
+                        }
                         val request = DownloadManager.Request(Uri.parse(apkUrl))
                             .setTitle("Drishyam $version")
                             .setDescription("Downloading Drishyam update")
@@ -140,7 +175,8 @@ object UpdateManager {
                             .setAllowedOverMetered(true)
                             .setAllowedOverRoaming(false)
                             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, apkName)
-                        (a.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
+                        val downloadId = manager.enqueue(request)
+                        a.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE).edit().putLong(KEY_DOWNLOAD_ID, downloadId).apply()
                         Toast.makeText(a, "Download started. Open the completed download to install.", Toast.LENGTH_LONG).show()
                         close()
                     } catch (_: Exception) {
@@ -152,9 +188,11 @@ object UpdateManager {
             }
             box.addView(download, LinearLayout.LayoutParams(-1, 52.dp()).apply { topMargin = 18.dp() })
 
-            // Secondary highlighted option: let users browse the official v2.7.0 release and choose its APK asset.
+            // Fallback link follows the release currently returned by GitHub, never an outdated hardcoded tag.
+            val releasePage = pageUrl?.takeIf { it.startsWith("https://github.com/savanjee-dev/Drishyam/releases/") }
+                ?: "https://github.com/savanjee-dev/Drishyam/releases/latest"
             val githubRelease = TextView(a).apply {
-                text = "⌘  Download from GitHub Releases\\n       Open official v2.7.0 release page  ↗"
+                text = "⌘  Download from GitHub Releases\n       Open official $tag release page  ↗"
                 gravity = Gravity.CENTER_VERTICAL
                 textSize = 14f
                 setLineSpacing(3.dp().toFloat(), 1f)
@@ -165,12 +203,12 @@ object UpdateManager {
                 isClickable = true
                 isFocusable = true
                 pressFx()
-                contentDescription = "Download from GitHub Releases. Opens the official Drishyam v2.7.0 release page."
+                contentDescription = "Download from GitHub Releases. Opens the official Drishyam $tag release page."
                 setOnClickListener {
                     try {
                         a.startActivity(android.content.Intent(
                             android.content.Intent.ACTION_VIEW,
-                            Uri.parse("https://github.com/savanjee-dev/Drishyam/releases/tag/v2.7.0")
+                            Uri.parse(releasePage)
                         ))
                     } catch (_: Exception) {
                         Toast.makeText(a, "Couldn't open GitHub Releases. Please try again.", Toast.LENGTH_LONG).show()
@@ -179,13 +217,16 @@ object UpdateManager {
             }
             box.addView(githubRelease, LinearLayout.LayoutParams(-1, 68.dp()).apply { topMargin = 10.dp() })
             box.addView(TextView(a).apply {
-                text = "Not now"
+                text = "Later"
                 gravity = Gravity.CENTER
                 textSize = 14f
                 setTextColor(ContextCompat.getColor(a, R.color.mute))
                 isClickable = true
                 setPadding(0, 14.dp(), 0, 0)
-                setOnClickListener { close() }
+                setOnClickListener {
+                    synchronized(dismissedThisSession) { dismissedThisSession.add(version) }
+                    close()
+                }
             }, LinearLayout.LayoutParams(-1, 42.dp()))
         }
     }
