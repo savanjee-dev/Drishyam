@@ -1,0 +1,9 @@
+Drishyam 2.7.2
+
+Light Mode and editorial polish
+
+- Improved Light Mode contrast for back arrows on Appearance and About settings screens.
+- Updated the developer story page to use readable Moss & Olive text colours, clearer body copy, and stronger caption contrast while preserving all existing photos and content.
+- Adjusted photo viewer top and bottom controls for system-bar insets to reduce clipping around status and gesture navigation areas.
+- Kept the v2.7.1 feed loading-status and category-header fixes.
+- Preserved saved items, likes, bookmarks, and existing app data.
