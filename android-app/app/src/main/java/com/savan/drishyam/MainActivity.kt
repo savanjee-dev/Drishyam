@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity() {
             .translationY(if (visible) 0f else -glassTop.height.toFloat() - 16.dp())
             .alpha(if (visible) 1f else 0f)
             .setDuration(if (visible) 260L else 210L)
-            .setInterpolator(AccelerateDecelerateInterpolator())
+            .setInterpolator(if (visible) android.view.animation.OvershootInterpolator(0.65f) else AccelerateDecelerateInterpolator())
             .withEndAction { glassTop.visibility = if (visible) View.VISIBLE else View.INVISIBLE }
             .start()
     }
@@ -281,7 +281,7 @@ class MainActivity : AppCompatActivity() {
             .translationY(if (visible) 0f else glassNav.height.toFloat() + 28.dp())
             .alpha(if (visible) 1f else 0f)
             .setDuration(if (visible) 210L else 180L)
-            .setInterpolator(AccelerateDecelerateInterpolator())
+            .setInterpolator(if (visible) android.view.animation.OvershootInterpolator(0.65f) else AccelerateDecelerateInterpolator())
             .withEndAction {
                 glassNav.visibility = if (visible) View.VISIBLE else View.INVISIBLE
                 lastBottomPad = -1
@@ -338,9 +338,9 @@ class MainActivity : AppCompatActivity() {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             val colors = if (night) {
-                intArrayOf(0xFFD8C6A1.toInt(), 0xFF91A783.toInt(), 0xFFF3F0E6.toInt(), 0xFF91A783.toInt(), 0xFFD8C6A1.toInt())
+                intArrayOf(0xFFD0C79A.toInt(), 0xFF89945A.toInt(), 0xFFF3F1E7.toInt(), 0xFF89945A.toInt(), 0xFFD0C79A.toInt())
             } else {
-                intArrayOf(0xFF294638.toInt(), 0xFF657B58.toInt(), 0xFFD8C6A1.toInt(), 0xFF657B58.toInt(), 0xFF294638.toInt())
+                intArrayOf(0xFF414D2D.toInt(), 0xFF89945A.toInt(), 0xFFD0C79A.toInt(), 0xFF89945A.toInt(), 0xFF414D2D.toInt())
             }
             val sh = LinearGradient(0f, 0f, w, 0f, colors, null, Shader.TileMode.REPEAT)
             t.paint.shader = sh
