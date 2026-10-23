@@ -110,8 +110,16 @@ class ViewerActivity : AppCompatActivity() {
         bookmark = findViewById(R.id.bookmark)
         like.pressFx()
         bookmark.pressFx()
-        like.setOnClickListener { Store.toggle(this, p); refreshLike() }
-        bookmark.setOnClickListener { Store.toggleBookmark(this, p); refreshBookmark() }
+        like.setOnClickListener {
+            Store.toggle(this, p)
+            animateIcon(like)
+            refreshLike()
+        }
+        bookmark.setOnClickListener {
+            Store.toggleBookmark(this, p)
+            animateIcon(bookmark)
+            refreshBookmark()
+        }
 
         findViewById<View>(R.id.dl).apply { pressFx(); setOnClickListener { fetchBitmap { saveToGallery(it) } } }
         findViewById<View>(R.id.setwp).apply { pressFx(); setOnClickListener { chooseWallpaperTarget(viewerSource) } }
@@ -147,6 +155,18 @@ class ViewerActivity : AppCompatActivity() {
         val send = Intent(Intent.ACTION_SEND).setType("text/plain")
             .putExtra(Intent.EXTRA_TEXT, p.title + "\n" + (p.link.ifEmpty { p.full }) + "\n" + getString(R.string.share_via))
         startActivity(Intent.createChooser(send, getString(R.string.share_title)))
+    }
+
+    private fun animateIcon(view: View) {
+        if (android.provider.Settings.Global.getFloat(contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f) return
+        view.animate().cancel()
+        view.scaleX = 1f
+        view.scaleY = 1f
+        view.animate().scaleX(0.82f).scaleY(0.82f).setDuration(90)
+            .withEndAction {
+                view.animate().scaleX(1f).scaleY(1f).setDuration(220)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(2.2f)).start()
+            }.start()
     }
 
     private fun refreshLike() {
