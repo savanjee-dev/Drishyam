@@ -16,19 +16,19 @@ object ReleaseChangelog {
         val tag = release.optString("tag_name", "").removePrefix("v")
         if (tag != version) return null
 
-        val body = release.optString("body", "").trim()
-        if (body.isNotBlank() && !body.equals("null", true)) return body
-
-        val assets = release.optJSONArray("assets") ?: return null
+        val assets = release.optJSONArray("assets")
         val expected = "DRISHYAM-$version-CHANGELOG.txt"
-        for (i in 0 until assets.length()) {
+        if (assets != null) for (i in 0 until assets.length()) {
             val asset = assets.optJSONObject(i) ?: continue
             if (!asset.optString("name").equals(expected, true)) continue
             val url = asset.optString("browser_download_url", "")
             if (!url.startsWith("https://github.com/savanjee-dev/Drishyam/releases/download/v$version/")) return null
-            return requestText(url)?.trim()?.takeIf { it.isNotBlank() }
+            requestText(url)?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
         }
-        return null
+
+        // Only use the description belonging to this exact release as a fallback.
+        val body = release.optString("body", "").trim()
+        return body.takeIf { it.isNotBlank() && !it.equals("null", true) }
     }
 
     private fun requestJson(url: String): JSONObject? {
