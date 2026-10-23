@@ -193,10 +193,10 @@ class MainActivity : AppCompatActivity() {
 
         buildChips()
 
-        findViewById<View>(R.id.n0).apply { pressFx(); setOnClickListener { showTab(0) } }
-        findViewById<View>(R.id.n1).apply { pressFx(); setOnClickListener { showSearch() } }
-        findViewById<View>(R.id.n2).apply { pressFx(); setOnClickListener { showTab(1) } }
-        findViewById<View>(R.id.n3).apply {
+        findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { showTab(0) } }
+        findViewById<View>(R.id.navItem1).apply { pressFx(); setOnClickListener { showSearch() } }
+        findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
+        findViewById<View>(R.id.navItem3).apply {
             pressFx()
             setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
