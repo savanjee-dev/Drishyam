@@ -179,7 +179,7 @@ class MainActivity : AppCompatActivity() {
                 pokeGlass()
                 if (tab == 0 && dy > 3) {
                     setNavVisible(false)
-                    setTopVisible(false)
+                    setTopVisible(true)
                 } else if (dy < -1) {
                     setNavVisible(true)
                     setTopVisible(true)
@@ -232,7 +232,7 @@ class MainActivity : AppCompatActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         if (PopupStack.dismiss()) return
-        if (tab == 2) { showTab(0); return }
+        if (tab == 2) { finish(); return }
         super.onBackPressed()
     }
 
@@ -297,6 +297,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupAbout() {
         findViewById<TextView>(R.id.footer).text = getString(R.string.footer, BuildConfig.VERSION_NAME)
         findViewById<ImageView>(R.id.aboutPhoto).setImageResource(R.drawable.savan)
+        findViewById<ImageView>(R.id.aboutAkshatPhoto).setImageResource(R.drawable.akshat_photo_1)
         findViewById<ImageView>(R.id.aboutPhoto2).setImageResource(R.drawable.akshat_photo_1)
         findViewById<ImageView>(R.id.aboutPhoto3).setImageResource(R.drawable.akshat_photo_2)
         findViewById<ImageView>(R.id.aboutPhoto4).setImageResource(R.drawable.akshat_photo_3)
@@ -384,6 +385,9 @@ class MainActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
+        glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
+        if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
+        glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
         chipScroll.visibility = if (n == 0) View.VISIBLE else View.GONE
         sortBar.visibility = View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
@@ -541,7 +545,7 @@ class MainActivity : AppCompatActivity() {
             else -> ""
         }
         status.text = text
-        statusPill.visibility = if (text.isBlank()) View.GONE else View.VISIBLE
+        statusPill.visibility = if (text.isBlank() || (cur.err != null && statusPill.getTag(R.id.statusPill) == "dismissed")) View.GONE else View.VISIBLE
     }
 
     private fun refreshCurrent() {
@@ -588,6 +592,8 @@ class MainActivity : AppCompatActivity() {
                 swipe.isRefreshing = false
                 if (error != null) {
                     s.err = error
+                    statusPill.setTag(R.id.statusPill, null)
+                    statusPill.postDelayed({ if (s === cur && s.err != null) { statusPill.setTag(R.id.statusPill, "dismissed"); statusPill.visibility = View.GONE } }, 3500L)
                 } else {
                     s.after = nextAfter
                     s.page = page + 1
