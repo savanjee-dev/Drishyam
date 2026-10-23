@@ -86,14 +86,14 @@ class UpdatesActivity : AppCompatActivity() {
             setPadding(8.dp(), 0, 0, 0)
         }
         heading.addView(TextView(this).apply {
-            text = "Software update"
+            text = "Drishyam updates"
             textSize = 25f
             maxLines = 1
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
             setTextColor(onSurface)
         })
         heading.addView(TextView(this).apply {
-            text = "Keep your app up to date"
+            text = "A clearer, calmer way to stay current"
             textSize = 14f
             setTextColor(onSurfaceVariant)
         })
@@ -105,25 +105,25 @@ class UpdatesActivity : AppCompatActivity() {
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = themeColor(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
-            setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainerLow, R.color.surface))
+            setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorPrimaryContainer, R.color.surface))
             useCompatPadding = false
-            setContentPadding(20.dp(), 20.dp(), 20.dp(), 20.dp())
+            setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
         }
         val cardContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
         cardContent.addView(TextView(this).apply {
-            text = "INSTALLED VERSION"
+            text = "YOUR CURRENT INSTALLATION"
             textSize = 11f
-            letterSpacing = 0.08f
-            setTextColor(onSurfaceVariant)
+            letterSpacing = 0.12f
+            setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
         })
         cardContent.addView(TextView(this).apply {
             text = "Drishyam v${BuildConfig.VERSION_NAME}"
-            textSize = 23f
+            textSize = 26f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
-            setTextColor(onSurface)
-            setPadding(0, 4.dp(), 0, 16.dp())
+            setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
+            setPadding(0, 6.dp(), 0, 18.dp())
         })
         versionText = TextView(this).apply {
             text = "Latest version: Not checked yet"
@@ -146,8 +146,8 @@ class UpdatesActivity : AppCompatActivity() {
         })
 
         root.addView(TextView(this).apply {
-            text = "What's new"
-            textSize = 20f
+            text = "Release notes"
+            textSize = 22f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
             setTextColor(onSurface)
             setPadding(2.dp(), 22.dp(), 0, 10.dp())
@@ -161,10 +161,13 @@ class UpdatesActivity : AppCompatActivity() {
             setContentPadding(18.dp(), 18.dp(), 18.dp(), 18.dp())
         }
         notes = TextView(this).apply {
-            text = "Release notes will appear here after you check for updates."
+            text = "Check for updates to load the changelog for the latest published version."
             textSize = 14f
-            setLineSpacing(5.dp().toFloat(), 1f)
+            setLineSpacing(6.dp().toFloat(), 1f)
             setTextColor(onSurface)
+            maxHeight = 340.dp()
+            isVerticalScrollBarEnabled = true
+            movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
         }
         notesCard.addView(notes)
         root.addView(notesCard)
@@ -280,15 +283,23 @@ class UpdatesActivity : AppCompatActivity() {
                 val comparison = compareVersions(version, BuildConfig.VERSION_NAME)
                 status.text = when {
                     comparison > 0 -> "A newer version is available."
-                    comparison == 0 -> "You're using the latest Drishyam version."
+                    comparison == 0 -> "✓ You're up to date. You're using the latest Drishyam version."
                     else -> "The latest published release is older than this installation. No update is available."
                 }
 
                 val rawNotes = result.opt("body")
                 val releaseNotes = (rawNotes as? String)?.trim().orEmpty()
-                notes.text = releaseNotes.takeUnless {
-                    it.isBlank() || it.equals("null", ignoreCase = true)
-                } ?: "No release notes were provided for this version."
+                notes.text = "Loading notes for v$version…"
+                Thread {
+                    val exactNotes = ReleaseChangelog.fetch(version)
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed) return@runOnUiThread
+                        if (latestVersion != version) return@runOnUiThread
+                        notes.text = exactNotes
+                            ?: releaseNotes.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+                            ?: "The changelog for v$version is unavailable. Open the official release to review its details."
+                    }
+                }.start()
 
                 val assets = result.optJSONArray("assets")
                 if (assets != null) {

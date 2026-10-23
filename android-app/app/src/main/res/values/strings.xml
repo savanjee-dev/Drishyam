@@ -52,7 +52,7 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="whats_new_title">What’s new in %1$s</string>
-    <string name="whats_new_body">• Cinematic Photography Journal redesign for the Developers page, with a premium hero and restrained photo reveals\n• Added a monochrome Instagram mark to the Follow button\n• Corrected Light Mode status and navigation bar icon contrast in the photo viewer\n• Audited viewer control safe areas while preserving the immersive photo experience\n• Kept previous feed fixes, developer photos, saved items, likes and bookmarks</string>
+    <string name="whats_new_body">Release notes are loaded from the changelog for the installed version.</string>
     <string name="credits_title">Credits and licences</string>
     <string name="credits_body">FONT CREDITS\n• Erica One — SIL Open Font License\n• Nothing You Could Do — SIL Open Font License\n• Montserrat — SIL Open Font License\n• Poppins — SIL Open Font License\n• Pacifico — SIL Open Font License\n\nFull licence texts are included in the LICENSES folder.\n\nPhotos are sourced from Unsplash. Please respect photographer attribution and Unsplash terms.</string>
     <string name="clear_confirm">Clear temporary image thumbnails? Your saved favourites and bookmarks will not be deleted.</string>

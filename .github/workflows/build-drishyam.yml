@@ -47,11 +47,11 @@ jobs:
           echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           CHANGELOG="$PROJECT_DIR/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
-          if [[ -f "$CHANGELOG" ]]; then
-            cp "$CHANGELOG" "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
-          else
-            printf 'Drishyam %s\n\nRelease notes: proxy-backed photo loading, attribution improvements, and stability refinements.\n' "$VERSION_NAME" > "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
+          if [[ ! -f "$CHANGELOG" ]]; then
+            echo "::error::Missing version-matched changelog: $CHANGELOG. Add the changelog before building or publishing this version."
+            exit 1
           fi
+          cp "$CHANGELOG" "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
           echo "Detected Drishyam $VERSION_NAME (versionCode $VERSION_CODE)."
 
       - name: Configure Android signing key

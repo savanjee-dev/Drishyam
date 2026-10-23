@@ -1,0 +1,9 @@
+Drishyam 2.7.10
+
+- Rebuilt the Software Update page with a stronger version hero, clearer status hierarchy, improved spacing, and responsive, theme-aware cards.
+- Show an explicit “You're up to date” success state after a successful check when the installed version matches the latest release.
+- Fetch the changelog asset matching the exact release version before using that release's description as a fallback.
+- Update About → What's new to load the changelog for the installed version instead of showing hardcoded older release notes.
+- Keep changelog text scrollable and show a clear version-specific message if the correct notes cannot be loaded.
+- Keep update checks user-initiated; opening the updater does not trigger a network request.
+- Preserve existing photos, content, saved items, likes, bookmarks, Dark Mode, preferences, and previous fixes.
