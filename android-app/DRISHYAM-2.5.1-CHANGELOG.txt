@@ -1,0 +1,10 @@
+Drishyam 2.5.1 — Editorial polish
+
+- Improved light and dark theme contrast for the header icons, animated wordmark and navigation selection.
+- Reduced live glass blur so content behind translucent surfaces is less smeared and easier to read.
+- Refined immersive photo card corners and added a subtle bottom scrim for photographer-credit legibility.
+- Unified search and settings button surfaces with the app's shared glass style.
+- Preserved the existing package ID, local saved data, likes, bookmarks, search, attribution, wallpaper actions and photo-loading implementation.
+- Image-fetching/API changes remain on hold.
+
+Install over Drishyam 2.5; do not uninstall or clear app data.
