@@ -57,7 +57,9 @@ fun ImageView.setHeart(liked: Boolean) {
 /** Pill segment: gradient when selected, frosted glass when not. */
 fun TextView.styleSeg(on: Boolean) {
     background = ContextCompat.getDrawable(context, if (on) R.drawable.accent_pill else R.drawable.glass_pill)
-    setTextColor(if (on) ContextCompat.getColor(context, android.R.color.white)
+    val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    val selectedColor = if (night) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
+    setTextColor(if (on) selectedColor
         else com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, ContextCompat.getColor(context, R.color.fg)))
 }
 
