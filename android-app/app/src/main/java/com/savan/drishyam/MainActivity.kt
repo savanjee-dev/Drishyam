@@ -251,7 +251,7 @@ class MainActivity : AppCompatActivity() {
         lastTopPad = top
         lastBottomPad = bottom
         rv.setPadding(14.dp(), top, 14.dp(), bottom)
-        aboutScroll.setPadding(0, top, 0, bottom)
+        aboutScroll.setPadding(0, top, 0, 12.dp())
         swipe.setProgressViewOffset(false, top, top + 60.dp())
     }
 
