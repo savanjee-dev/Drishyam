@@ -24,7 +24,6 @@ class ViewerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_viewer)
         animatePageEntrance(findViewById(android.R.id.content))
