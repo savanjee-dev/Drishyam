@@ -13,7 +13,7 @@
     <color name="glassClear">#00000000</color>
     <color name="glassStroke">#708C9A7A</color>
     <color name="glassDialog">#FFFCF4</color>
-    <color name="glassTint">#CFFFCF4</color>
+    <color name="glassTint">#CCFFFCF4</color>
     <color name="glassRimStart">#FFFFFFFF</color>
     <color name="glassRimEnd">#66869A7A</color>
 </resources>
