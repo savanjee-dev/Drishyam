@@ -8,12 +8,12 @@
     <color name="mute">#657166</color>
     <color name="accent">#294638</color>
     <color name="accent2">#91A783</color>
-    <color name="glassFill">#F0F0E6</color>
+    <color name="glassFill">#F7F5EC</color>
     <color name="glassHighlight">#CCFFFFFF</color>
     <color name="glassClear">#00000000</color>
-    <color name="glassStroke">#66869A7A</color>
+    <color name="glassStroke">#708C9A7A</color>
     <color name="glassDialog">#FFFCF4</color>
-    <color name="glassTint">#24C6B58D</color>
+    <color name="glassTint">#CFFFCF4</color>
     <color name="glassRimStart">#FFFFFFFF</color>
     <color name="glassRimEnd">#66869A7A</color>
 </resources>
