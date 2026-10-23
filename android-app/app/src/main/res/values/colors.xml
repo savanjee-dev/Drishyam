@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="transparent">#00000000</color>
-    <!-- Forest Editorial: warm paper, deep evergreen, restrained sage -->
-    <color name="bg">#F1EFE6</color>
+    <!-- Drishyam 2.6: Moss & Olive — warm editorial light mode -->
+    <color name="bg">#F3F1E7</color>
     <color name="surface">#FFFCF4</color>
-    <color name="fg">#202A23</color>
-    <color name="mute">#657166</color>
-    <color name="accent">#294638</color>
-    <color name="accent2">#91A783</color>
+    <color name="fg">#1B2117</color>
+    <color name="mute">#5F6753</color>
+    <color name="accent">#414D2D</color>
+    <color name="accent2">#89945A</color>
     <color name="glassFill">#F7F5EC</color>
     <color name="glassHighlight">#CCFFFFFF</color>
     <color name="glassClear">#00000000</color>
-    <color name="glassStroke">#708C9A7A</color>
+    <color name="glassStroke">#7089945A</color>
     <color name="glassDialog">#FFFCF4</color>
-    <color name="glassTint">#CCFFFCF4</color>
+    <color name="glassTint">#CCF3F1E7</color>
     <color name="glassRimStart">#FFFFFFFF</color>
-    <color name="glassRimEnd">#66869A7A</color>
+    <color name="glassRimEnd">#6689945A</color>
 </resources>

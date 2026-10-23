@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
 import org.json.JSONObject
 
@@ -24,7 +25,6 @@ class ViewerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_viewer)
         animatePageEntrance(findViewById(android.R.id.content))
@@ -127,7 +127,7 @@ class ViewerActivity : AppCompatActivity() {
 
     private fun refreshBookmark() {
         val saved = Store.isBookmarked(this, p.id)
-        bookmark.imageTintList = ColorStateList.valueOf(if (saved) 0xFF9D7BFF.toInt() else 0xFFFFFFFF.toInt())
+        bookmark.imageTintList = ColorStateList.valueOf(if (saved) ContextCompat.getColor(this, R.color.accent2) else 0xFFFFFFFF.toInt())
         bookmark.contentDescription = getString(if (saved) R.string.unbookmark_desc else R.string.bookmark_desc)
     }
 
