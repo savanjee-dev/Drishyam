@@ -1,0 +1,5 @@
+Drishyam 2.4.11
+
+- Fix the About page footer so it displays the installed app version dynamically from BuildConfig.VERSION_NAME.
+- Preserve the existing UI, photo-loading fixes, and saved app data.
+- Keep application ID com.savan.drishyam and increment version code to 22.

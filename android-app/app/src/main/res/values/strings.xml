@@ -40,7 +40,7 @@
     <string name="gallery_heading">A little corner for the photographs I choose to share.</string>
     <string name="gallery_body">Planned as a public collection: everyone can browse and download, and only the developer account can upload or remove images. The secure cloud connection is not active yet.</string>
     <string name="gallery_badge">IN DEVELOPMENT</string>
-    <string name="footer">DRISHYAM · VERSION 2.4.7\nBuilt with friendship · Made for curious eyes</string>
+    <string name="footer">DRISHYAM · VERSION %1$s\nBuilt with friendship · Made for curious eyes</string>
     <string name="settings_title">Drishyam Settings</string>
     <string name="settings_version">Drishyam 2.4.7 · Designed and built by Savan</string>
     <string name="theme_title">Theme</string>

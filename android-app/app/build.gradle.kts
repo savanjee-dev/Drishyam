@@ -10,8 +10,8 @@ android {
         applicationId = "com.savan.drishyam"
         minSdk = 29
         targetSdk = 34
-        versionCode = 21
-        versionName = "2.4.10"
+        versionCode = 22
+        versionName = "2.4.11"
     }
     buildFeatures { buildConfig = true }
     signingConfigs {
