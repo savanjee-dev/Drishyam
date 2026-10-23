@@ -9,11 +9,15 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import com.bumptech.glide.Glide
 import org.json.JSONObject
 
@@ -27,6 +31,21 @@ class ViewerActivity : AppCompatActivity() {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_viewer)
+        // Keep the floating photo controls clear of gesture/navigation and status bars.
+        val viewerOverlay = findViewById<View>(R.id.viewerOverlay)
+        val viewerTopBar = findViewById<View>(R.id.viewerTopBar)
+        val detailSheet = findViewById<View>(R.id.sheet)
+        ViewCompat.setOnApplyWindowInsetsListener(viewerOverlay) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            viewerTopBar.updateLayoutParams<FrameLayout.LayoutParams> {
+                topMargin = bars.top + 8.dp()
+            }
+            detailSheet.updateLayoutParams<FrameLayout.LayoutParams> {
+                bottomMargin = bars.bottom + 12.dp()
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(viewerOverlay)
         animatePageEntrance(findViewById(android.R.id.content))
 
         val payload = intent.getStringExtra("p")
