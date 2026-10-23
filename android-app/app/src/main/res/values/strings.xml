@@ -52,7 +52,7 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="whats_new_title">What’s new in %1$s</string>
-    <string name="whats_new_body">• Complete Moss &amp; Olive visual identity with coordinated light and dark themes\n• Redesigned Home, Search, Favourites and Settings navigation\n• Reimagined Settings hub and About experience with editorial typography and rounded surfaces\n• Refined photo cards, floating controls and immersive photo viewing\n• Existing photo loading, saved items, likes and bookmarks are preserved</string>
+    <string name="whats_new_body">• Editorial Moss &amp; Olive styling with improved Light Mode readability across the developer story and captions\n• Fixed low-contrast back arrows on Appearance and About settings pages in Light Mode\n• Photo viewer controls now account for system status and navigation bars to reduce bottom-control clipping\n• Kept the v2.7.1 feed loading-status and category-header fixes\n• Existing photos, saved items, likes and bookmarks remain preserved</string>
     <string name="credits_title">Credits and licences</string>
     <string name="credits_body">FONT CREDITS\n• Erica One — SIL Open Font License\n• Nothing You Could Do — SIL Open Font License\n• Montserrat — SIL Open Font License\n• Poppins — SIL Open Font License\n• Pacifico — SIL Open Font License\n\nFull licence texts are included in the LICENSES folder.\n\nPhotos are sourced from Unsplash. Please respect photographer attribution and Unsplash terms.</string>
     <string name="clear_confirm">Clear temporary image thumbnails? Your saved favourites and bookmarks will not be deleted.</string>
