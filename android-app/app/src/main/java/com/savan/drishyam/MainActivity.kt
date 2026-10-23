@@ -297,7 +297,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupAbout() {
         findViewById<TextView>(R.id.footer).text = getString(R.string.footer, BuildConfig.VERSION_NAME)
         findViewById<ImageView>(R.id.aboutPhoto).setImageResource(R.drawable.savan)
-        findViewById<ImageView>(R.id.aboutAkshatPhoto).setImageResource(R.drawable.akshat_photo_1)
+        findViewById<ImageView>(R.id.aboutAkshatPhoto).setImageResource(R.drawable.akshat_portrait)
         findViewById<ImageView>(R.id.aboutPhoto2).setImageResource(R.drawable.akshat_photo_1)
         findViewById<ImageView>(R.id.aboutPhoto3).setImageResource(R.drawable.akshat_photo_2)
         findViewById<ImageView>(R.id.aboutPhoto4).setImageResource(R.drawable.akshat_photo_3)
