@@ -205,8 +205,15 @@ class MainActivity : AppCompatActivity() {
         shownSort = currentSort()
         styleSort()
         showTab(0)
+        if (intent.getBooleanExtra("open_about", false)) showTab(2)
         glassSource.postDelayed({ UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) showTab(2)
     }
 
     override fun onResume() {
