@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
         overlay.addOnLayoutChangeListener(relayout)
         aboutScroll.setOnScrollChangeListener { _, _, _, _, _ -> pokeGlass() }
 
-        swipe.setColorSchemeColors(0xFF9D7BFF.toInt(), 0xFFFF7AB6.toInt())
+        swipe.setColorSchemeColors(ContextCompat.getColor(this, R.color.accent), ContextCompat.getColor(this, R.color.accent2))
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
         swipe.setOnRefreshListener { refreshCurrent() }
 
@@ -152,8 +152,15 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
-        findViewById<View>(R.id.searchButton).apply { pressFx(); setOnClickListener { showSearch() } }
-        findViewById<View>(R.id.settingsButton).apply {
+        findViewById<ImageView>(R.id.searchButton).apply {
+            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
+            pressFx()
+            setOnClickListener { showSearch() }
+        }
+        findViewById<ImageView>(R.id.settingsButton).apply {
+            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
             pressFx()
             setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
@@ -295,7 +302,12 @@ class MainActivity : AppCompatActivity() {
         val t = findViewById<TextView>(R.id.title)
         t.post {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
-            val colors = intArrayOf(0xFFD8C6A1.toInt(), 0xFF91A783.toInt(), 0xFFF3F0E6.toInt(), 0xFF91A783.toInt(), 0xFFD8C6A1.toInt())
+            val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val colors = if (night) {
+                intArrayOf(0xFFD8C6A1.toInt(), 0xFF91A783.toInt(), 0xFFF3F0E6.toInt(), 0xFF91A783.toInt(), 0xFFD8C6A1.toInt())
+            } else {
+                intArrayOf(0xFF294638.toInt(), 0xFF657B58.toInt(), 0xFFD8C6A1.toInt(), 0xFF657B58.toInt(), 0xFF294638.toInt())
+            }
             val sh = LinearGradient(0f, 0f, w, 0f, colors, null, Shader.TileMode.REPEAT)
             t.paint.shader = sh
             val m = Matrix()
@@ -322,7 +334,14 @@ class MainActivity : AppCompatActivity() {
             val v = findViewById<ImageView>(id)
             val on = i == n
             v.background = if (on) ContextCompat.getDrawable(this, R.drawable.accent_pill) else null
-            v.setColorFilter(ContextCompat.getColor(this, if (on) android.R.color.white else R.color.mute))
+            val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val iconColor = when {
+                on && night -> 0xFF294638.toInt()
+                on -> android.graphics.Color.WHITE
+                night -> 0xFF294638.toInt()
+                else -> 0xFFE9E7D9.toInt()
+            }
+            v.setColorFilter(iconColor)
         }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
