@@ -1,0 +1,10 @@
+Drishyam 2.5.0 — Forest Editorial
+
+Major visual refresh:
+- Refined the Forest Editorial palette for a more cohesive premium look in light and dark themes.
+- Replaced the text-heavy bottom dock with a compact icon-only navigation dock with accessible labels.
+- Softened background glow motion and aligned the wordmark animation with forest, sage and warm parchment colours.
+- Refined photo card borders and surface treatment.
+- Kept existing font families: Erica One, Poppins, Montserrat, Pacifico and Nothing You Could Do.
+- Preserved the app ID, local saved data, likes, bookmarks, search, attribution, wallpaper actions, and existing photo-loading implementation.
+- Image-fetching/API changes remain on hold.

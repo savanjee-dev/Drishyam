@@ -295,12 +295,12 @@ class MainActivity : AppCompatActivity() {
         val t = findViewById<TextView>(R.id.title)
         t.post {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
-            val colors = intArrayOf(0xFFFF9966.toInt(), 0xFFFF5E62.toInt(), 0xFFC04BFF.toInt(), 0xFF5B8CFF.toInt(), 0xFFFF9966.toInt())
+            val colors = intArrayOf(0xFFD8C6A1.toInt(), 0xFF91A783.toInt(), 0xFFF3F0E6.toInt(), 0xFF91A783.toInt(), 0xFFD8C6A1.toInt())
             val sh = LinearGradient(0f, 0f, w, 0f, colors, null, Shader.TileMode.REPEAT)
             t.paint.shader = sh
             val m = Matrix()
             ValueAnimator.ofFloat(0f, w).apply {
-                duration = 5000
+                duration = 9000
                 repeatCount = ValueAnimator.INFINITE
                 interpolator = LinearInterpolator()
                 addUpdateListener { m.setTranslate(it.animatedValue as Float, 0f); sh.setLocalMatrix(m); t.invalidate() }
@@ -319,10 +319,10 @@ class MainActivity : AppCompatActivity() {
         glassNav.translationY = 0f
         glassNav.alpha = 1f
         listOf(R.id.n0, R.id.n1, R.id.n2).forEachIndexed { i, id ->
-            val v = findViewById<TextView>(id)
+            val v = findViewById<ImageView>(id)
             val on = i == n
             v.background = if (on) ContextCompat.getDrawable(this, R.drawable.accent_pill) else null
-            v.setTextColor(ContextCompat.getColor(this, if (on) android.R.color.white else R.color.mute))
+            v.setColorFilter(ContextCompat.getColor(this, if (on) android.R.color.white else R.color.mute))
         }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE

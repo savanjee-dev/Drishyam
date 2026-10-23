@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="transparent">#00000000</color>
-
-    <!-- Forest Editorial light palette -->
-    <color name="bg">#F2EEE4</color>
-    <color name="surface">#FFFCF5</color>
-    <color name="fg">#252B27</color>
-    <color name="mute">#626D63</color>
-    <color name="accent">#263C32</color>
-    <color name="accent2">#819581</color>
-
-    <!-- Glass surfaces adapted to the editorial palette -->
-    <color name="glassFill">#E8E8DC</color>
+    <!-- Forest Editorial: warm paper, deep evergreen, restrained sage -->
+    <color name="bg">#F1EFE6</color>
+    <color name="surface">#FFFCF4</color>
+    <color name="fg">#202A23</color>
+    <color name="mute">#657166</color>
+    <color name="accent">#294638</color>
+    <color name="accent2">#91A783</color>
+    <color name="glassFill">#F0F0E6</color>
     <color name="glassHighlight">#CCFFFFFF</color>
     <color name="glassClear">#00000000</color>
-    <color name="glassStroke">#99819581</color>
-    <color name="glassDialog">#FFFCF5</color>
-    <color name="glassTint">#26D8C6A1</color>
+    <color name="glassStroke">#66869A7A</color>
+    <color name="glassDialog">#FFFCF4</color>
+    <color name="glassTint">#24C6B58D</color>
     <color name="glassRimStart">#FFFFFFFF</color>
-    <color name="glassRimEnd">#66819581</color>
+    <color name="glassRimEnd">#66869A7A</color>
 </resources>
