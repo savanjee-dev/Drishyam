@@ -3,14 +3,14 @@
     <color name="transparent">#00000000</color>
 
     <!-- Forest Editorial light palette -->
-    <color name="bg">#F2EEE4</color>
+    <color name="bg">#F5F2E9</color>
     <color name="surface">#FFFCF5</color>
     <color name="fg">#252B27</color>
     <color name="mute">#626D63</color>
     <color name="accent">#263C32</color>
     <color name="accent2">#819581</color>
 
-    <!-- Glass surfaces adapted to the editorial palette -->
+    <!-- Glass is a supporting material, not the dominant visual language -->
     <color name="glassFill">#E8E8DC</color>
     <color name="glassHighlight">#CCFFFFFF</color>
     <color name="glassClear">#00000000</color>

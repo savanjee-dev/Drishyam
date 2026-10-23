@@ -12,17 +12,18 @@ import android.view.animation.LinearInterpolator
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Three soft colour orbs that drift slowly behind the content. Static in low-effects mode. */
+/** Three restrained forest-and-sand colour orbs drift behind content. Static in low-effects mode. */
 class GlowBackground @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs) {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val colors = intArrayOf(0x809D7BFF.toInt(), 0x80FF7AB6.toInt(), 0x66FF9966.toInt())
+    // Match Forest Editorial in both themes; avoid the old purple/pink/orange colour clash.
+    private val colors = intArrayOf(0x6690A88F, 0x66C6B58B, 0x66516B5A)
     private var phase = 0f
 
     private val anim = ValueAnimator.ofFloat(0f, (2 * Math.PI).toFloat()).apply {
-        duration = 16000
+        duration = 22000
         repeatCount = ValueAnimator.INFINITE
         interpolator = LinearInterpolator()
         addUpdateListener {
