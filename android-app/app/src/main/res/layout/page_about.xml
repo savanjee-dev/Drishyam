@@ -7,27 +7,27 @@
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp"
         android:orientation="vertical" android:background="@drawable/glass_card" android:padding="12dp">
 
-        <FrameLayout android:layout_width="match_parent" android:layout_height="460dp"
+        <FrameLayout android:layout_width="match_parent" android:layout_height="520dp"
             android:background="@drawable/glass_card" android:clipToOutline="true">
             <ImageView android:id="@+id/aboutBlur" android:layout_width="match_parent" android:layout_height="match_parent"
                 android:scaleType="centerCrop" android:alpha="0.34" android:contentDescription="@null" />
             <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/scrim" />
             <View android:layout_width="match_parent" android:layout_height="190dp"
                 android:layout_gravity="bottom" android:background="@drawable/developer_card_bottom_scrim" />
-            <ImageView android:id="@+id/aboutPhoto" android:layout_width="250dp" android:layout_height="292dp"
-                android:layout_gravity="center_horizontal|top" android:layout_marginTop="58dp"
+            <ImageView android:id="@+id/aboutPhoto" android:layout_width="match_parent" android:layout_height="300dp"
+                android:layout_gravity="center_horizontal|top" android:layout_marginStart="22dp" android:layout_marginEnd="22dp" android:layout_marginTop="78dp"
                 android:background="@drawable/glass_card" android:clipToOutline="true"
                 android:scaleType="centerCrop" android:contentDescription="@string/about_name" />
             <LinearLayout android:id="@+id/ig" android:layout_width="wrap_content" android:layout_height="42dp"
-                android:layout_gravity="top|end" android:layout_marginTop="12dp" android:layout_marginEnd="12dp"
-                android:background="@drawable/accent_pill" android:gravity="center"
+                android:layout_gravity="top|end" android:layout_marginTop="8dp" android:layout_marginEnd="14dp"
+                android:background="@drawable/developer_follow_live" android:gravity="center"
                 android:orientation="horizontal" android:paddingStart="14dp" android:paddingEnd="14dp"
-                android:clickable="true" android:focusable="true" android:contentDescription="@string/follow">
+                android:clickable="true" android:focusable="true" android:contentDescription="Instagram @savanjee">
                 <ImageView android:layout_width="18dp" android:layout_height="18dp"
                     android:src="@drawable/ic_instagram_mono" android:tint="?attr/colorOnSurface" android:contentDescription="@null" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp" android:text="@string/follow"
-                    android:textColor="@color/fg" android:textSize="13sp"
+                    android:layout_marginStart="8dp" android:text="@savanjee"
+                    android:textColor="#FF171B13" android:textSize="13sp"
                     android:fontFamily="@font/poppins_medium" />
             </LinearLayout>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -48,7 +48,7 @@
         </FrameLayout>
 
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="14dp" android:text="TWO FRIENDS. ONE VISION."
+            android:layout_marginTop="30dp" android:text="TWO FRIENDS. ONE VISION."
             android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.14"
             android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
