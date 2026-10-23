@@ -314,21 +314,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun animateAbout() {
-        if (lowFx(this)) return
-        val halo = findViewById<View>(R.id.aboutHalo)
-        ValueAnimator.ofFloat(0.88f, 1.12f).apply {
-            duration = 3200
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { a ->
-                val s = a.animatedValue as Float
-                halo.scaleX = s
-                halo.scaleY = s
-                halo.alpha = 0.5f + (s - 0.88f) * 1.2f
-            }
-            start()
-        }
+        // The editorial layout has no separate halo view; keep the story animation optional.
     }
 
     private fun animateTitle() {
