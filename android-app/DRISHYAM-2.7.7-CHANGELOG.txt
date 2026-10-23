@@ -1,0 +1,7 @@
+Drishyam 2.7.7
+
+- Fixed Settings > Check for updates opening no visible update-information page.
+- Added a dedicated Updates screen showing installed and latest versions.
+- Displays GitHub release notes, clear loading and error states, and a working Check again action.
+- Shows the APK download action when a newer release is available.
+- Preserves the existing update installation flow and app data.
