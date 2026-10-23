@@ -165,11 +165,13 @@ app:glassSolid="true">
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal">
                     <ImageView android:id="@+id/n0" style="@style/NavIconTab"
-                        android:src="@drawable/ic_nav_explore" android:contentDescription="@string/nav_explore" />
+                        android:src="@drawable/ic_nav_explore" android:contentDescription="@string/nav_home" />
                     <ImageView android:id="@+id/n1" style="@style/NavIconTab"
-                        android:src="@drawable/ic_nav_saved" android:contentDescription="@string/nav_saved" />
+                        android:src="@drawable/ic_search" android:contentDescription="@string/nav_search" />
                     <ImageView android:id="@+id/n2" style="@style/NavIconTab"
-                        android:src="@drawable/ic_nav_about" android:contentDescription="@string/nav_about" />
+                        android:src="@drawable/ic_heart_fill" android:contentDescription="@string/nav_favourites" />
+                    <ImageView android:id="@+id/n3" style="@style/NavIconTab"
+                        android:src="@drawable/ic_settings" android:contentDescription="@string/nav_settings" />
                 </LinearLayout>
             </com.savan.drishyam.GlassLayout>
         </LinearLayout>
