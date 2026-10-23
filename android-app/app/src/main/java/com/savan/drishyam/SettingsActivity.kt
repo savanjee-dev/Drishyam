@@ -150,7 +150,7 @@ class SettingsActivity : AppCompatActivity() {
             pressFx()
             setOnClickListener {
                 MaterialAlertDialogBuilder(this@SettingsActivity)
-                    .setTitle(R.string.whats_new_title)
+                    .setTitle(getString(R.string.whats_new_title, BuildConfig.VERSION_NAME))
                     .setMessage(R.string.whats_new_body)
                     .setPositiveButton(R.string.ok, null)
                     .show()
@@ -167,7 +167,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<TextView>(R.id.settingsVersion).text = getString(R.string.settings_version)
+        findViewById<TextView>(R.id.settingsVersion).text = getString(R.string.settings_version, BuildConfig.VERSION_NAME)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")
