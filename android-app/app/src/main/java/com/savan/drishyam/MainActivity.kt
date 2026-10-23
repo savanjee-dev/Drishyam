@@ -108,6 +108,8 @@ class MainActivity : AppCompatActivity() {
     private var lowFxAtCreate = false
     private var lastTopPad = -1
     private var lastBottomPad = -1
+    private var transientStatus: String? = null
+    private var statusGeneration = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
@@ -526,6 +528,7 @@ class MainActivity : AppCompatActivity() {
             }
             tab == 2 -> ""
             cur.loading -> getString(R.string.loading_more)
+            transientStatus != null -> transientStatus!!
             cur.err != null -> cur.err + " " + getString(R.string.retry_suffix)
             cur.done -> getString(R.string.end_of_feed)
             else -> ""
@@ -534,8 +537,24 @@ class MainActivity : AppCompatActivity() {
         statusPill.visibility = if (text.isBlank() || (cur.err != null && statusPill.getTag(R.id.statusPill) == "dismissed")) View.GONE else View.VISIBLE
     }
 
+    private fun showTransientStatus(message: String) {
+        transientStatus = message
+        val generation = ++statusGeneration
+        updateStatus()
+        statusPill.animate().cancel()
+        statusPill.alpha = 1f
+        statusPill.postDelayed({
+            if (generation == statusGeneration) {
+                transientStatus = null
+                updateStatus()
+            }
+        }, 3500L)
+    }
+
     private fun refreshCurrent() {
         if (tab != 0 || cur.loading) { swipe.isRefreshing = false; return }
+        transientStatus = null
+        statusGeneration++
         cur.reset()
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
@@ -579,7 +598,6 @@ class MainActivity : AppCompatActivity() {
                 if (error != null) {
                     s.err = error
                     statusPill.setTag(R.id.statusPill, null)
-                    statusPill.postDelayed({ if (s === cur && s.err != null) { statusPill.setTag(R.id.statusPill, "dismissed"); statusPill.visibility = View.GONE } }, 3500L)
                 } else {
                     s.after = nextAfter
                     s.page = page + 1
@@ -590,8 +608,19 @@ class MainActivity : AppCompatActivity() {
                 s.items.addAll(fresh)
                 if (s === cur && tab == 0) {
                     adapter.notifyItemRangeInserted(start, fresh.size)
-                    updateStatus()
-                    rv.post { if (!rv.canScrollVertically(1)) loadMore() }
+                    if (error != null) {
+                        showTransientStatus(error + " " + getString(R.string.retry_suffix))
+                        statusPill.postDelayed({ if (s === cur && s.err != null) { statusPill.setTag(R.id.statusPill, "dismissed"); statusPill.visibility = View.GONE } }, 3500L)
+                    } else {
+                        val message = when {
+                            fresh.isNotEmpty() -> "Loaded ${fresh.size} photos"
+                            s.done -> getString(R.string.end_of_feed)
+                            else -> "No new photos returned"
+                        }
+                        showTransientStatus(message)
+                    }
+                    // Avoid immediately chaining requests when the first page is shorter than the viewport.
+                    // Recursive loads made the status pill flash repeatedly.
                 }
             }
         }.start()
