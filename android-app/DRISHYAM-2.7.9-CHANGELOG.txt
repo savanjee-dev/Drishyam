@@ -1,0 +1,8 @@
+Drishyam 2.7.9
+
+- Redesigned the Software Update page with Material You Expressive surfaces, typography, spacing, and theme-aware colors.
+- Kept update checks manual; opening the page does not start a network request and no periodic background checks are scheduled.
+- Improved latest published stable release detection, version comparison, and GitHub API error messages.
+- Display release notes from the detected release, with a clear fallback when notes are missing.
+- Only offer the APK asset matching the detected release version.
+- Preserve existing photos, content, saved items, likes, bookmarks, theme settings, and app preferences.
