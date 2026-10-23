@@ -301,19 +301,8 @@ class UpdatesActivity : AppCompatActivity() {
                     }
                 }.start()
 
-                val assets = result.optJSONArray("assets")
-                if (assets != null) {
-                    for (i in 0 until assets.length()) {
-                        val asset = assets.optJSONObject(i) ?: continue
-                        val name = asset.optString("name")
-                        val url = asset.optString("browser_download_url")
-                        if (name.equals("Drishyam-$version.apk", ignoreCase = true) &&
-                            url.startsWith("https://github.com/savanjee-dev/Drishyam/releases/download/")) {
-                            apkUrl = url
-                            break
-                        }
-                    }
-                }
+                val verifiedAsset = VerifiedReleaseApk.fromRelease(result, version)
+                apkUrl = verifiedAsset?.url
                 if (comparison > 0 && apkUrl != null) {
                     downloadButton.text = "Download v$version"
                     downloadButton.visibility = View.VISIBLE
