@@ -178,8 +178,13 @@ class MainActivity : AppCompatActivity() {
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(r: RecyclerView, dx: Int, dy: Int) {
                 pokeGlass()
-                if (tab == 0 && dy > 3) setNavVisible(false)
-                else if (dy < -1) setNavVisible(true)
+                if (tab == 0 && dy > 3) {
+                    setNavVisible(false)
+                    setTopVisible(false)
+                } else if (dy < -1) {
+                    setNavVisible(true)
+                    setTopVisible(true)
+                }
                 val lm = r.layoutManager as LinearLayoutManager
                 if (dy > 0 && lm.findLastVisibleItemPosition() >= adapter.itemCount - 4) loadMore()
             }
@@ -252,6 +257,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var navShown = true
+    private var topShown = true
+
+    private fun setTopVisible(visible: Boolean) {
+        if (topShown == visible || tab != 0) return
+        topShown = visible
+        glassTop.animate().cancel()
+        if (visible) glassTop.visibility = View.VISIBLE
+        glassTop.animate()
+            .translationY(if (visible) 0f else -glassTop.height.toFloat() - 16.dp())
+            .alpha(if (visible) 1f else 0f)
+            .setDuration(if (visible) 260L else 210L)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .withEndAction { glassTop.visibility = if (visible) View.VISIBLE else View.INVISIBLE }
+            .start()
+    }
+
     private fun setNavVisible(visible: Boolean) {
         if (navShown == visible || tab != 0) return
         navShown = visible
@@ -339,6 +360,11 @@ class MainActivity : AppCompatActivity() {
     private fun showTab(n: Int) {
         tab = n
         navShown = true
+        topShown = true
+        glassTop.animate().cancel()
+        glassTop.visibility = View.VISIBLE
+        glassTop.translationY = 0f
+        glassTop.alpha = 1f
         glassNav.animate().cancel()
         glassNav.visibility = View.VISIBLE
         glassNav.translationY = 0f
