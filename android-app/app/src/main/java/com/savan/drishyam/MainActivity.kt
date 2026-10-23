@@ -331,7 +331,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun animateAbout() {
-        // The editorial layout has no separate halo view; keep the story animation optional.
+        if (lowFx(this)) return
+        val revealIds = listOf(
+            R.id.aboutPhoto, R.id.aboutAkshatPhoto,
+            R.id.aboutPhoto2, R.id.aboutPhoto3, R.id.aboutPhoto4, R.id.ig
+        )
+        revealIds.forEachIndexed { index, id ->
+            val view = findViewById<View>(id)
+            view.animate().cancel()
+            view.alpha = 0f
+            view.translationY = 16.dp().toFloat()
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 55L)
+                .setDuration(420L)
+                .start()
+        }
     }
 
     private fun animateTitle() {
@@ -404,6 +420,7 @@ class MainActivity : AppCompatActivity() {
             if (cur.items.isEmpty()) loadMore()
         }
         pokeGlass()
+        if (n == 2) animateAbout()
     }
 
     // ---------- Chips ----------
