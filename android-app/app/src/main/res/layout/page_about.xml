@@ -160,7 +160,7 @@
         android:orientation="horizontal" android:clickable="true" android:focusable="true"
         android:contentDescription="@string/follow">
         <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_instagram_mono" android:contentDescription="@null" />
+            android:src="@drawable/ic_instagram_mono" android:tint="?attr/colorOnSurface" android:contentDescription="@null" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginStart="10dp" android:text="@string/follow"
             android:textColor="@color/fg" android:textSize="14sp"
