@@ -68,16 +68,20 @@
 
                     <LinearLayout
                         android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:orientation="vertical">
+                        android:layout_weight="1" android:orientation="horizontal"
+                        android:gravity="center_vertical">
                         <TextView
                             android:id="@+id/title"
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:fontFamily="@font/ericaone" android:text="@string/app_name"
                             android:textSize="27sp" android:textColor="?attr/colorPrimary" />
                         <TextView
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginStart="3dp" android:fontFamily="@font/pacifico_regular"
-                            android:text="@string/tagline" android:textSize="12sp" android:textColor="?attr/colorOnSurfaceVariant" />
+                            android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end"
+                            android:layout_marginStart="6dp" android:layout_marginEnd="8dp"
+                            android:fontFamily="@font/pacifico_regular"
+                            android:text="@string/tagline" android:textSize="12sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
                     <ImageView
@@ -159,8 +163,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginStart="24dp" android:layout_marginEnd="24dp" android:layout_marginBottom="10dp"
                 android:padding="6dp"
-app:glassRadius="100dp"
-app:glassSolid="true">
+app:glassRadius="100dp">
                 <LinearLayout
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal" android:gravity="center_vertical">
