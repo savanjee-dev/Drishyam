@@ -94,7 +94,7 @@
         android:text="“A familiar moment, seen a little differently.”" android:textColor="#D0C79A"
         android:textSize="12sp" android:fontFamily="@font/pacifico_regular" />
 
-    <ImageView android:id="@+id/aboutPhoto3" android:layout_width="86%" android:layout_height="220dp"
+    <ImageView android:id="@+id/aboutPhoto3" android:layout_width="match_parent" android:layout_height="220dp"
         android:layout_gravity="end" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
         android:background="@drawable/glass_card" android:clipToOutline="true"
         android:scaleType="centerCrop" android:contentDescription="A college friendship memory" />
