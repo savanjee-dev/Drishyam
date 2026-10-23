@@ -7,6 +7,7 @@ import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.RenderEffect
 import android.graphics.Shader
+import android.graphics.drawable.AnimationDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -348,6 +349,8 @@ class MainActivity : AppCompatActivity() {
                 .setDuration(420L)
                 .start()
         }
+        // Keep the Instagram pill subtly alive; reduced-motion mode skips this animation.
+        (findViewById<View>(R.id.ig).background as? AnimationDrawable)?.start()
     }
 
     private fun animateTitle() {
