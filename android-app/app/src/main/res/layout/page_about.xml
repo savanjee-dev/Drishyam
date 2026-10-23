@@ -7,25 +7,29 @@
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp"
         android:orientation="vertical" android:background="@drawable/glass_card" android:padding="12dp">
 
-        <FrameLayout android:layout_width="match_parent" android:layout_height="420dp"
+        <FrameLayout android:layout_width="match_parent" android:layout_height="460dp"
             android:background="@drawable/glass_card" android:clipToOutline="true">
             <ImageView android:id="@+id/aboutBlur" android:layout_width="match_parent" android:layout_height="match_parent"
-                android:scaleType="centerCrop" android:alpha="0.25" android:contentDescription="@null" />
+                android:scaleType="centerCrop" android:alpha="0.34" android:contentDescription="@null" />
             <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/scrim" />
-            <ImageView android:id="@+id/aboutPhoto" android:layout_width="230dp" android:layout_height="276dp"
-                android:layout_gravity="center_horizontal|top" android:layout_marginTop="22dp"
+            <ImageView android:id="@+id/aboutPhoto" android:layout_width="250dp" android:layout_height="292dp"
+                android:layout_gravity="center_horizontal|top" android:layout_marginTop="20dp"
                 android:background="@drawable/glass_card" android:clipToOutline="true"
                 android:scaleType="centerCrop" android:contentDescription="@string/about_name" />
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_gravity="bottom" android:orientation="vertical" android:gravity="center"
-                android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingBottom="20dp">
+                android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingBottom="22dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:fontFamily="@font/ericaone" android:text="@string/about_name"
-                    android:textColor="#FFF3F1E7" android:textSize="34sp" />
+                    android:fontFamily="@font/montserrat_semibold" android:letterSpacing="0.16"
+                    android:text="DRISHYAM  ·  THE PEOPLE BEHIND THE FRAME"
+                    android:textColor="#FFE7E4D7" android:textSize="9sp" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp" android:fontFamily="@font/montserrat_semibold"
-                    android:letterSpacing="0.08" android:text="FOUNDER &amp; LEAD DEVELOPER"
-                    android:textColor="@color/accent2" android:textSize="10sp" />
+                    android:layout_marginTop="7dp" android:fontFamily="@font/ericaone" android:text="@string/about_name"
+                    android:textColor="#FFFFFFFF" android:textSize="38sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:fontFamily="@font/montserrat_semibold"
+                    android:letterSpacing="0.10" android:text="FOUNDER &amp; LEAD DEVELOPER"
+                    android:textColor="#FFD0D6B2" android:textSize="10sp" />
             </LinearLayout>
         </FrameLayout>
 
@@ -150,11 +154,18 @@
             android:fontFamily="@font/montserrat_semibold" />
     </LinearLayout>
 
-    <TextView android:id="@+id/ig" android:layout_width="match_parent" android:layout_height="50dp"
+    <LinearLayout android:id="@+id/ig" android:layout_width="match_parent" android:layout_height="52dp"
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="14dp"
         android:background="@drawable/accent_pill" android:gravity="center"
-        android:text="@string/follow" android:textColor="@color/fg" android:textSize="14sp"
-        android:fontFamily="@font/poppins_medium" android:clickable="true" android:focusable="true" />
+        android:orientation="horizontal" android:clickable="true" android:focusable="true"
+        android:contentDescription="@string/follow">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_instagram_mono" android:tint="?attr/colorOnSurface" android:contentDescription="@null" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="10dp" android:text="@string/follow"
+            android:textColor="@color/fg" android:textSize="14sp"
+            android:fontFamily="@font/poppins_medium" />
+    </LinearLayout>
 
     <TextView android:id="@+id/footer" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="24dp" android:layout_marginBottom="8dp" android:gravity="center"

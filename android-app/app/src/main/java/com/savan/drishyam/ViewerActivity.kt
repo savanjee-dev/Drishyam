@@ -5,6 +5,7 @@ import android.content.ContentValues
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
@@ -17,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import com.bumptech.glide.Glide
 import org.json.JSONObject
@@ -31,6 +33,15 @@ class ViewerActivity : AppCompatActivity() {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_viewer)
+        // Keep system-bar icons readable over the viewer's pale Light Mode bars.
+        val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        window.statusBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
+        window.navigationBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !nightMode
+            isAppearanceLightNavigationBars = !nightMode
+        }
         // Keep the floating photo controls clear of gesture/navigation and status bars.
         val viewerOverlay = findViewById<View>(R.id.viewerOverlay)
         val viewerTopBar = findViewById<View>(R.id.viewerTopBar)

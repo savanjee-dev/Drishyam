@@ -1,0 +1,9 @@
+Drishyam 2.7.3 — Cinematic Journal & Viewer Polish
+
+• Fixed Light Mode status-bar and navigation-bar icon contrast in the photo viewer.
+• Reviewed viewer top and bottom safe-area handling while preserving the immersive image layout and glass controls.
+• Redesigned the Developers page opening as a cinematic photography-journal hero.
+• Added restrained staggered reveals for existing developer and friendship photographs.
+• Updated the Follow button with a monochrome Instagram camera mark.
+• Preserved all existing developer photographs, story text, credits, app identity, Dark Mode intent, and prior feed fixes.
+• Version code: 31
