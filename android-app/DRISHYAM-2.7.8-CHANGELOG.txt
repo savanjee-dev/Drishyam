@@ -1,0 +1,6 @@
+Drishyam 2.7.8
+
+- Fixed update-screen heading typography for a cleaner, more readable layout.
+- Fixed missing release notes showing as the literal text “null”.
+- Kept manual update checks, version comparison, and release download flow.
+- Preserved existing photos, saved items, likes, bookmarks, theme settings, and app preferences.
