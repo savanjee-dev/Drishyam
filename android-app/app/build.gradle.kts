@@ -7,7 +7,6 @@ android {
     namespace = "com.savan.drishyam"
     compileSdk = 34
     defaultConfig {
-        buildConfigField("String", "UNSPLASH_ACCESS_KEY", "\"${System.getenv("UNSPLASH_ACCESS_KEY") ?: ""}\"")
         applicationId = "com.savan.drishyam"
         minSdk = 29
         targetSdk = 34
