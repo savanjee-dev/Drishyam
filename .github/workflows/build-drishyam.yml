@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - "drishyam-android-project-source.zip"
+      - "android-app/**"
+      - ".github/workflows/build-drishyam.yml"
 
 permissions:
   contents: write
@@ -27,23 +28,19 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: Extract source and read version automatically
+      - name: Read app version
         id: app
         shell: bash
         run: |
           set -euo pipefail
-          ZIP_FILE="drishyam-android-project-source.zip"
-          test -f "$ZIP_FILE" || { echo "::error::Upload the source ZIP as $ZIP_FILE to the repository root."; exit 1; }
-          mkdir -p "$RUNNER_TEMP/drishyam-source"
-          unzip -q "$ZIP_FILE" -d "$RUNNER_TEMP/drishyam-source"
-          PROJECT_DIR="$(find "$RUNNER_TEMP/drishyam-source" -name settings.gradle.kts -print -quit | xargs -r dirname)"
-          test -n "$PROJECT_DIR" || { echo "::error::Could not find settings.gradle.kts in source ZIP"; exit 1; }
+          PROJECT_DIR="$GITHUB_WORKSPACE/android-app"
+          test -f "$PROJECT_DIR/settings.gradle.kts" || { echo "::error::Android project settings.gradle.kts not found"; exit 1; }
           GRADLE_FILE="$PROJECT_DIR/app/build.gradle.kts"
-          test -f "$GRADLE_FILE" || { echo "::error::Could not find app/build.gradle.kts"; exit 1; }
+          test -f "$GRADLE_FILE" || { echo "::error::app/build.gradle.kts not found"; exit 1; }
           VERSION_NAME="$(sed -nE 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$GRADLE_FILE" | head -n 1)"
           VERSION_CODE="$(sed -nE 's/.*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$GRADLE_FILE" | head -n 1)"
-          [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Invalid/missing versionName in app/build.gradle.kts: $VERSION_NAME"; exit 1; }
-          [[ "$VERSION_CODE" =~ ^[0-9]+$ ]] || { echo "::error::Invalid/missing versionCode in app/build.gradle.kts: $VERSION_CODE"; exit 1; }
+          [[ "$VERSION_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Invalid/missing versionName: $VERSION_NAME"; exit 1; }
+          [[ "$VERSION_CODE" =~ ^[0-9]+$ ]] || { echo "::error::Invalid/missing versionCode: $VERSION_CODE"; exit 1; }
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
@@ -53,7 +50,7 @@ jobs:
           if [[ -f "$CHANGELOG" ]]; then
             cp "$CHANGELOG" "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
           else
-            printf 'Drishyam %s\n\nRelease notes are available in the app under Settings -> About Drishyam -> What’s new.\n' "$VERSION_NAME" > "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
+            printf 'Drishyam %s\n\nRelease notes: proxy-backed photo loading, attribution improvements, and stability refinements.\n' "$VERSION_NAME" > "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt"
           fi
           echo "Detected Drishyam $VERSION_NAME (versionCode $VERSION_CODE)."
 
@@ -72,7 +69,9 @@ jobs:
           test -n "$ANDROID_KEY_PASSWORD" || { echo "::error::Missing ANDROID_KEY_PASSWORD secret"; exit 1; }
           KEYSTORE_PATH="$RUNNER_TEMP/drishyam-release-key.jks"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH" || { echo "::error::Decoded keystore is empty"; exit 1; }
           cp "$KEYSTORE_PATH" "$PROJECT_DIR/app/release-key.jks"
+          echo "ANDROID_KEYSTORE_FILE=$PROJECT_DIR/app/release-key.jks" >> "$GITHUB_ENV"
           echo "ANDROID_KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
           echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
           echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
