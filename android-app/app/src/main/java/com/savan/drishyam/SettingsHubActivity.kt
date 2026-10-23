@@ -75,7 +75,7 @@ class SettingsHubActivity : AppCompatActivity() {
         aboutSection.letterSpacing = 0.14f
         addCategory(root, "What's new & credits", "Release notes, fonts and photo licences", "about", "✦")
         addActionCategory(root, "Our story", "Meet the people and ideas behind Drishyam", "◎") {
-            startActivity(Intent(this, MainActivity::class.java).putExtra("open_about", true))
+            startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("open_about", true))
             finish()
         }
 
