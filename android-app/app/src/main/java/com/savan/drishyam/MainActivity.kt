@@ -115,6 +115,17 @@ class MainActivity : AppCompatActivity() {
         applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        // Match system-bar icon contrast to the active theme; keep Dark Mode unchanged.
+        window.statusBarColor = ContextCompat.getColor(this, R.color.bg)
+        @Suppress("DEPRECATION")
+        val systemUi = window.decorView.systemUiVisibility
+        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = if (night) {
+            systemUi and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+        } else {
+            systemUi or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        }
         lowFxAtCreate = lowFx(this)
 
         rv = findViewById(R.id.rv)
