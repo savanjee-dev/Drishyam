@@ -68,7 +68,14 @@ object UpdateManager {
                     if (!manual && dismissedThisSession.contains(version)) return@post
                 }
                 val current = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0" } catch (_: Exception) { "0" }
-                if (!manual && compareVersions(version, current) <= 0) return@post
+                val versionComparison = compareVersions(version, current)
+                if (versionComparison <= 0) {
+                    if (manual) {
+                        val message = if (versionComparison == 0) "You're using the latest Drishyam version." else "No newer Drishyam release is available."
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                    return@post
+                }
                 val asset = result.optJSONArray("assets")
                 var apkUrl: String? = null
                 var apkName = "Drishyam-$tag.apk"
