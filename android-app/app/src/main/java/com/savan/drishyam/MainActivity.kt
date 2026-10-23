@@ -133,6 +133,10 @@ class MainActivity : AppCompatActivity() {
         statusPill = findViewById(R.id.statusPill)
         chips = findViewById(R.id.chips)
         chipScroll = findViewById(R.id.chipScroll)
+        chipScroll.isHorizontalFadingEdgeEnabled = true
+        chipScroll.setFadingEdgeLength(24.dp())
+        chipScroll.clipChildren = true
+        chipScroll.clipToPadding = true
         sortBar = findViewById(R.id.sortBar)
         savedBar = findViewById(R.id.savedBar)
         swipe = findViewById(R.id.swipe)
