@@ -11,7 +11,6 @@ import org.json.JSONObject
 class FullscreenActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_fullscreen)
         animatePageEntrance(findViewById(android.R.id.content))
