@@ -1,0 +1,7 @@
+Drishyam 2.7.7
+
+- Added a dedicated Updates screen that opens from Settings.
+- Shows installed and latest versions, release notes, and update availability.
+- Added visible loading and error states with a Check again action.
+- Manual checks always make a fresh request and are not blocked by the automatic 24-hour check interval.
+- Preserved existing photo feed, saved content, Dark Mode, preferences, and update download/install confirmation flow.
