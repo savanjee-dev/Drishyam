@@ -126,7 +126,7 @@ class ViewerActivity : AppCompatActivity() {
 
     private fun refreshBookmark() {
         val saved = Store.isBookmarked(this, p.id)
-        bookmark.imageTintList = ColorStateList.valueOf(if (saved) 0xFF9D7BFF.toInt() else 0xFFFFFFFF.toInt())
+        bookmark.imageTintList = ColorStateList.valueOf(if (saved) ContextCompat.getColor(this, R.color.accent2) else 0xFFFFFFFF.toInt())
         bookmark.contentDescription = getString(if (saved) R.string.unbookmark_desc else R.string.bookmark_desc)
     }
 
