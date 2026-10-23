@@ -1,13 +1,13 @@
 package com.savan.drishyam
 
 import org.json.JSONObject
+import java.io.File
+import java.io.FileInputStream
+import java.security.MessageDigest
 
 /**
- * Strictly identifies the APK asset for a release and validates the SHA-256
- * digest format exposed by GitHub's release asset API.
- *
- * Callers must compare the computed SHA-256 of downloaded bytes against
- * expectedSha256 before offering installation.
+ * Strictly identifies the APK asset for a release and validates its published
+ * SHA-256 metadata. Installation must not be offered until verifyFile succeeds.
  */
 internal data class VerifiedReleaseApk(
     val version: String,
@@ -15,6 +15,24 @@ internal data class VerifiedReleaseApk(
     val expectedSha256: String,
     val fileName: String
 ) {
+    fun verifyFile(file: File): Boolean {
+        if (!file.isFile || file.length() <= 0L) return false
+        val digest = MessageDigest.getInstance("SHA-256")
+        FileInputStream(file).use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        val actual = digest.digest().joinToString("") { "%02x".format(it) }
+        return MessageDigest.isEqual(
+            actual.toByteArray(Charsets.US_ASCII),
+            expectedSha256.toByteArray(Charsets.US_ASCII)
+        )
+    }
+
     companion object {
         private const val REPOSITORY = "savanjee-dev/Drishyam"
         private const val DOWNLOAD_PREFIX = "https://github.com/$REPOSITORY/releases/download/"
