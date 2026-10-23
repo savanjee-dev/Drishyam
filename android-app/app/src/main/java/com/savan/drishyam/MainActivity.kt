@@ -189,8 +189,12 @@ class MainActivity : AppCompatActivity() {
 
         buildChips()
 
-        listOf(R.id.n0 to 0, R.id.n1 to 1, R.id.n2 to 2).forEach { (id, n) ->
-            findViewById<View>(id).apply { pressFx(); setOnClickListener { showTab(n) } }
+        findViewById<View>(R.id.n0).apply { pressFx(); setOnClickListener { showTab(0) } }
+        findViewById<View>(R.id.n1).apply { pressFx(); setOnClickListener { showSearch() } }
+        findViewById<View>(R.id.n2).apply { pressFx(); setOnClickListener { showTab(1) } }
+        findViewById<View>(R.id.n3).apply {
+            pressFx()
+            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
         segBook.apply { pressFx(); setOnClickListener { setSaved(1) } }
@@ -330,16 +334,17 @@ class MainActivity : AppCompatActivity() {
         glassNav.visibility = View.VISIBLE
         glassNav.translationY = 0f
         glassNav.alpha = 1f
-        listOf(R.id.n0, R.id.n1, R.id.n2).forEachIndexed { i, id ->
+        val selectedNav = when (n) { 0 -> 0; 1 -> 2; else -> 3 }
+        listOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3).forEachIndexed { i, id ->
             val v = findViewById<ImageView>(id)
-            val on = i == n
+            val on = i == selectedNav
             v.background = if (on) ContextCompat.getDrawable(this, R.drawable.accent_pill) else null
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             val iconColor = when {
-                on && night -> 0xFF294638.toInt()
-                on -> android.graphics.Color.WHITE
-                night -> 0xFF294638.toInt()
-                else -> 0xFFE9E7D9.toInt()
+                on && night -> 0xFF0A0D08.toInt()
+                on -> 0xFFF3F1E7.toInt()
+                night -> 0xFFD0C79A.toInt()
+                else -> 0xFF414D2D.toInt()
             }
             v.setColorFilter(iconColor)
         }
