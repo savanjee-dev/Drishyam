@@ -11,7 +11,7 @@ android {
         minSdk = 29
         targetSdk = 34
         versionCode = 24
-        versionName = "2.5.0"
+        versionName = "2.5"
     }
     buildFeatures { buildConfig = true }
     signingConfigs {
