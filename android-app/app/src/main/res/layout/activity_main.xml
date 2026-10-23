@@ -54,8 +54,8 @@
             android:id="@+id/glassTop"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_gravity="top"
-            android:layout_marginStart="10dp" android:layout_marginEnd="10dp" android:layout_marginTop="6dp"
-            app:glassRadius="30dp">
+            android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="8dp"
+            app:glassRadius="28dp">
 
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -82,16 +82,16 @@
 
                     <ImageView
                         android:id="@+id/searchButton"
-                        android:layout_width="42dp" android:layout_height="42dp"
-                        android:background="@drawable/glass_pill_purple" android:padding="12dp"
+                        android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/glass_pill" android:padding="13dp"
                         android:src="@drawable/ic_search" android:scaleType="fitCenter"
                         android:contentDescription="@string/search_desc"
                         android:clickable="true" android:focusable="true" />
                     <ImageView
                         android:id="@+id/settingsButton"
                         android:layout_width="42dp" android:layout_height="42dp"
-                        android:layout_marginStart="10dp"
-                        android:background="@drawable/glass_pill_pink" android:padding="12dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/glass_pill" android:padding="13dp"
                         android:src="@drawable/ic_settings" android:scaleType="fitCenter"
                         android:contentDescription="@string/settings_desc"
                         android:clickable="true" android:focusable="true" />
