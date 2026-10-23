@@ -48,7 +48,7 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_light">Light</string>
     <string name="whats_new_title">What’s new in %1$s</string>
-    <string name="whats_new_body">• A refreshed Forest Editorial identity with calmer, more cohesive colour and motion\n• New compact icon navigation and refined photo cards\n• Improved visual consistency across Explore, Saved, About and Settings\n• Existing photo loading, saved items, likes and bookmarks are preserved</string>
+    <string name="whats_new_body">• Improved light and dark theme contrast for the header, wordmark and navigation\n• Reduced glass blur so content behind translucent surfaces stays less distracting\n• Refined immersive photo cards and photographer-credit readability\n• Existing photo loading, saved items, likes and bookmarks are preserved</string>
     <string name="credits_title">Credits and licences</string>
     <string name="credits_body">FONT CREDITS\n• Erica One — SIL Open Font License\n• Nothing You Could Do — SIL Open Font License\n• Montserrat — SIL Open Font License\n• Poppins — SIL Open Font License\n• Pacifico — SIL Open Font License\n\nFull licence texts are included in the LICENSES folder.\n\nPhotos are sourced from Unsplash. Please respect photographer attribution and Unsplash terms.</string>
     <string name="clear_confirm">Clear temporary image thumbnails? Your saved favourites and bookmarks will not be deleted.</string>
