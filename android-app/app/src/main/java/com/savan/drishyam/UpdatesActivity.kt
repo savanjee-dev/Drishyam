@@ -58,8 +58,10 @@ class UpdatesActivity : AppCompatActivity() {
         }
         header.addView(back)
         header.addView(TextView(this).apply {
-            text = "Drishyam updates"
-            textSize = 25f
+            text = "SOFTWARE UPDATE"
+            textSize = 22f
+            maxLines = 1
+            letterSpacing = 0f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
             setTextColor(ContextCompat.getColor(this@UpdatesActivity, R.color.fg))
         })
@@ -177,7 +179,7 @@ class UpdatesActivity : AppCompatActivity() {
                 }
                 val tag = result.optString("tag_name", "").trim()
                 val version = tag.removePrefix("v").trim()
-                if (version.isBlank() || Regex("\\d+").find(version) == null) {
+                if (!Regex("^\\d+\\.\\d+\\.\\d+$").matches(version)) {
                     status.text = "GitHub returned an invalid release version. Please try again."
                     return@runOnUiThread
                 }
@@ -193,7 +195,11 @@ class UpdatesActivity : AppCompatActivity() {
                     comparison == 0 -> "You're using the latest Drishyam version."
                     else -> "The public release is older than the installed version. Check again later."
                 }
-                notes.text = result.optString("body", "").trim().ifBlank { "No release notes were provided." }
+                val rawNotes = result.opt("body")
+                val releaseNotes = (rawNotes as? String)?.trim().orEmpty()
+                notes.text = releaseNotes
+                    .takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+                    ?: "No release notes were provided for this version."
                 val assets = result.optJSONArray("assets")
                 if (assets != null) for (i in 0 until assets.length()) {
                     val asset = assets.optJSONObject(i) ?: continue
