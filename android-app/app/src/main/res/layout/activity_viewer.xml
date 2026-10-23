@@ -30,7 +30,7 @@
                 app:glassDark="true" app:glassRadius="100dp">
                 <ImageView
                     android:layout_width="match_parent" android:layout_height="match_parent"
-                    android:padding="13dp" android:src="@drawable/ic_back"
+                    android:padding="13dp" android:src="@drawable/ic_back" android:tint="#FFFFFFFF"
                     android:contentDescription="@string/back_desc" />
             </com.savan.drishyam.GlassLayout>
 
