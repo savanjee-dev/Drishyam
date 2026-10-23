@@ -105,8 +105,7 @@
                     android:clipToPadding="true"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp"
-                    android:horizontalFadingEdgeEnabled="true"
-                    android:fadingEdgeLength="24dp">
+                    android:paddingEnd="8dp">
                     <LinearLayout
                         android:id="@+id/chips"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
