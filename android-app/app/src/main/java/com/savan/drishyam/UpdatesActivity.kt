@@ -190,7 +190,7 @@ class UpdatesActivity : AppCompatActivity() {
         root.addView(downloadButton, LinearLayout.LayoutParams(-1, 54.dp()).apply {
             topMargin = 10.dp()
         })
-        releaseButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTextButtonStyle).apply {
+        releaseButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "View GitHub release"
             textSize = 14f
             isAllCaps = false
