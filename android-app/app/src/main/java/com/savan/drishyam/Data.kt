@@ -83,22 +83,45 @@ object Store {
 }
 
 object Api {
+    private fun readLimited(stream: java.io.InputStream, maxBytes: Int): String {
+        stream.use { input ->
+            val out = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                total += count
+                if (total > maxBytes) throw java.io.IOException("Response body exceeded the size limit.")
+                out.write(buffer, 0, count)
+            }
+            return out.toString(Charsets.UTF_8.name())
+        }
+    }
+
     private fun get(url: String, headers: Map<String, String>): String {
         val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 15000
-        c.readTimeout = 20000
-        c.instanceFollowRedirects = true
-        c.setRequestProperty("Accept", "application/json")
-        c.setRequestProperty("Cache-Control", "no-cache")
-        headers.forEach { (k, v) -> c.setRequestProperty(k, v) }
-        if (c.responseCode != 200) {
+        try {
+            c.connectTimeout = 15000
+            c.readTimeout = 20000
+            c.instanceFollowRedirects = true
+            c.requestMethod = "GET"
+            c.setRequestProperty("Accept", "application/json")
+            c.setRequestProperty("Cache-Control", "no-cache")
+            headers.forEach { (k, v) -> c.setRequestProperty(k, v) }
+
             val code = c.responseCode
-            val detail = try {
-                (if (code >= 400) c.errorStream else null)?.bufferedReader()?.use { it.readText() }?.take(240)
-            } catch (_: Exception) { null }
-            throw Exception("HTTP $code" + if (!detail.isNullOrBlank()) ": $detail" else "")
+            if (code != HttpURLConnection.HTTP_OK) {
+                val detail = try {
+                    c.errorStream?.let { readLimited(it, 2048) }?.take(240)
+                } catch (_: Exception) { null }
+                throw Exception("HTTP $code" + if (!detail.isNullOrBlank()) ": $detail" else "")
+            }
+            // Bound untrusted API responses so a bad upstream response cannot exhaust app memory.
+            return readLimited(c.inputStream, 5 * 1024 * 1024)
+        } finally {
+            c.disconnect()
         }
-        return c.inputStream.bufferedReader().use { it.readText() }
     }
 
     fun ping(downloadLocation: String) {
