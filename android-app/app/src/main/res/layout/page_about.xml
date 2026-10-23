@@ -9,7 +9,7 @@
         android:orientation="vertical" android:background="@drawable/glass_card" android:padding="12dp">
 
         <FrameLayout
-            android:layout_width="match_parent" android:layout_height="430dp"
+            android:layout_width="match_parent" android:layout_height="400dp"
             android:background="@drawable/glass_card" android:clipToOutline="true">
 
             <ImageView
@@ -30,7 +30,7 @@
 
             <ImageView
                 android:id="@+id/aboutPhoto"
-                android:layout_width="224dp" android:layout_height="278dp"
+                android:layout_width="224dp" android:layout_height="260dp"
                 android:layout_gravity="center_horizontal|top" android:layout_marginTop="30dp"
                 android:background="@drawable/glass_card" android:clipToOutline="true"
                 android:scaleType="centerCrop" android:contentDescription="@string/about_name" />
@@ -91,7 +91,32 @@
     <TextView style="@style/CardText" android:text="@string/about_app_body" />
 
     <TextView style="@style/SectionLabel" android:text="@string/story_title" />
-    <TextView style="@style/CardText" android:text="@string/story_body" />
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp"
+        android:orientation="vertical" android:padding="20dp"
+        android:background="@drawable/glass_card">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="HOW A FRIENDSHIP BECAME AN IDEA"
+            android:textColor="@color/accent2" android:textSize="10sp"
+            android:letterSpacing="0.12" android:fontFamily="@font/montserrat_semibold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="It started with ordinary days, long conversations and a shared urge to create something of our own."
+            android:textColor="?attr/colorOnSurface" android:textSize="19sp"
+            android:lineSpacingExtra="3dp" android:fontFamily="@font/montserrat_semibold" />
+        <View android:layout_width="44dp" android:layout_height="3dp"
+            android:layout_marginTop="16dp" android:layout_marginBottom="14dp"
+            android:background="@drawable/accent_pill" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/story_body" android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp" android:lineSpacingExtra="5dp"
+            android:fontFamily="@font/poppins_regular" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:text="BUILT WITH FRIENDSHIP. DRIVEN BY CURIOSITY."
+            android:textColor="?attr/colorPrimary" android:textSize="10sp"
+            android:letterSpacing="0.08" android:fontFamily="@font/montserrat_semibold" />
+    </LinearLayout>
 
     <TextView style="@style/SectionLabel" android:text="@string/what_title" />
     <LinearLayout
