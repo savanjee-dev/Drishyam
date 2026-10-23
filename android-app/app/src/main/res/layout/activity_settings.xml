@@ -30,7 +30,7 @@
                     android:id="@+id/settingsBack"
                     android:layout_width="48dp" android:layout_height="48dp"
                     android:background="@drawable/glass_pill" android:padding="13dp"
-                    android:src="@drawable/ic_back" android:contentDescription="@string/back_desc"
+                    android:src="@drawable/ic_back" android:tint="?attr/colorOnSurface" android:contentDescription="@string/back_desc"
                     android:clickable="true" android:focusable="true" />
                 <TextView
                     android:layout_width="wrap_content" android:layout_height="wrap_content"
