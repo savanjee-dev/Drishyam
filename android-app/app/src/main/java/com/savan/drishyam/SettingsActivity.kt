@@ -39,7 +39,7 @@ class SettingsActivity : AppCompatActivity() {
                 setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFBBBBBB.toInt()))
                 setPadding(0, 4.dp(), 0, 0)
             })
-            setOnClickListener { UpdateManager.check(this@SettingsActivity, findViewById(R.id.glassSource), manual = true) }
+            setOnClickListener { startActivity(android.content.Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
         }
         (findViewById<View>(R.id.rowCredits).parent as? ViewGroup)?.let { parent ->
             parent.addView(updateRow, parent.indexOfChild(findViewById(R.id.rowCredits)) + 1,
