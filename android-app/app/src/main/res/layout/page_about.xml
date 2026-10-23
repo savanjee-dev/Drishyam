@@ -31,7 +31,7 @@
 
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="14dp" android:text="TWO FRIENDS. ONE VISION."
-            android:textColor="#D0C79A" android:textSize="10sp" android:letterSpacing="0.14"
+            android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.14"
             android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="7dp" android:text="From a shared room to a shared vision."
@@ -40,7 +40,7 @@
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="9dp"
             android:text="Our friendship began in a college hostel. Two friends from Bihar, sharing the same room, discovered a shared passion for professional photography—and an idea to build something of our own."
-            android:textColor="@color/mute" android:textSize="13sp" android:lineSpacingExtra="4dp"
+            android:textColor="@color/fg" android:textSize="14sp" android:lineSpacingExtra="5dp"
             android:fontFamily="@font/poppins_regular" />
     </LinearLayout>
 
@@ -48,14 +48,14 @@
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="18dp"
         android:orientation="vertical" android:background="@drawable/glass_card" android:padding="16dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="THE PEOPLE BEHIND THE IDEA" android:textColor="#D0C79A"
+            android:text="THE PEOPLE BEHIND THE IDEA" android:textColor="@color/accent"
             android:textSize="10sp" android:letterSpacing="0.12" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp" android:text="Savan Jee"
             android:textColor="@color/fg" android:textSize="22sp" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="3dp" android:text="FOUNDER &amp; LEAD DEVELOPER"
-            android:textColor="#D0C79A" android:textSize="10sp" android:letterSpacing="0.08"
+            android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.08"
             android:fontFamily="@font/montserrat_semibold" />
         <View android:layout_width="match_parent" android:layout_height="1dp"
             android:layout_marginTop="15dp" android:layout_marginBottom="15dp" android:background="@color/glassStroke" />
@@ -67,22 +67,22 @@
             android:textColor="@color/fg" android:textSize="22sp" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="3dp" android:text="CO-DEVELOPER"
-            android:textColor="#D0C79A" android:textSize="10sp" android:letterSpacing="0.08"
+            android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.08"
             android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:text="A friend and collaborator in turning a shared idea into a real project."
-            android:textColor="@color/mute" android:textSize="13sp" android:lineSpacingExtra="4dp"
+            android:textColor="@color/fg" android:textSize="14sp" android:lineSpacingExtra="5dp"
             android:fontFamily="@font/poppins_regular" />
     </LinearLayout>
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginStart="18dp" android:layout_marginEnd="18dp" android:layout_marginTop="26dp"
-        android:text="LIFE BETWEEN THE FRAMES" android:textColor="#D0C79A"
+        android:text="LIFE BETWEEN THE FRAMES" android:textColor="@color/accent"
         android:textSize="10sp" android:letterSpacing="0.14" android:fontFamily="@font/montserrat_semibold" />
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginStart="18dp" android:layout_marginEnd="18dp" android:layout_marginTop="8dp"
         android:text="Not every moment needs an explanation. Some are remembered for how they looked; others, for the people who were there."
-        android:textColor="#FFF3F1E7" android:textSize="18sp" android:lineSpacingExtra="4dp"
+        android:textColor="@color/fg" android:textSize="18sp" android:lineSpacingExtra="4dp"
         android:fontFamily="@font/montserrat_semibold" />
 
     <ImageView android:id="@+id/aboutPhoto2" android:layout_width="match_parent" android:layout_height="250dp"
@@ -91,8 +91,8 @@
         android:scaleType="centerCrop" android:contentDescription="A shared moment from Savan and Akshat's journey" />
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginStart="22dp" android:layout_marginEnd="22dp" android:layout_marginTop="8dp"
-        android:text="“A familiar moment, seen a little differently.”" android:textColor="#D0C79A"
-        android:textSize="12sp" android:fontFamily="@font/pacifico_regular" />
+        android:text="“A familiar moment, seen a little differently.”" android:textColor="@color/accent"
+        android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
 
     <ImageView android:id="@+id/aboutPhoto3" android:layout_width="match_parent" android:layout_height="220dp"
         android:layout_gravity="end" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
@@ -100,8 +100,8 @@
         android:scaleType="centerCrop" android:contentDescription="A college friendship memory" />
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginStart="18dp" android:layout_marginEnd="18dp" android:layout_marginTop="8dp"
-        android:text="“Some memories live quietly between the frames.”" android:textColor="#D0C79A"
-        android:textSize="12sp" android:fontFamily="@font/pacifico_regular" />
+        android:text="“Some memories live quietly between the frames.”" android:textColor="@color/accent"
+        android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
 
     <ImageView android:id="@+id/aboutPhoto4" android:layout_width="match_parent" android:layout_height="250dp"
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
@@ -109,23 +109,23 @@
         android:scaleType="centerCrop" android:contentDescription="Another shared moment from the developers' journey" />
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginStart="22dp" android:layout_marginEnd="22dp" android:layout_marginTop="8dp"
-        android:text="“Different moments. One shared journey.”" android:textColor="#D0C79A"
-        android:textSize="12sp" android:fontFamily="@font/pacifico_regular" />
+        android:text="“Different moments. One shared journey.”" android:textColor="@color/accent"
+        android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="28dp"
         android:orientation="vertical" android:background="@drawable/glass_card" android:padding="20dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="MORE THAN AN IMAGE" android:textColor="#D0C79A" android:textSize="10sp"
+            android:text="MORE THAN AN IMAGE" android:textColor="@color/accent" android:textSize="10sp"
             android:letterSpacing="0.14" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="10dp" android:text="What if great photographs were easier to discover?"
-            android:textColor="#FFF3F1E7" android:textSize="22sp" android:lineSpacingExtra="3dp"
+            android:textColor="@color/fg" android:textSize="22sp" android:lineSpacingExtra="3dp"
             android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="Our shared passion led to a simple idea: create an online platform where people could discover and enjoy high-quality photographs. That idea became Drishyam—a photography discovery and image-streaming app shaped by our interest in the art of seeing."
-            android:textColor="#E6F3F1E7" android:textSize="13sp" android:lineSpacingExtra="4dp"
+            android:textColor="@color/fg" android:textSize="13sp" android:lineSpacingExtra="4dp"
             android:fontFamily="@font/poppins_regular" />
     </LinearLayout>
 
@@ -134,30 +134,30 @@
         android:orientation="vertical" android:gravity="center" android:background="@drawable/glass_card" android:padding="24dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
             android:gravity="center" android:text="BUILT WITH FRIENDSHIP.\nINSPIRED BY PHOTOGRAPHY.\nCREATED TO SHARE THE VIEW."
-            android:textColor="#FFF3F1E7" android:textSize="19sp" android:lineSpacingExtra="5dp"
+            android:textColor="@color/fg" android:textSize="19sp" android:lineSpacingExtra="5dp"
             android:fontFamily="@font/montserrat_semibold" />
         <View android:layout_width="42dp" android:layout_height="2dp"
             android:layout_marginTop="20dp" android:layout_marginBottom="18dp" android:background="#89945A" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="AKSHAT JHA · CO-DEVELOPER" android:textColor="#D0C79A"
+            android:text="AKSHAT JHA · CO-DEVELOPER" android:textColor="@color/accent"
             android:textSize="10sp" android:letterSpacing="0.08" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:text="by Savan" android:textColor="#FFF3F1E7"
+            android:layout_marginTop="8dp" android:text="by Savan" android:textColor="@color/fg"
             android:textSize="32sp" android:fontFamily="@font/pacifico_regular" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="4dp" android:text="FOUNDER &amp; LEAD DEVELOPER · DRISHYAM"
-            android:textColor="#D0C79A" android:textSize="9sp" android:letterSpacing="0.06"
+            android:textColor="@color/accent" android:textSize="9sp" android:letterSpacing="0.06"
             android:fontFamily="@font/montserrat_semibold" />
     </LinearLayout>
 
     <TextView android:id="@+id/ig" android:layout_width="match_parent" android:layout_height="50dp"
         android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="14dp"
         android:background="@drawable/accent_pill" android:gravity="center"
-        android:text="@string/follow" android:textColor="#FFF3F1E7" android:textSize="14sp"
+        android:text="@string/follow" android:textColor="@color/fg" android:textSize="14sp"
         android:fontFamily="@font/poppins_medium" android:clickable="true" android:focusable="true" />
 
     <TextView android:id="@+id/footer" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="24dp" android:layout_marginBottom="8dp" android:gravity="center"
         android:fontFamily="@font/montserrat_semibold" android:text="@string/footer"
-        android:textColor="#B6B4A7" android:textSize="11sp" />
+        android:textColor="@color/mute" android:textSize="11sp" />
 </LinearLayout>
