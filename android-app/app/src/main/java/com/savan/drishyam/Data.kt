@@ -265,6 +265,6 @@ object Api {
                 p.optInt("width", 0), p.optInt("height", 0),
                 createdAt.take(10), publishedAt, p.optInt("likes", 0)))
         }
-        return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20)
+        return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20))
     }
 }
