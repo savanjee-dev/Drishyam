@@ -1,12 +1,9 @@
 package com.savan.drishyam
 
-import android.app.DownloadManager
 import android.app.Activity
 import android.content.Context
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.os.Environment
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -25,7 +22,6 @@ object UpdateManager {
     @Volatile private var checking = false
     private const val PREFS_UPDATES = "drishyam_update_state"
     private const val KEY_LAST_SUCCESSFUL_CHECK = "last_successful_check_ms"
-    private const val KEY_DOWNLOAD_ID = "active_download_id"
     private const val CHECK_INTERVAL_MS = 24L * 60L * 60L * 1000L
     private val dismissedThisSession = mutableSetOf<String>()
 
@@ -84,13 +80,13 @@ object UpdateManager {
                     return@post
                 }
                 val safeSource = context.findViewById<View>(android.R.id.content)
-                try { showReleaseDialog(context, safeSource, tag, version, result.optString("body", "No changelog was provided."), result.optString("html_url"), apkUrl!!, apkName, manual) }
+                try { showReleaseDialog(context, safeSource, tag, version, result.optString("body", "No changelog was provided."), result.optString("html_url"), verifiedAsset!!, manual) }
                 catch (_: Exception) { if (manual) Toast.makeText(context, "Update found, but the dialog could not open. Open the release page instead.", Toast.LENGTH_LONG).show() }
             }
         }.start()
     }
 
-    private fun hasActiveDownload(context: Context, manager: DownloadManager): Boolean {
+    private fun hasActiveDownload(context: Context, manager: Any): Boolean { return false /* legacy helper retained temporarily */\n    /*
         val id = context.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE).getLong(KEY_DOWNLOAD_ID, -1L)
         if (id < 0L) return false
         val cursor = manager.query(DownloadManager.Query().setFilterById(id)) ?: return false
@@ -103,7 +99,7 @@ object UpdateManager {
         }
     }
 
-    private fun compareVersions(a: String, b: String): Int {
+    */\n    private fun compareVersions(a: String, b: String): Int {
         val aa = Regex("\\d+").findAll(a).mapNotNull { it.value.toIntOrNull() }.toList()
         val bb = Regex("\\d+").findAll(b).mapNotNull { it.value.toIntOrNull() }.toList()
         for (i in 0 until maxOf(aa.size, bb.size)) {
@@ -113,8 +109,8 @@ object UpdateManager {
         return 0
     }
 
-    private fun showReleaseDialog(a: Activity, source: View, tag: String, version: String, notes: String, pageUrl: String?, apkUrl: String, apkName: String, manual: Boolean) {
-        showGlassPopup(a, source) { box, close ->
+    private fun showReleaseDialog(a: Activity, source: View, tag: String, version: String, notes: String, pageUrl: String?, releaseApk: VerifiedReleaseApk, manual: Boolean) {
+        val apkUrl = releaseApk.url\n        showGlassPopup(a, source) { box, close ->
             box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
             box.addView(TextView(a).apply {
                 text = if (manual) "Drishyam updates" else "Drishyam $version is here"
@@ -158,29 +154,11 @@ object UpdateManager {
                 background = ContextCompat.getDrawable(a, R.drawable.accent_pill)
                 pressFx()
                 setOnClickListener {
-                    try {
-                        val manager = a.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-                        if (hasActiveDownload(a, manager)) {
-                            Toast.makeText(a, "A Drishyam update download is already in progress.", Toast.LENGTH_LONG).show()
-                            close()
-                            return@setOnClickListener
-                        }
-                        val request = DownloadManager.Request(Uri.parse(apkUrl))
-                            .setTitle("Drishyam $version")
-                            .setDescription("Downloading Drishyam update")
-                            .setMimeType("application/vnd.android.package-archive")
-                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                            .setAllowedOverMetered(true)
-                            .setAllowedOverRoaming(false)
-                            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, apkName)
-                        val downloadId = manager.enqueue(request)
-                        a.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE).edit().putLong(KEY_DOWNLOAD_ID, downloadId).apply()
-                        Toast.makeText(a, "Download started. Open the completed download to install.", Toast.LENGTH_LONG).show()
-                        close()
-                    } catch (_: Exception) {
-                        Toast.makeText(a, "Couldn't start the download. Opening the release page.", Toast.LENGTH_LONG).show()
-                        try { a.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(pageUrl ?: apkUrl))) } catch (_: Exception) { }
-                        close()
+                    download.isEnabled = false
+                    download.text = "Verifying download…"
+                    VerifiedUpdateInstaller.downloadAndInstall(a, releaseApk) { message ->
+                        download.text = message
+                        download.isEnabled = true
                     }
                 }
             }
