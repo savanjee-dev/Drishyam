@@ -186,6 +186,13 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
+        findViewById<ImageView>(R.id.headerSearchButton).apply {
+            imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
+            pressFx()
+            setOnClickListener { showSearch() }
+        }
+
         findViewById<ImageView>(R.id.sortButton).apply {
             imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
             background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
@@ -297,8 +304,7 @@ class MainActivity : AppCompatActivity() {
         val taglineText = SpannableString("See the world a little slower.")
         val slowerStart = taglineText.indexOf("slower.")
         if (slowerStart >= 0) taglineText.setSpan(StyleSpan(Typeface.BOLD), slowerStart, taglineText.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        tagline.text = taglineText
-        tagline.alpha = 0f; tagline.translationY = 8.dp().toFloat()
+        tagline.text = taglineText        tagline.alpha = 0f; tagline.translationY = 8.dp().toFloat()
         tagline.postDelayed({ if (splash.visibility == View.VISIBLE) tagline.animate().alpha(1f).translationY(0f).setDuration(500L).setInterpolator(DecelerateInterpolator()).start() }, 2700L)        caption.alpha = 0f
         caption.postDelayed({ if (splash.visibility == View.VISIBLE) caption.animate().alpha(1f).setDuration(350L).start() }, 3000L)
 
@@ -597,8 +603,7 @@ class MainActivity : AppCompatActivity() {
             val itemId = when (i) {
                 0 -> R.id.navItem0
                 1 -> R.id.navItem1
-                2 -> R.id.navItem2
-                else -> R.id.navItem3            }
+                2 -> R.id.navItem2                else -> R.id.navItem3            }
             findViewById<View>(itemId).setBackgroundResource(
                 if (on) R.drawable.glass_pill else android.R.color.transparent
             )
@@ -897,8 +902,7 @@ class MainActivity : AppCompatActivity() {
         val page = s.page
         val after = s.after
         val sort = currentSort()
-        val forceFresh = s.forceFresh
-        s.forceFresh = false
+        val forceFresh = s.forceFresh        s.forceFresh = false
 
         Thread {
             val added = ArrayList<Photo>()
