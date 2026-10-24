@@ -418,8 +418,80 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { return false }
         if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
         prefs.edit().remove("pending_whats_new_version").apply()
-        startActivity(Intent(this, WhatsNewActivity::class.java).putExtra("highlight_version", currentVersion))
+        // Keep the feed visible underneath a lightweight, animated What's New sheet.
+        // The full release history remains available from the sheet's secondary action.
+        showWhatsNewPopup(findViewById(R.id.glassSource), currentVersion)
         return true
+    }
+
+    private fun showWhatsNewPopup(source: View, currentVersion: String) {
+        val releases = ReleaseNotesCache.cachedHistory(this)
+        val release = releases.firstOrNull { it.version == currentVersion } ?: releases.firstOrNull()
+        showGlassPopup(this, source, expressive = true) { box, close ->
+            box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
+            box.addView(TextView(this).apply {
+                text = "WHAT'S NEW"
+                textSize = 11f
+                letterSpacing = 0.16f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_semibold)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
+            })
+            box.addView(TextView(this).apply {
+                text = "A fresh chapter."
+                textSize = 27f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_bold)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                setPadding(0, 6.dp(), 0, 4.dp())
+            })
+            box.addView(TextView(this).apply {
+                text = "Drishyam v$currentVersion"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
+            })
+            box.addView(TextView(this).apply {
+                text = release?.notes?.takeIf { it.isNotBlank() }
+                    ?: "Your update is ready. Explore the latest improvements and refinements."
+                textSize = 14f
+                maxLines = 6
+                setLineSpacing(3.dp().toFloat(), 1f)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                setPadding(0, 14.dp(), 0, 18.dp())
+            })
+            val history = TextView(this).apply {
+                text = "View full release history"
+                gravity = Gravity.CENTER
+                textSize = 14f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.white))
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.accent_pill)
+                isClickable = true
+                isFocusable = true
+                pressFx()
+                setOnClickListener {
+                    close()
+                    startActivity(Intent(this@MainActivity, WhatsNewActivity::class.java)
+                        .putExtra("highlight_version", currentVersion))
+                }
+            }
+            box.addView(history, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 48.dp()
+            ).apply { bottomMargin = 10.dp() })
+            val continueButton = TextView(this).apply {
+                text = "Continue to Drishyam"
+                gravity = Gravity.CENTER
+                textSize = 14f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
+                isClickable = true
+                isFocusable = true
+                pressFx()
+                setOnClickListener { close() }
+            }
+            box.addView(continueButton, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 46.dp()
+            ))
+        }
     }
 
     private fun compareVersionNumbers(a: String, b: String): Int {
