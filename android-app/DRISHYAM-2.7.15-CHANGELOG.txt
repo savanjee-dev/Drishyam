@@ -1,0 +1,13 @@
+Drishyam 2.7.15
+
+Design, motion, and release-history improvements
+
+- Refined the Settings hub with a more expressive visual hierarchy.
+- Added subtle, staggered entrance motion across Settings, Updates, and What's New screens.
+- Added restrained photo-card entrance motion and smoother viewer icon feedback.
+- Improved the fullscreen close-control reveal and hide transition.
+- Respect the app's Low Effects option and Android's system animator setting by suppressing optional motion when reduced motion is requested.
+- Improved release-history sorting and refresh behavior so the installed version is represented accurately.
+- Preserves existing user photos, saved content, preferences, and Dark Mode.
+
+This release was build-validated and signature-verified by GitHub Actions. Physical-device visual verification is still recommended.
