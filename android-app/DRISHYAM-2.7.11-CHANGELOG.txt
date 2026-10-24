@@ -1,8 +1,7 @@
-Drishyam 2.7.12
+Drishyam 2.7.11
 
-- Add a compact home sort menu with India, Latest, Hot, and Top feeds.
-- Request Unsplash's newest-first ordering for Latest and support the popular photo feed for Hot.
-- Sort Top results by available Unsplash like counts.
-- Bypass the proxy's short-lived cache on pull-to-refresh and reset feed pagination cleanly.
-- Filter India results using Unsplash location metadata where it identifies India.
-- Preserve saved photos, bookmarks, preferences, Dark Mode, and existing app data.
+- Verify in-app update APK downloads using the published SHA-256 digest before installation.
+- Validate the APK package identity and signing certificate against the installed Drishyam app.
+- Show version-specific “What’s new” notes after an in-app update completes.
+- Improve update status messages and release-note handling.
+- Preserve existing saved items, preferences, Dark Mode, and app content during upgrades.
