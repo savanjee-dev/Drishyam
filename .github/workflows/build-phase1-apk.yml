@@ -102,7 +102,7 @@ jobs:
           APK_SOURCE="$PROJECT_DIR/app/build/outputs/apk/release/app-release.apk"
           test -f "$APK_SOURCE"
           mkdir -p "$RUNNER_TEMP/drishyam-phase2-output"
-          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-phase1-output/Drishyam-Phase2.apk"
+          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2.apk"
 
       - name: Verify APK signature
         shell: bash
