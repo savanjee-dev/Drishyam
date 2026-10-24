@@ -63,10 +63,6 @@ class SettingsHubActivity : AppCompatActivity() {
             setCardBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer,
                 ContextCompat.getColor(this@SettingsHubActivity, R.color.surface)))
             setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
-            isClickable = true
-            isFocusable = true
-            pressFx()
-            setOnClickListener { startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance")) }
         }
         val versionBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val brand = addText(versionBody, "DRISHYAM  /  MOSS & OLIVE", 11f, R.color.accent, 0, 10)
