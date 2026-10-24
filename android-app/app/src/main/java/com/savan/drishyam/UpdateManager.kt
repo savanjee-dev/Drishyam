@@ -133,7 +133,8 @@ object UpdateManager {
                 setTextColor(ContextCompat.getColor(a, R.color.mute))
                 setPadding(0, 8.dp(), 0, 0)
             })
-            val download = TextView(a).apply {
+            val download = TextView(a)
+            download.apply {
                 text = "Download update"
                 gravity = Gravity.CENTER
                 textSize = 15f
