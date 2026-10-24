@@ -205,33 +205,8 @@ fun choicePopup(activity: Activity, source: View, title: String, options: List<S
     }
 }
 
-/** Spring-like edge feedback for scroll containers; touch handling remains with the child views. */
+/** Native, non-elastic edge feedback for scroll containers. */
 fun installScrollBounce(view: View) {
     // Use Android's native overscroll feedback; no custom bounce, spring, or elastic translation.
     view.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-}
-
-/** Compatibility edge-effect class with non-elastic, standard Android edge feedback. */
-class SpringEdgeEffectFactory : androidx.recyclerview.widget.RecyclerView.EdgeEffectFactory() {
-    override fun createEdgeEffect(view: androidx.recyclerview.widget.RecyclerView, direction: Int): android.widget.EdgeEffect =
-        android.widget.EdgeEffect(view.context)
-}
-
-/** Short staggered entrance used by each page; disabled when Low-effects mode is enabled. */
-fun animatePageEntrance(root: View) {
-    if (lowFx(root.context) || root !is ViewGroup) return
-    var container: ViewGroup = root
-    if (container.childCount == 1 && container.getChildAt(0) is ViewGroup) {
-        container = container.getChildAt(0) as ViewGroup
-    }
-    if (container.childCount == 1 && container.getChildAt(0) is ViewGroup) {
-        container = container.getChildAt(0) as ViewGroup
-    }
-    for (i in 0 until container.childCount) {
-        val child = container.getChildAt(i)
-        child.alpha = 0f
-        child.translationY = 14.dp().toFloat()
-        child.animate().alpha(1f).translationY(0f).setStartDelay((i * 28L).coerceAtMost(200L))
-            .setDuration(240).setInterpolator(DecelerateInterpolator()).start()
-    }
 }
