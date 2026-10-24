@@ -80,7 +80,7 @@ internal object VerifiedUpdateInstaller {
                     val archiveInfo = archive.signingInfo ?: throw SecurityException("Downloaded app signing identity couldn't be checked.")
                     val installedCerts = installedInfo.apkContentsSigners
                     val archiveCerts = archiveInfo.apkContentsSigners
-                    val matches = if (installedInfo.hasMultipleSigners || archiveInfo.hasMultipleSigners) {
+                    val matches = if (installedInfo.hasMultipleSigners() || archiveInfo.hasMultipleSigners()) {
                         installedCerts.size == archiveCerts.size && installedCerts.all { installedSigner ->
                             archiveCerts.any { it.toByteArray().contentEquals(installedSigner.toByteArray()) }
                         }
