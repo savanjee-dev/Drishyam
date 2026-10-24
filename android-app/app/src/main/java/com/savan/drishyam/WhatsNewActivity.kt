@@ -104,21 +104,26 @@ class WhatsNewActivity : AppCompatActivity() {
             })
         }
 
-        Thread {
-            val fresh = ReleaseNotesCache.fetchHistory(this)
-            runOnUiThread {
-                if (isFinishing || isDestroyed) return@runOnUiThread
-                if (fresh != null) {
-                    val previousY = scroll.scrollY
-                    render(fresh)
-                    scroll.post { scroll.scrollTo(0, previousY.coerceAtMost((content.height - scroll.height).coerceAtLeast(0))) }
-                    loading.text = "Release history updated · available offline"
-                } else {
-                    loading.text = if (cached.isNotEmpty()) "Showing saved release notes · offline or connection unavailable"
-                    else "Couldn't load release history. Connect to the internet and reopen this page."
+        // Keep navigation instant: don't hit the network again while the saved history is fresh.
+        if (cached.isNotEmpty() && !ReleaseNotesCache.shouldRefreshHistory(this)) {
+            loading.text = "Saved release history · available offline"
+        } else {
+            Thread {
+                val fresh = ReleaseNotesCache.fetchHistory(this)
+                runOnUiThread {
+                    if (isFinishing || isDestroyed) return@runOnUiThread
+                    if (fresh != null) {
+                        val previousY = scroll.scrollY
+                        render(fresh)
+                        scroll.post { scroll.scrollTo(0, previousY.coerceAtMost((content.height - scroll.height).coerceAtLeast(0))) }
+                        loading.text = "Release history updated · available offline"
+                    } else {
+                        loading.text = if (cached.isNotEmpty()) "Showing saved release notes · offline or connection unavailable"
+                        else "Couldn't load release history. Connect to the internet and reopen this page."
+                    }
                 }
-            }
-        }.start()
+            }.start()
+        }
     }
 
     private fun render(releases: List<ReleaseNotesCache.Release>) {
