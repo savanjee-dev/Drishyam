@@ -1,0 +1,10 @@
+Drishyam 2.7.14
+
+Design refresh
+- Introduces a bold Material 3 Expressive direction for What's New, Update Checker, and Settings.
+- Improves page hierarchy, release highlights, and update-status presentation.
+- Replaces spring and elastic overshoot feedback with controlled fade, slide, and decelerating transitions.
+- Keeps the existing Moss & Olive identity, Dark Mode, saved photos, bookmarks, and user preferences.
+
+Note
+- The Latest photo feed changes are intentionally deferred to a later update.

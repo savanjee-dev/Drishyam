@@ -12,7 +12,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
-import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -32,7 +33,7 @@ fun hapticsOn(c: Context): Boolean =
 fun lowFx(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
 
-/** Press feedback: the control squishes while touched and springs back on release. */
+/** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
     setOnTouchListener { v, e ->
         when (e.actionMasked) {
@@ -42,8 +43,8 @@ fun View.pressFx() {
                 if (hapticsOn(v.context)) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
-                v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(240)
-                    .setInterpolator(OvershootInterpolator(2.7f)).setDuration(330).start()
+                v.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150)
+                    .setInterpolator(DecelerateInterpolator()).start()
         }
         false // keep click handling intact
     }
@@ -94,7 +95,7 @@ fun hideKeyboard(activity: Activity, v: View) {
 
 /**
  * Shows a floating glass card over a dimmed screen. The card blurs [source] behind it,
- * keeps a margin from every screen edge, and pops in with a small spring.
+ * keeps a margin from every screen edge, and enters with a short fade and controlled scale.
  * [build] fills the card; call the given function to close it.
  */
 fun showGlassPopup(
@@ -145,8 +146,8 @@ fun showGlassPopup(
     card.scaleY = 0.9f
     card.alpha = 0f
     scrim.animate().alpha(1f).setDuration(180).start()
-    card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(280)
-        .setInterpolator(OvershootInterpolator(1.3f)).start()
+    card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(190)
+        .setInterpolator(DecelerateInterpolator()).start()
 }
 
 private fun popupTitle(a: Activity, text: String) = TextView(a).apply {
@@ -204,87 +205,8 @@ fun choicePopup(activity: Activity, source: View, title: String, options: List<S
     }
 }
 
-/** Spring-like edge feedback for scroll containers; touch handling remains with the child views. */
+/** Native, non-elastic edge feedback for scroll containers. */
 fun installScrollBounce(view: View) {
-    if (lowFx(view.context)) return
-    var downX = 0f
-    var downY = 0f
-    view.setOnTouchListener { v, event ->
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val dx = event.x - downX
-                val dy = event.y - downY
-                val horizontal = v is android.widget.HorizontalScrollView
-                val atStart = if (horizontal) !v.canScrollHorizontally(-1) else !v.canScrollVertically(-1)
-                val atEnd = if (horizontal) !v.canScrollHorizontally(1) else !v.canScrollVertically(1)
-                val draggedTowardStart = if (horizontal) dx > 12.dp() else dy > 12.dp()
-                val draggedTowardEnd = if (horizontal) dx < -12.dp() else dy < -12.dp()
-                if ((atStart && draggedTowardStart) || (atEnd && draggedTowardEnd)) {
-                    val distance = if (horizontal) 10.dp().toFloat() else 12.dp().toFloat()
-                    val target = if (horizontal) {
-                        if (atStart) distance else -distance
-                    } else {
-                        if (atStart) distance else -distance
-                    }
-                    if (horizontal) v.translationX = target else v.translationY = target
-                    v.animate().translationX(0f).translationY(0f).setDuration(430)
-                        .setInterpolator(OvershootInterpolator(1.25f)).start()
-                    if (hapticsOn(v.context)) v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                }
-            }
-        }
-        false
-    }
-}
-
-/** Overscroll on the photo feed stretches the content briefly and springs back instead of glowing. */
-class SpringEdgeEffectFactory : androidx.recyclerview.widget.RecyclerView.EdgeEffectFactory() {
-    override fun createEdgeEffect(view: androidx.recyclerview.widget.RecyclerView, direction: Int): android.widget.EdgeEffect {
-        return object : android.widget.EdgeEffect(view.context) {
-            override fun onPull(deltaDistance: Float) {
-                super.onPull(deltaDistance)
-                val amount = (view.height * deltaDistance * 0.32f).coerceIn(0f, 34.dp().toFloat())
-                view.translationY = if (direction == DIRECTION_TOP) amount else -amount
-            }
-            override fun onPull(deltaDistance: Float, displacement: Float) {
-                super.onPull(deltaDistance, displacement)
-                val amount = (view.height * deltaDistance * 0.32f).coerceIn(0f, 34.dp().toFloat())
-                view.translationY = if (direction == DIRECTION_TOP) amount else -amount
-            }
-            override fun onRelease() {
-                super.onRelease()
-                view.animate().translationY(0f).setDuration(420)
-                    .setInterpolator(OvershootInterpolator(1.2f)).start()
-            }
-            override fun onAbsorb(velocity: Int) {
-                super.onAbsorb(velocity)
-                val amount = (velocity / 90f).coerceIn(4f, 24f)
-                view.animate().translationY(if (direction == DIRECTION_TOP) amount else -amount)
-                    .setDuration(110).withEndAction {
-                        view.animate().translationY(0f).setDuration(390)
-                            .setInterpolator(OvershootInterpolator(1.35f)).start()
-                    }.start()
-            }
-        }
-    }
-}
-
-/** Short staggered entrance used by each page; disabled when Low-effects mode is enabled. */
-fun animatePageEntrance(root: View) {
-    if (lowFx(root.context) || root !is ViewGroup) return
-    var container: ViewGroup = root
-    if (container.childCount == 1 && container.getChildAt(0) is ViewGroup) {
-        container = container.getChildAt(0) as ViewGroup
-    }
-    if (container.childCount == 1 && container.getChildAt(0) is ViewGroup) {
-        container = container.getChildAt(0) as ViewGroup
-    }
-    for (i in 0 until container.childCount) {
-        val child = container.getChildAt(i)
-        child.alpha = 0f
-        child.translationY = 14.dp().toFloat()
-        child.animate().alpha(1f).translationY(0f).setStartDelay((i * 24L).coerceAtMost(180L))
-            .setDuration(360).setInterpolator(OvershootInterpolator(0.65f)).start()
-    }
+    // Use Android's native overscroll feedback; no custom bounce, spring, or elastic translation.
+    view.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
 }

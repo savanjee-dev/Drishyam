@@ -91,6 +91,7 @@ class WhatsNewActivity : AppCompatActivity() {
         }
         page.addView(loading)
         setContentView(page)
+        animatePageEntrance(page)
 
         // Render local data immediately, without waiting for GitHub.
         val cached = ReleaseNotesCache.cachedHistory(this)
@@ -133,6 +134,45 @@ class WhatsNewActivity : AppCompatActivity() {
         val outline = color(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
         val onSurface = color(com.google.android.material.R.attr.colorOnSurface, R.color.fg)
         val variant = color(com.google.android.material.R.attr.colorOnSurfaceVariant, R.color.mute)
+
+        val latest = releases.firstOrNull()
+        if (latest != null) {
+            val hero = MaterialCardView(this).apply {
+                radius = 32.dp().toFloat()
+                cardElevation = 0f
+                strokeWidth = 0
+                setCardBackgroundColor(primaryContainer)
+                setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
+                isClickable = true
+                isFocusable = true
+                setOnClickListener { runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(latest.url))) } }
+            }
+            val heroBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            heroBody.addView(TextView(this).apply {
+                text = "THE LATEST CHAPTER"
+                textSize = 11f
+                letterSpacing = 0.16f
+                setTextColor(onPrimaryContainer)
+            })
+            heroBody.addView(TextView(this).apply {
+                text = "A fresh perspective."
+                textSize = 30f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_bold)
+                setTextColor(onPrimaryContainer)
+                setPadding(0, 8.dp(), 0, 6.dp())
+            })
+            heroBody.addView(TextView(this).apply {
+                text = "Drishyam ${latest.version} · What's changed"
+                textSize = 14f
+                setTextColor(onPrimaryContainer)
+            })
+            hero.addView(heroBody)
+            content.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 18.dp() })
+            hero.alpha = 0f
+            hero.translationY = 10.dp().toFloat()
+            hero.animate().alpha(1f).translationY(0f).setStartDelay(40L).setDuration(240)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+        }
 
         releases.forEachIndexed { index, release ->
             val card = MaterialCardView(this).apply {
@@ -178,6 +218,11 @@ class WhatsNewActivity : AppCompatActivity() {
             content.addView(card, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = 12.dp()
             })
+            card.alpha = 0f
+            card.translationY = 8.dp().toFloat()
+            card.animate().alpha(1f).translationY(0f)
+                .setStartDelay((index * 32L).coerceAtMost(160L))
+                .setDuration(220).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
         }
         scroll.post { scroll.scrollTo(0, restoreScrollY.coerceAtMost((content.height - scroll.height).coerceAtLeast(0))) }
     }
