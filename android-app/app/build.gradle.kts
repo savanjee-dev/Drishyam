@@ -10,7 +10,7 @@ android {
         applicationId = "com.savan.drishyam"
         minSdk = 29
         targetSdk = 34
-        versionCode = 45
+        versionCode = 46
         versionName = "3.0"
     }
     buildFeatures { buildConfig = true }
