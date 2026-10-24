@@ -93,7 +93,7 @@ class UpdatesActivity : AppCompatActivity() {
             setTextColor(onSurface)
         })
         heading.addView(TextView(this).apply {
-            text = "A clearer, calmer way to stay current"
+            text = "Every release, a better perspective"
             textSize = 14f
             setTextColor(onSurfaceVariant)
         })
@@ -101,26 +101,26 @@ class UpdatesActivity : AppCompatActivity() {
         root.addView(header)
 
         val statusCard = MaterialCardView(this).apply {
-            radius = 30.dp().toFloat()
+            radius = 34.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = themeColor(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
             setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorPrimaryContainer, R.color.surface))
             useCompatPadding = false
-            setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
+            setContentPadding(24.dp(), 26.dp(), 24.dp(), 26.dp())
         }
         val cardContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
         cardContent.addView(TextView(this).apply {
-            text = "YOUR CURRENT INSTALLATION"
+            text = "YOUR DRISHYAM EXPERIENCE"
             textSize = 11f
             letterSpacing = 0.12f
             setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
         })
         cardContent.addView(TextView(this).apply {
-            text = "Drishyam v${BuildConfig.VERSION_NAME}"
-            textSize = 26f
+            text = "A fresh perspective."
+            textSize = 29f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
             setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
             setPadding(0, 6.dp(), 0, 18.dp())
@@ -131,6 +131,7 @@ class UpdatesActivity : AppCompatActivity() {
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
             setTextColor(onSurface)
         }
+        versionText.text = "Installed version · v${BuildConfig.VERSION_NAME}"
         cardContent.addView(versionText)
         status = TextView(this).apply {
             text = "Tap Check for updates to check the latest published stable release."
@@ -215,6 +216,7 @@ class UpdatesActivity : AppCompatActivity() {
         })
 
         setContentView(scroll)
+        animatePageEntrance(scroll)
     }
 
     private fun checkForUpdates() {
