@@ -102,8 +102,10 @@ internal object VerifiedUpdateInstaller {
                             setDataAndType(uri, "application/vnd.android.package-archive")
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        status("APK verified. Android will ask you to approve installation.")
                         activity.startActivity(intent)
+                        activity.getSharedPreferences("drishyam_update_state", android.content.Context.MODE_PRIVATE)
+                            .edit().putString("pending_whats_new_version", release.version).apply()
+                        status("APK verified. Android will ask you to approve installation.")
                     } catch (e: Exception) {
                         status("APK verified, but Android couldn't open the installer: ${e.message ?: "try again"}.")
                     } finally {
