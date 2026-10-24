@@ -217,7 +217,7 @@ class UpdatesActivity : AppCompatActivity() {
 
         setContentView(scroll)
         animatePageEntrance(scroll)
-        if (!lowFx(this)) {
+        if (motionEnabled(this)) {
             val expressiveCards = listOf(statusCard, notesCard)
             expressiveCards.forEachIndexed { index, card ->
                 card.alpha = 0f
