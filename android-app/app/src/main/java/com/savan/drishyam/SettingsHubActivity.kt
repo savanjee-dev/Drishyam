@@ -10,6 +10,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
 
 class SettingsHubActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,16 +54,28 @@ class SettingsHubActivity : AppCompatActivity() {
         heading.typeface = ResourcesCompat.getFont(this, R.font.ericaone)
         addText(root, "Make Drishyam feel like yours.", 14f, R.color.mute, 0, 18)
 
-        val versionCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(20.dp(), 18.dp(), 20.dp(), 18.dp())
-            background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_card)
+        val versionCard = MaterialCardView(this).apply {
+            radius = 30.dp().toFloat()
+            cardElevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = MaterialColors.getColor(this, com.google.android.material.R.attr.colorOutlineVariant,
+                ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke))
+            setCardBackgroundColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimaryContainer,
+                ContextCompat.getColor(this@SettingsHubActivity, R.color.surface)))
+            setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
+            isClickable = true
+            isFocusable = true
+            pressFx()
+            setOnClickListener { startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance")) }
         }
-        val brand = addText(versionCard, "DRISHYAM  /  MOSS & OLIVE", 11f, R.color.accent, 0, 8)
-        brand.letterSpacing = 0.08f
-        val version = addText(versionCard, "A more immersive way to see.", 20f, R.color.fg, 0, 5)
-        version.typeface = ResourcesCompat.getFont(this, R.font.montserrat_semibold)
-        addText(versionCard, "Version ${BuildConfig.VERSION_NAME} · by Savan", 12f, R.color.mute, 0, 0)
+        val versionBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val brand = addText(versionBody, "DRISHYAM  /  MOSS & OLIVE", 11f, R.color.accent, 0, 10)
+        brand.letterSpacing = 0.16f
+        val version = addText(versionBody, "A more expressive way to see.", 25f, R.color.fg, 0, 8)
+        version.typeface = ResourcesCompat.getFont(this, R.font.montserrat_bold)
+        addText(versionBody, "Shape your space, tune the details, keep the focus on photography.", 13f, R.color.fg, 0, 12)
+        addText(versionBody, "VERSION ${BuildConfig.VERSION_NAME}   ·   BY SAVAN", 10f, R.color.mute, 0, 0).letterSpacing = 0.06f
+        versionCard.addView(versionBody)
         root.addView(versionCard, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
 
         val section = addText(root, "PREFERENCES", 11f, R.color.accent, 26, 8)
