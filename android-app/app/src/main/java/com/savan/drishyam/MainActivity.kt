@@ -37,6 +37,7 @@ import android.text.style.StyleSpan
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -263,7 +264,7 @@ class MainActivity : AppCompatActivity() {
             val tv = TextView(this).apply {
                 text = letter.toString()
                 textSize = 42f
-                typeface = ContextCompat.getFont(this@MainActivity, R.font.ericaone)
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.ericaone)
                 setTextColor(nameColor)
                 alpha = 0f
                 translationY = 20.dp().toFloat()
