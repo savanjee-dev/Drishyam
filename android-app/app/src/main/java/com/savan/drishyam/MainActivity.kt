@@ -182,7 +182,6 @@ class MainActivity : AppCompatActivity() {
         cur = sources.first()
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
-        rv.edgeEffectFactory = SpringEdgeEffectFactory()
         installScrollBounce(aboutScroll)
         installScrollBounce(chipScroll)
         rv.adapter = adapter
@@ -310,7 +309,7 @@ class MainActivity : AppCompatActivity() {
             .translationY(if (visible) 0f else -glassTop.height.toFloat() - 16.dp())
             .alpha(if (visible) 1f else 0f)
             .setDuration(if (visible) 260L else 210L)
-            .setInterpolator(if (visible) android.view.animation.OvershootInterpolator(0.65f) else AccelerateDecelerateInterpolator())
+            .setInterpolator(if (visible) AccelerateDecelerateInterpolator() else AccelerateDecelerateInterpolator())
             .withEndAction { glassTop.visibility = if (visible) View.VISIBLE else View.INVISIBLE }
             .start()
     }
@@ -323,7 +322,7 @@ class MainActivity : AppCompatActivity() {
             .translationY(if (visible) 0f else glassNav.height.toFloat() + 28.dp())
             .alpha(if (visible) 1f else 0f)
             .setDuration(if (visible) 210L else 180L)
-            .setInterpolator(if (visible) android.view.animation.OvershootInterpolator(0.65f) else AccelerateDecelerateInterpolator())
+            .setInterpolator(if (visible) AccelerateDecelerateInterpolator() else AccelerateDecelerateInterpolator())
             .withEndAction {
                 glassNav.visibility = if (visible) View.VISIBLE else View.INVISIBLE
                 lastBottomPad = -1
