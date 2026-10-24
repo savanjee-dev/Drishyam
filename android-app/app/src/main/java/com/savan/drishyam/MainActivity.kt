@@ -412,14 +412,28 @@ class MainActivity : AppCompatActivity() {
     /** Opens the full What's New page once an update installed from inside Drishyam is detected. */
     private fun showPendingWhatsNewIfNeeded(): Boolean {
         val prefs = getSharedPreferences("drishyam_update_state", Context.MODE_PRIVATE)
-        val pendingVersion = prefs.getString("pending_whats_new_version", null) ?: return false
         val currentVersion = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: return false
         } catch (_: Exception) { return false }
-        if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
-        prefs.edit().remove("pending_whats_new_version").apply()
-        // Keep the feed visible underneath a lightweight, animated What's New sheet.
-        // The full release history remains available from the sheet's secondary action.
+
+        val pendingVersion = prefs.getString("pending_whats_new_version", null)
+        if (pendingVersion != null) {
+            // Updates initiated from inside Drishyam keep their pending-version guard.
+            // Do not consume the pending notice until that version is actually installed.
+            if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
+            prefs.edit()
+                .remove("pending_whats_new_version")
+                .putString("whats_new_shown_version", currentVersion)
+                .apply()
+            showWhatsNewPopup(findViewById(R.id.glassSource), currentVersion)
+            return true
+        }
+
+        // Also cover APKs installed manually or through another installer. The old logic
+        // only handled in-app updates, so a normal sideloaded v3.0 update never showed
+        // What's New. Show once per installed version and remember it across relaunches.
+        if (prefs.getString("whats_new_shown_version", null) == currentVersion) return false
+        prefs.edit().putString("whats_new_shown_version", currentVersion).apply()
         showWhatsNewPopup(findViewById(R.id.glassSource), currentVersion)
         return true
     }
