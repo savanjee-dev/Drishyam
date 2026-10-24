@@ -441,59 +441,133 @@ class MainActivity : AppCompatActivity() {
     private fun showWhatsNewPopup(source: View, currentVersion: String) {
         val releases = ReleaseNotesCache.cachedHistory(this)
         val release = releases.firstOrNull { it.version == currentVersion } ?: releases.firstOrNull()
+        val notes = release?.notes?.takeIf { it.isNotBlank() }
+            ?: "Explore the refreshed Home screen and the latest improvements in Drishyam."
+        val previousVersion = releases.firstOrNull { compareVersionNumbers(it.version, currentVersion) < 0 }?.version
+            ?: "2.7.16"
+
         showGlassPopup(this, source, expressive = true) { box, close ->
-            box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
+            box.setPadding(20.dp(), 20.dp(), 20.dp(), 18.dp())
             box.addView(TextView(this).apply {
-                text = "WHAT'S NEW"
+                text = "⬇"
+                gravity = Gravity.CENTER
+                textSize = 30f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.accent_pill)
+                layoutParams = LinearLayout.LayoutParams(84.dp(), 64.dp()).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    bottomMargin = 16.dp()
+                }
+            })
+            box.addView(TextView(this).apply {
+                text = "NEW UPDATE INSTALLED"
+                gravity = Gravity.CENTER
                 textSize = 11f
                 letterSpacing = 0.16f
                 typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_semibold)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
             })
             box.addView(TextView(this).apply {
-                text = "A fresh chapter."
-                textSize = 27f
+                text = "Drishyam $currentVersion is ready"
+                gravity = Gravity.CENTER
+                textSize = 25f
                 typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_bold)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                setPadding(0, 6.dp(), 0, 4.dp())
+                setPadding(0, 8.dp(), 0, 14.dp())
             })
-            box.addView(TextView(this).apply {
-                text = "Drishyam v$currentVersion"
-                textSize = 14f
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
-            })
-            box.addView(TextView(this).apply {
-                text = release?.notes?.takeIf { it.isNotBlank() }
-                    ?: "Your update is ready. Explore the latest improvements and refinements."
-                textSize = 14f
-                maxLines = 6
-                setLineSpacing(3.dp().toFloat(), 1f)
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                setPadding(0, 14.dp(), 0, 18.dp())
-            })
-            val history = TextView(this).apply {
-                text = "View full release history"
+            val versions = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+            }
+            fun versionPill(label: String, highlighted: Boolean) = TextView(this).apply {
+                text = label
                 gravity = Gravity.CENTER
                 textSize = 14f
                 typeface = ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
-                setTextColor(ContextCompat.getColor(this@MainActivity, android.R.color.white))
-                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.accent_pill)
-                isClickable = true
-                isFocusable = true
-                pressFx()
-                setOnClickListener {
-                    close()
-                    startActivity(Intent(this@MainActivity, WhatsNewActivity::class.java)
-                        .putExtra("highlight_version", currentVersion))
-                }
+                setTextColor(ContextCompat.getColor(this@MainActivity, if (highlighted) R.color.bg else R.color.mute))
+                background = ContextCompat.getDrawable(this@MainActivity, if (highlighted) R.drawable.accent_pill else R.drawable.glass_pill)
+                setPadding(14.dp(), 8.dp(), 14.dp(), 8.dp())
             }
-            box.addView(history, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 48.dp()
-            ).apply { bottomMargin = 10.dp() })
-            val continueButton = TextView(this).apply {
-                text = "Continue to Drishyam"
+            versions.addView(versionPill(previousVersion, false))
+            versions.addView(TextView(this).apply {
+                text = "  →  "
+                textSize = 17f
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
+            })
+            versions.addView(versionPill(currentVersion, true))
+            box.addView(versions, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = 18.dp()
+            })
+            box.addView(TextView(this).apply {
+                text = "WHAT'S NEW"
+                textSize = 12f
+                letterSpacing = 0.12f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_semibold)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
+                setPadding(0, 0, 0, 10.dp())
+            })
+
+            val features = notes.lines().map { it.trim().removePrefix("-").removePrefix("•").trim() }
+                .filter { it.isNotBlank() && !it.startsWith("#") }
+                .take(3)
+            val cards = if (features.isEmpty()) listOf(
+                "Home redesign" to "A clearer, more expressive way to explore photography.",
+                "Smoother experience" to "Refined transitions and a more polished update experience."
+            ) else features.mapIndexed { index, line ->
+                val split = line.split(":", limit = 2)
+                (if (split.size == 2) split[0].trim() else when(index) {
+                    0 -> "What's improved"
+                    1 -> "Home experience"
+                    else -> "More refinements"
+                }) to (if (split.size == 2) split[1].trim() else line)
+            }
+            cards.forEach { (heading, detail) ->
+                val card = com.google.android.material.card.MaterialCardView(this).apply {
+                    radius = 22.dp().toFloat()
+                    cardElevation = 0f
+                    strokeWidth = 1.dp()
+                    strokeColor = ContextCompat.getColor(this@MainActivity, R.color.outline)
+                    setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.surface))
+                }
+                val row = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(12.dp(), 12.dp(), 12.dp(), 12.dp())
+                }
+                row.addView(TextView(this).apply {
+                    text = "✧"
+                    gravity = Gravity.CENTER
+                    textSize = 24f
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
+                    background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
+                }, LinearLayout.LayoutParams(52.dp(), 52.dp()).apply { marginEnd = 12.dp() })
+                val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+                copy.addView(TextView(this@MainActivity).apply {
+                    text = heading
+                    textSize = 16f
+                    typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_semibold)
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                })
+                copy.addView(TextView(this@MainActivity).apply {
+                    text = detail
+                    textSize = 13f
+                    maxLines = 3
+                    setLineSpacing(2.dp().toFloat(), 1f)
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
+                    setPadding(0, 3.dp(), 0, 0)
+                })
+                row.addView(copy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                card.addView(row)
+                box.addView(card, LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    bottomMargin = 9.dp()
+                })
+            }
+
+            val later = TextView(this).apply {
+                text = "Later"
                 gravity = Gravity.CENTER
-                textSize = 14f
+                textSize = 15f
                 typeface = ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
                 background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
@@ -502,9 +576,26 @@ class MainActivity : AppCompatActivity() {
                 pressFx()
                 setOnClickListener { close() }
             }
-            box.addView(continueButton, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, 46.dp()
-            ))
+            val continueButton = TextView(this).apply {
+                text = "Continue to Drishyam"
+                gravity = Gravity.CENTER
+                textSize = 15f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.bg))
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.accent_pill)
+                isClickable = true
+                isFocusable = true
+                pressFx()
+                setOnClickListener { close() }
+            }
+            val actions = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                setPadding(0, 10.dp(), 0, 0)
+                addView(later, LinearLayout.LayoutParams(0, 54.dp(), 1f).apply { marginEnd = 8.dp() })
+                addView(continueButton, LinearLayout.LayoutParams(0, 54.dp(), 1f))
+            }
+            box.addView(actions)
         }
     }
 
