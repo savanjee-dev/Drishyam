@@ -106,3 +106,40 @@ test("download tracking uses the configured key and fixed Unsplash endpoint", as
   assert.equal(capturedHeaders.Authorization, "Client-ID test-only-key");
   assert.equal(capturedHeaders["Accept-Version"], "v1");
 });
+
+test("upstream rate limits are returned as a safe retryable error", async (t) => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("private upstream detail", { status: 429 });
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  const response = await worker.fetch(
+    new Request("https://worker.example/photos/abc_123/download"),
+    { UNSPLASH_ACCESS_KEY: "test-only-key" },
+    context()
+  );
+
+  assert.equal(response.status, 429);
+  assert.deepEqual(await response.json(), {
+    error: "Photo service rate limit reached. Try again shortly.",
+    upstream_status: 429
+  });
+  assert.equal(response.headers.get("cache-control"), "no-store");
+});
+
+test("network failures are converted to a safe gateway error", async (t) => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error("private network diagnostic"); };
+  t.after(() => { globalThis.fetch = originalFetch; });
+
+  const response = await worker.fetch(
+    new Request("https://worker.example/photos/abc_123/download"),
+    { UNSPLASH_ACCESS_KEY: "test-only-key" },
+    context()
+  );
+
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), {
+    error: "Photo service is temporarily unavailable."
+  });
+  assert.equal(response.headers.get("cache-control"), "no-store");
+});
