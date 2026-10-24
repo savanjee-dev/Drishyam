@@ -354,8 +354,11 @@ class UpdatesActivity : AppCompatActivity() {
                 downloadProgress.isIndeterminate = false
                 downloadProgress.progress = 0
             }
-            downloadButton.isEnabled = true
-            downloadButton.text = "Download v${release.version}"
+            val downloading = message.contains("Downloading update", ignoreCase = true)
+            downloadButton.isEnabled = !downloading
+            downloadButton.text = if (downloading) {
+                if (percent != null) "Downloading… $percent%" else "Downloading…"
+            } else "Download v${release.version}"
         }
     }
 
