@@ -1,11 +1,11 @@
-name: Phase 2 APK Build (No Release)
+name: Phase 3 APK Build (No Release)
 # CI-only test artifact; do not publish a production release.
 # Dedicated test build only; intentionally does not publish a GitHub Release.
 
 on:
   workflow_dispatch:
   push:
-    branches: ["ci/phase1-splash-build", "phase2/home-header-search-sort"]
+    branches: ["ci/phase1-splash-build", "phase2/home-header-search-sort", "phase3/material3-expressive-v3.0"]
     paths:
       - "android-app/**"
       - ".github/workflows/build-phase1-apk.yml"
@@ -34,12 +34,12 @@ jobs:
           GRADLE_FILE="$PROJECT_DIR/app/build.gradle.kts"
           VERSION_NAME="$(sed -nE 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$GRADLE_FILE" | head -n 1)"
           VERSION_CODE="$(sed -nE 's/.*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$GRADLE_FILE" | head -n 1)"
-          test "$VERSION_NAME" = "2.7.16"
-          test "$VERSION_CODE" = "44"
+          test "$VERSION_NAME" = "3.0"
+          test "$VERSION_CODE" = "45"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "VERSION_NAME=$VERSION_NAME" >> "$GITHUB_ENV"
           echo "VERSION_CODE=$VERSION_CODE" >> "$GITHUB_ENV"
-          echo "Building isolated Phase 2 test APK only; no release or tag will be published."
+          echo "Building isolated Phase 3 v3.0 test APK only; no release or tag will be published."
 
       - name: Configure Android signing key
         shell: bash
@@ -73,7 +73,7 @@ jobs:
           printf '%s' "$GOOGLE_SERVICES_JSON" > "$PROJECT_DIR/app/google-services.json"
           python3 -m json.tool "$PROJECT_DIR/app/google-services.json" > /dev/null
 
-      - name: Validate Android XML and Phase 2 search resources
+      - name: Validate Android XML and Phase 3 resources
         shell: bash
         run: |
           set -euo pipefail
@@ -88,7 +88,7 @@ jobs:
           missing = [name for name in required if not (root / name).is_file()]
           if missing:
               raise SystemExit("Missing Phase 1 resources: " + ", ".join(missing))
-          print("XML parsing and Phase 2 resource checks passed.")
+          print("XML parsing and Phase 3 resource checks passed.")
           PY
 
       - name: Build signed release-variant APK for testing
@@ -101,8 +101,8 @@ jobs:
           gradle --no-daemon assembleRelease
           APK_SOURCE="$PROJECT_DIR/app/build/outputs/apk/release/app-release.apk"
           test -f "$APK_SOURCE"
-          mkdir -p "$RUNNER_TEMP/drishyam-phase2-output"
-          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2.apk"
+          mkdir -p "$RUNNER_TEMP/drishyam-phase3-output"
+          cp "$APK_SOURCE" "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-v3.0-Phase3.apk"
 
       - name: Verify APK signature
         shell: bash
@@ -115,7 +115,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Drishyam-Phase2-Test-APK
+          name: Drishyam-v3.0-Phase3-Test-APK
           path: ${{ runner.temp }}/drishyam-phase2-output/Drishyam-Phase2.apk
           if-no-files-found: error
           retention-days: 30
