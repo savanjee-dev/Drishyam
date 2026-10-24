@@ -1,0 +1,7 @@
+Drishyam 2.7.11
+
+- Verify in-app update APK downloads using the published SHA-256 digest before installation.
+- Validate the APK package identity and signing certificate against the installed Drishyam app.
+- Show version-specific “What’s new” notes after an in-app update completes.
+- Improve update status messages and release-note handling.
+- Preserve existing saved items, preferences, Dark Mode, and app content during upgrades.
