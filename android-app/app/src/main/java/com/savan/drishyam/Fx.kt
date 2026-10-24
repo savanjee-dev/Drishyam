@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
@@ -114,6 +115,7 @@ fun showGlassPopup(
     activity: Activity,
     source: View,
     topOffsetDp: Int = -1,
+    expressive: Boolean = false,
     build: (LinearLayout, () -> Unit) -> Unit
 ) {
     PopupStack.dismiss()
@@ -147,8 +149,12 @@ fun showGlassPopup(
             PopupStack.set(null)
             hideKeyboard(activity, scrim)
             if (motionEnabled(activity)) {
-                card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150).start()
-                scrim.animate().alpha(0f).setDuration(170)
+                val closeMotion = card.animate().alpha(0f).scaleX(if (expressive) 0.96f else 0.94f)
+                    .scaleY(if (expressive) 0.96f else 0.94f)
+                    .translationY(if (expressive) 8.dp().toFloat() else 0f)
+                    .setDuration(if (expressive) 190L else 150L)
+                closeMotion.start()
+                scrim.animate().alpha(0f).setDuration(if (expressive) 220L else 170L)
                     .withEndAction { host.removeView(scrim) }.start()
             } else {
                 host.removeView(scrim)
@@ -160,12 +166,14 @@ fun showGlassPopup(
     build(box, close)
 
     if (motionEnabled(activity)) {
-        card.scaleX = 0.9f
-        card.scaleY = 0.9f
+        card.scaleX = if (expressive) 0.88f else 0.9f
+        card.scaleY = if (expressive) 0.92f else 0.9f
+        card.translationY = if (expressive) 28.dp().toFloat() else 0f
         card.alpha = 0f
-        scrim.animate().alpha(1f).setDuration(180).start()
-        card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(190)
-            .setInterpolator(DecelerateInterpolator()).start()
+        scrim.animate().alpha(1f).setDuration(if (expressive) 240L else 180L).start()
+        val entrance = card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+            .setDuration(if (expressive) 360L else 190L)
+        entrance.setInterpolator(if (expressive) OvershootInterpolator(0.55f) else DecelerateInterpolator()).start()
     } else {
         card.scaleX = 1f
         card.scaleY = 1f
