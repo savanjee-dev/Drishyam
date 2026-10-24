@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -29,6 +30,7 @@ class UpdatesActivity : AppCompatActivity() {
     private lateinit var checkButton: MaterialButton
     private lateinit var downloadButton: MaterialButton
     private lateinit var releaseButton: MaterialButton
+    private lateinit var downloadProgress: ProgressBar
     private var apkUrl: String? = null
     private var verifiedApk: VerifiedReleaseApk? = null
     private var releasePage: String? = null
@@ -188,6 +190,17 @@ class UpdatesActivity : AppCompatActivity() {
         root.addView(downloadButton, LinearLayout.LayoutParams(-1, 54.dp()).apply {
             topMargin = 10.dp()
         })
+        downloadProgress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 0
+            isIndeterminate = false
+            visibility = View.GONE
+            progressTintList = android.content.res.ColorStateList.valueOf(primary)
+        }
+        root.addView(downloadProgress, LinearLayout.LayoutParams(-1, 6.dp()).apply {
+            topMargin = 8.dp()
+            bottomMargin = 4.dp()
+        })
         releaseButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "View GitHub release"
             textSize = 14f
@@ -328,6 +341,19 @@ class UpdatesActivity : AppCompatActivity() {
         VerifiedUpdateInstaller.downloadAndInstall(this, release) { message ->
             if (isFinishing || isDestroyed) return@downloadAndInstall
             status.text = message
+            val percent = Regex("(\\\\d{1,3})%").find(message)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (percent != null) {
+                downloadProgress.visibility = View.VISIBLE
+                downloadProgress.isIndeterminate = false
+                downloadProgress.progress = percent.coerceIn(0, 100)
+            } else if (message.contains("Downloading", ignoreCase = true)) {
+                downloadProgress.visibility = View.VISIBLE
+                downloadProgress.isIndeterminate = true
+            } else {
+                downloadProgress.visibility = View.GONE
+                downloadProgress.isIndeterminate = false
+                downloadProgress.progress = 0
+            }
             downloadButton.isEnabled = true
             downloadButton.text = "Download v${release.version}"
         }
