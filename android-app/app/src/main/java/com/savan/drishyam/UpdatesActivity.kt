@@ -341,7 +341,7 @@ class UpdatesActivity : AppCompatActivity() {
         VerifiedUpdateInstaller.downloadAndInstall(this, release) { message ->
             if (isFinishing || isDestroyed) return@downloadAndInstall
             status.text = message
-            val percent = Regex("(\\\\d{1,3})%").find(message)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            val percent = Regex("(\\d{1,3})%").find(message)?.groupValues?.getOrNull(1)?.toIntOrNull()
             if (percent != null) {
                 downloadProgress.visibility = View.VISIBLE
                 downloadProgress.isIndeterminate = false
