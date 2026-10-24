@@ -239,68 +239,16 @@ class MainActivity : AppCompatActivity() {
      * If installation was cancelled, keep the pending version until a matching/newer version
      * is installed. The dialog is shown once and never replaces the saved-photo state.
      */
+    /** Opens the full What's New page once an update installed from inside Drishyam is detected. */
     private fun showPendingWhatsNewIfNeeded(): Boolean {
         val prefs = getSharedPreferences("drishyam_update_state", Context.MODE_PRIVATE)
         val pendingVersion = prefs.getString("pending_whats_new_version", null) ?: return false
         val currentVersion = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: return false
-        } catch (_: Exception) {
-            return false
-        }
+        } catch (_: Exception) { return false }
         if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
-
-        Thread {
-            val notes = ReleaseChangelog.fetch(currentVersion)
-            runOnUiThread {
-                if (isFinishing || isDestroyed || !::glassSource.isInitialized) return@runOnUiThread
-                showGlassPopup(this, glassSource) { box, close ->
-                    box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
-                    box.addView(TextView(this).apply {
-                        text = "Drishyam $currentVersion"
-                        textSize = 24f
-                        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_bold)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                    })
-                    box.addView(TextView(this).apply {
-                        text = "What’s new"
-                        textSize = 15f
-                        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
-                        setPadding(0, 14.dp(), 0, 5.dp())
-                    })
-                    val formatted = notes.orEmpty().lineSequence().map { it.trim() }.filter { it.isNotBlank() }
-                        .map { line -> if (line.startsWith("-") || line.startsWith("•") || line.startsWith("*")) "•  " + line.drop(1).trim() else "•  " + line }
-                        .joinToString("\n")
-                    box.addView(TextView(this).apply {
-                        text = formatted.ifBlank { "• Bug fixes and improvements in this version." }
-                        textSize = 14f
-                        setLineSpacing(4.dp().toFloat(), 1f)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                        maxHeight = 260.dp()
-                        isVerticalScrollBarEnabled = true
-                        movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
-                        setPadding(0, 0, 0, 8.dp())
-                    })
-                    box.addView(TextView(this).apply {
-                        text = "Your photos, saved items, preferences, and Dark Mode remain on this device."
-                        textSize = 12f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
-                        setPadding(0, 8.dp(), 0, 0)
-                    })
-                    box.addView(TextView(this).apply {
-                        text = "Continue"
-                        gravity = Gravity.CENTER
-                        textSize = 14f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                        isClickable = true
-                        isFocusable = true
-                        setPadding(0, 14.dp(), 0, 0)
-                        setOnClickListener { close() }
-                    }, LinearLayout.LayoutParams(-1, 42.dp()))
-                }
-                prefs.edit().remove("pending_whats_new_version").apply()
-            }
-        }.start()
+        prefs.edit().remove("pending_whats_new_version").apply()
+        startActivity(Intent(this, WhatsNewActivity::class.java).putExtra("highlight_version", currentVersion))
         return true
     }
 
