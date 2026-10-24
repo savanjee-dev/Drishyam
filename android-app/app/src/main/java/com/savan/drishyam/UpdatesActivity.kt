@@ -1,11 +1,8 @@
 package com.savan.drishyam
 
-import android.app.DownloadManager
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -33,6 +30,7 @@ class UpdatesActivity : AppCompatActivity() {
     private lateinit var downloadButton: MaterialButton
     private lateinit var releaseButton: MaterialButton
     private var apkUrl: String? = null
+    private var verifiedApk: VerifiedReleaseApk? = null
     private var releasePage: String? = null
     private var latestVersion: String? = null
     private var checkInProgress = false
@@ -216,6 +214,7 @@ class UpdatesActivity : AppCompatActivity() {
         checkButton.text = "Checking…"
         status.text = "Connecting to GitHub Releases…"
         apkUrl = null
+        verifiedApk = null
         downloadButton.visibility = View.GONE
         releaseButton.visibility = View.GONE
 
@@ -302,6 +301,7 @@ class UpdatesActivity : AppCompatActivity() {
                 }.start()
 
                 val verifiedAsset = VerifiedReleaseApk.fromRelease(result, version)
+                verifiedApk = verifiedAsset
                 apkUrl = verifiedAsset?.url
                 if (comparison > 0 && apkUrl != null) {
                     downloadButton.text = "Download v$version"
@@ -315,27 +315,17 @@ class UpdatesActivity : AppCompatActivity() {
     }
 
     private fun downloadUpdate() {
-        val url = apkUrl ?: run {
-            Toast.makeText(this, "No APK download is available yet.", Toast.LENGTH_LONG).show()
+        val release = verifiedApk ?: run {
+            Toast.makeText(this, "No verified APK download is available yet. Check for updates again.", Toast.LENGTH_LONG).show()
             return
         }
-        try {
-            val manager = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            val request = DownloadManager.Request(Uri.parse(url))
-                .setTitle("Drishyam ${latestVersion ?: ""}")
-                .setDescription("Downloading Drishyam update")
-                .setMimeType("application/vnd.android.package-archive")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setAllowedOverMetered(true)
-                .setAllowedOverRoaming(false)
-                .setDestinationInExternalPublicDir(
-                    Environment.DIRECTORY_DOWNLOADS,
-                    "Drishyam-${latestVersion ?: "update"}.apk"
-                )
-            manager.enqueue(request)
-            Toast.makeText(this, "Download started. Open the completed download to install.", Toast.LENGTH_LONG).show()
-        } catch (_: Exception) {
-            Toast.makeText(this, "Couldn't start the download. Open the GitHub release page instead.", Toast.LENGTH_LONG).show()
+        downloadButton.isEnabled = false
+        downloadButton.text = "Verifying download…"
+        VerifiedUpdateInstaller.downloadAndInstall(this, release) { message ->
+            if (isFinishing || isDestroyed) return@downloadAndInstall
+            status.text = message
+            downloadButton.isEnabled = true
+            downloadButton.text = "Download v${release.version}"
         }
     }
 
