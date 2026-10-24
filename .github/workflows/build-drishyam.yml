@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - "stability/drishyam-2.4.9"
-      - "release/v2.7.4-photo-view-2.0"
-      - "release/v2.7.8-update-fixes"
+      - "main"
+      - "fix/verified-update-downloads"
     paths:
       - "android-app/**"
       - ".github/workflows/build-drishyam.yml"
@@ -144,7 +143,8 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: github.ref == 'refs/heads/stability/drishyam-2.4.9' || github.ref == 'refs/heads/release/v2.7.4-photo-view-2.0' || github.ref == 'refs/heads/release/v2.7.8-update-fixes'
+        # Publish only when an authorized maintainer manually dispatches this workflow from main.
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.app.outputs.version_name }}
