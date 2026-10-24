@@ -1,6 +1,8 @@
 package com.savan.drishyam
 
 import android.app.Activity
+import android.animation.ValueAnimator
+import android.os.Build
 import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Resources
@@ -32,6 +34,10 @@ fun hapticsOn(c: Context): Boolean =
 /** Low-effects mode switches off live blur and the animated backdrop. */
 fun lowFx(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
+
+/** Single motion gate shared by page and component transitions. */
+fun motionEnabled(c: Context): Boolean =
+    !lowFx(c) && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
 
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
