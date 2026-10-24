@@ -3,6 +3,10 @@ name: Build and Release Drishyam APK
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "stability/drishyam-2.4.9"
+      - "release/v2.7.4-photo-view-2.0"
+      - "release/v2.7.8-update-fixes"
     paths:
       - "android-app/**"
       - ".github/workflows/build-drishyam.yml"
