@@ -1,0 +1,45 @@
+name: Test Drishyam Photo Proxy
+
+on:
+  pull_request:
+    paths:
+      - "cloudflare-worker/**"
+      - ".github/workflows/test-photo-proxy.yml"
+  push:
+    branches:
+      - main
+      - "fix/verified-update-downloads"
+    paths:
+      - "cloudflare-worker/**"
+      - ".github/workflows/test-photo-proxy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drishyam-photo-proxy-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare-worker
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: cloudflare-worker/package.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Check Worker and run tests
+        run: npm run build
