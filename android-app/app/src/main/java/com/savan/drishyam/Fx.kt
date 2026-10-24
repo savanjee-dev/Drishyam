@@ -207,36 +207,8 @@ fun choicePopup(activity: Activity, source: View, title: String, options: List<S
 
 /** Spring-like edge feedback for scroll containers; touch handling remains with the child views. */
 fun installScrollBounce(view: View) {
-    if (lowFx(view.context)) return
-    var downX = 0f
-    var downY = 0f
-    view.setOnTouchListener { v, event ->
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { downX = event.x; downY = event.y }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                val dx = event.x - downX
-                val dy = event.y - downY
-                val horizontal = v is android.widget.HorizontalScrollView
-                val atStart = if (horizontal) !v.canScrollHorizontally(-1) else !v.canScrollVertically(-1)
-                val atEnd = if (horizontal) !v.canScrollHorizontally(1) else !v.canScrollVertically(1)
-                val draggedTowardStart = if (horizontal) dx > 12.dp() else dy > 12.dp()
-                val draggedTowardEnd = if (horizontal) dx < -12.dp() else dy < -12.dp()
-                if ((atStart && draggedTowardStart) || (atEnd && draggedTowardEnd)) {
-                    val distance = if (horizontal) 10.dp().toFloat() else 12.dp().toFloat()
-                    val target = if (horizontal) {
-                        if (atStart) distance else -distance
-                    } else {
-                        if (atStart) distance else -distance
-                    }
-                    if (horizontal) v.translationX = target else v.translationY = target
-                    v.animate().translationX(0f).translationY(0f).setDuration(180)
-                        .setInterpolator(DecelerateInterpolator()).start()
-                    if (hapticsOn(v.context)) v.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                }
-            }
-        }
-        false
-    }
+    // Use Android's native overscroll feedback; no custom bounce, spring, or elastic translation.
+    view.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
 }
 
 /** Compatibility edge-effect class with non-elastic, standard Android edge feedback. */
