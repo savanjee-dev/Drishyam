@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splashRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/splash_radial_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:importantForAccessibility="yes">
+
+    <View
+        android:id="@+id/splashAmbientGlow"
+        android:layout_width="460dp"
+        android:layout_height="460dp"
+        android:layout_gravity="center"
+        android:background="@drawable/splash_glow" />
+
+    <View
+        android:id="@+id/splashRing"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_gravity="center"
+        android:background="@drawable/splash_ring"
+        android:alpha="0" />
+
+    <LinearLayout
+        android:id="@+id/splashContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp">
+
+        <FrameLayout
+            android:id="@+id/splashLogoStage"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+            <ImageView
+                android:id="@+id/splashLogo"
+                android:layout_width="118dp"
+                android:layout_height="118dp"
+                android:layout_gravity="center"
+                android:contentDescription="Drishyam"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/ic_launcher" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/splashName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:orientation="horizontal" />
+
+        <TextView
+            android:id="@+id/splashByline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:fontFamily="@font/pacifico_regular"
+            android:text="by Savan"
+            android:textColor="@color/accent"
+            android:textSize="17sp"
+            android:alpha="0" />
+
+        <TextView
+            android:id="@+id/splashTagline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:fontFamily="@font/poppins_regular"
+            android:text="See the world a little slower."
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp"
+            android:alpha="0" />
+
+        <FrameLayout
+            android:layout_width="210dp"
+            android:layout_height="12dp"
+            android:layout_marginTop="36dp"
+            android:background="@drawable/splash_progress_track">
+            <View
+                android:id="@+id/splashProgressFill"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/splash_progress_fill"
+                android:scaleX="0"
+                android:transformPivotX="0dp" />
+        </FrameLayout>
+
+        <TextView
+            android:id="@+id/splashCaption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:fontFamily="@font/poppins_medium"
+            android:letterSpacing="0.18"
+            android:text="LOADING YOUR FRAMES"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="11sp"
+            android:alpha="0" />
+    </LinearLayout>
+</FrameLayout>
