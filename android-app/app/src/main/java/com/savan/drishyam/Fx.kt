@@ -147,9 +147,9 @@ fun showGlassPopup(
             PopupStack.set(null)
             hideKeyboard(activity, scrim)
             if (motionEnabled(activity)) {
-                card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150)
+                card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150).start()
+                scrim.animate().alpha(0f).setDuration(170)
                     .withEndAction { host.removeView(scrim) }.start()
-                scrim.animate().alpha(0f).setDuration(170).start()
             } else {
                 host.removeView(scrim)
             }
