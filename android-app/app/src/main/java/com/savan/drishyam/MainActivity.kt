@@ -186,6 +186,13 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
+        findViewById<View>(R.id.homeSearchField).apply {
+            isClickable = true
+            isFocusable = true
+            pressFx()
+            setOnClickListener { showSearch() }
+        }
+
         findViewById<ImageView>(R.id.headerSearchButton).apply {
             imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
             background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
