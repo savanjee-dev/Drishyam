@@ -148,30 +148,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<View>(R.id.rowWhatsNew).apply {
             pressFx()
             setOnClickListener {
-                val notesView = TextView(this@SettingsActivity).apply {
-                    text = "Loading changelog for installed version ${BuildConfig.VERSION_NAME}…"
-                    textSize = 15f
-                    setLineSpacing(5.dp().toFloat(), 1f)
-                    setTextColor(com.google.android.material.color.MaterialColors.getColor(
-                        this, com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF.toInt()))
-                    setPadding(24.dp(), 8.dp(), 24.dp(), 8.dp())
-                    maxHeight = 420.dp()
-                    isVerticalScrollBarEnabled = true
-                    movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
-                }
-                val dialog = MaterialAlertDialogBuilder(this@SettingsActivity)
-                    .setTitle(getString(R.string.whats_new_title, BuildConfig.VERSION_NAME))
-                    .setView(notesView)
-                    .setPositiveButton(R.string.ok, null)
-                    .show()
-                Thread {
-                    val fetched = ReleaseChangelog.fetch(BuildConfig.VERSION_NAME)
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed || !dialog.isShowing) return@runOnUiThread
-                        notesView.text = fetched
-                            ?: "The changelog for installed version ${BuildConfig.VERSION_NAME} could not be loaded. Connect to the internet and try again later."
-                    }
-                }.start()
+                startActivity(android.content.Intent(this@SettingsActivity, WhatsNewActivity::class.java))
             }
         }
         findViewById<View>(R.id.rowCredits).apply {
