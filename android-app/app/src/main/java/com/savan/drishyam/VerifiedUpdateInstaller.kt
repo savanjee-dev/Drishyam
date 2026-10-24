@@ -70,15 +70,29 @@ internal object VerifiedUpdateInstaller {
                 val archive = activity.packageManager.getPackageArchiveInfo(temp.absolutePath, flags)
                     ?: throw SecurityException("Android couldn't validate this APK.")
                 if (archive.packageName != activity.packageName) throw SecurityException("This APK is not the Drishyam app.")
+                if (archive.versionName != release.version) throw SecurityException("APK version doesn't match the selected release.")
                 val installed = activity.packageManager.getPackageInfo(activity.packageName, flags)
+                if (archive.longVersionCode <= installed.longVersionCode) {
+                    throw SecurityException("This APK is not newer than the installed Drishyam version.")
+                }
                 if (Build.VERSION.SDK_INT >= 28) {
                     val installedInfo = installed.signingInfo ?: throw SecurityException("Installed app signing identity couldn't be checked.")
                     val archiveInfo = archive.signingInfo ?: throw SecurityException("Downloaded app signing identity couldn't be checked.")
                     val installedCerts = installedInfo.apkContentsSigners
                     val archiveCerts = archiveInfo.apkContentsSigners
-                    val matches = archiveCerts.any { apkSigner ->
-                        installedCerts.any { it.toByteArray().contentEquals(apkSigner.toByteArray()) } ||
-                            installedInfo.signingCertificateHistory.any { it.toByteArray().contentEquals(apkSigner.toByteArray()) }
+                    val matches = if (installedInfo.hasMultipleSigners || archiveInfo.hasMultipleSigners) {
+                        installedCerts.size == archiveCerts.size && installedCerts.all { installedSigner ->
+                            archiveCerts.any { it.toByteArray().contentEquals(installedSigner.toByteArray()) }
+                        }
+                    } else {
+                        val installedSigner = installedCerts.singleOrNull()
+                        val archiveSigner = archiveCerts.singleOrNull()
+                        installedSigner != null && archiveSigner != null && (
+                            archiveSigner.toByteArray().contentEquals(installedSigner.toByteArray()) ||
+                                archiveInfo.signingCertificateHistory.any {
+                                    it.toByteArray().contentEquals(installedSigner.toByteArray())
+                                }
+                        )
                     }
                     if (!matches) throw SecurityException("APK signing identity doesn't match the installed app. Installation was blocked.")
                 }
@@ -88,8 +102,8 @@ internal object VerifiedUpdateInstaller {
                 if (!temp.renameTo(verified)) throw IllegalStateException("Couldn't prepare the verified APK.")
                 temp = null
                 main.post {
-                    if (activity.isFinishing || activity.isDestroyed) return@post
                     try {
+                        if (activity.isFinishing || activity.isDestroyed) return@post
                         if (Build.VERSION.SDK_INT >= 26 && !activity.packageManager.canRequestPackageInstalls()) {
                             status("Allow Drishyam to install updates in Android settings, then return and tap Download again.")
                             val settings = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
