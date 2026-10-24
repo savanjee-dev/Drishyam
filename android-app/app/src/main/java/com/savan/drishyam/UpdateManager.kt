@@ -3,6 +3,7 @@ package com.savan.drishyam
 import android.app.Activity
 import android.content.Context
 import android.os.Handler
+import android.net.Uri
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
