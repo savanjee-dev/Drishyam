@@ -1,4 +1,5 @@
 name: Phase 1 APK Build (No Release)
+# CI-only test artifact; do not publish a production release.
 # Dedicated test build only; intentionally does not publish a GitHub Release.
 
 on:
