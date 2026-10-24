@@ -1,0 +1,12 @@
+Drishyam 2.7.16
+
+Material 3 Expressive redesign preview
+
+- Introduces a clearer editorial hierarchy on the Home feed.
+- Restyles photo category filters as theme-aware Material 3 chips.
+- Refreshes Settings with a tonal hero card and rounded Material 3 surface groups.
+- Refines the photo viewer detail sheet with a large rounded Material surface while preserving the immersive photo canvas and existing controls.
+- Continues to respect Dark Mode, saved content, likes, bookmarks, and existing preferences.
+- Keeps optional motion restrained and gated by Low Effects and Android system animator settings.
+
+This release is intended for owner device testing after automated build and APK signature verification. Please report visual, interaction, photo-loading, and upgrade issues for follow-up fixes.
