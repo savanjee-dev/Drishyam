@@ -138,7 +138,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         card.addView(arrow)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 10.dp() })
-        if (!lowFx(this@SettingsHubActivity)) {
+        if (motionEnabled(this@SettingsHubActivity)) {
             val entranceIndex = root.childCount.coerceAtMost(10)
             card.alpha = 0f
             card.translationY = 18.dp().toFloat()
