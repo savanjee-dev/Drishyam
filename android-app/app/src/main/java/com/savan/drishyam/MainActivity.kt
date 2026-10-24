@@ -253,7 +253,6 @@ class MainActivity : AppCompatActivity() {
         }
         if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
 
-        prefs.edit().remove("pending_whats_new_version").apply()
         Thread {
             val notes = ReleaseChangelog.fetch(currentVersion)
             runOnUiThread {
@@ -303,6 +302,7 @@ class MainActivity : AppCompatActivity() {
                         setOnClickListener { close() }
                     }, LinearLayout.LayoutParams(-1, 42.dp()))
                 }
+                prefs.edit().remove("pending_whats_new_version").apply()
             }
         }.start()
         return true
