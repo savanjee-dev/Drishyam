@@ -673,13 +673,24 @@ class MainActivity : AppCompatActivity() {
                 finished = last
                 added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
             } catch (e: Exception) {
-                val m = e.message ?: ""
-                error = when {
-                    m.contains("429") -> "Unsplash is temporarily rate-limiting requests. Please wait and try again."
-                    m.contains("403") || m.contains("Forbidden", true) -> "Photo service authorization failed (403). Check proxy settings."
-                    m.contains("404") -> "This feed was not found."
-                    m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet."
-                    else -> "Couldn’t load photos from Unsplash ($m)."
+                // Keep the feed usable when Unsplash or its proxy is temporarily unavailable.
+                // Wikimedia Commons is a separate public source and does not require an Unsplash key.
+                val unsplashError = e.message ?: "Photo service unavailable."
+                try {
+                    val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
+                    val (fallbackPhotos, last) = Api.commons(fallbackQuery, page)
+                    if (fallbackPhotos.isEmpty()) throw Exception("No fallback photos returned.")
+                    added.addAll(fallbackPhotos)
+                    finished = last
+                } catch (fallbackError: Exception) {
+                    val m = unsplashError
+                    error = when {
+                        m.contains("429") -> "Unsplash is temporarily rate-limiting requests and backup photos are unavailable. Please retry."
+                        m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied the request and backup photos could not load. Check the connection and retry."
+                        m.contains("404") -> "This feed was not found and backup photos could not load."
+                        m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet and retry."
+                        else -> "Photo services are temporarily unavailable ($m). Please retry."
+                    }
                 }
             }
 
