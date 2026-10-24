@@ -143,3 +143,40 @@ test("network failures are converted to a safe gateway error", async (t) => {
   });
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
+
+test("successful photo search forwards validated parameters and returns CORS JSON", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const originalCaches = globalThis.caches;
+  let capturedUrl;
+  let capturedHeaders;
+  globalThis.caches = { default: {
+    async match() { return undefined; },
+    async put() {}
+  }};
+  globalThis.fetch = async (url, options) => {
+    capturedUrl = String(url);
+    capturedHeaders = options.headers;
+    return new Response(JSON.stringify({ results: [{ id: "photo-1" }], total: 1 }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+    if (originalCaches === undefined) delete globalThis.caches;
+    else globalThis.caches = originalCaches;
+  });
+
+  const response = await worker.fetch(
+    new Request("https://worker.example/search/photos?query=forest&page=2&per_page=12&color=green&content_filter=high"),
+    { UNSPLASH_ACCESS_KEY: "test-only-key" },
+    context()
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  assert.match(response.headers.get("content-type"), /application\/json/);
+  assert.equal(capturedUrl, "https://api.unsplash.com/search/photos?query=forest&page=2&per_page=12&orientation=portrait&color=green&content_filter=high");
+  assert.equal(capturedHeaders.Authorization, "Client-ID test-only-key");
+  assert.deepEqual(await response.json(), { results: [{ id: "photo-1" }], total: 1 });
+});
