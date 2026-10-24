@@ -1,142 +1,175 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:orientation="vertical" android:paddingBottom="120dp">
+    android:orientation="vertical" android:paddingBottom="18dp">
 
-    <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
-        android:orientation="vertical" android:background="@drawable/glass_card"
-        android:padding="14dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp"
+        android:orientation="vertical" android:background="@drawable/glass_card" android:padding="12dp">
 
-        <FrameLayout
-            android:layout_width="match_parent" android:layout_height="410dp"
+        <FrameLayout android:layout_width="match_parent" android:layout_height="560dp"
             android:background="@drawable/glass_card" android:clipToOutline="true">
-
-            <ImageView
-                android:id="@+id/aboutBlur"
-                android:layout_width="match_parent" android:layout_height="match_parent"
-                android:scaleType="centerCrop" android:alpha="0.34"
-                android:contentDescription="@null" />
-
-            <View
-                android:layout_width="match_parent" android:layout_height="match_parent"
-                android:background="@drawable/scrim" />
-
-            <View
-                android:id="@+id/aboutHalo"
-                android:layout_width="280dp" android:layout_height="280dp"
-                android:layout_gravity="center_horizontal|top" android:layout_marginTop="22dp"
-                android:background="@drawable/halo" />
-
-            <ImageView
-                android:id="@+id/aboutPhoto"
-                android:layout_width="260dp" android:layout_height="310dp"
-                android:layout_gravity="center_horizontal|top" android:layout_marginTop="24dp"
+            <ImageView android:id="@+id/aboutBlur" android:layout_width="match_parent" android:layout_height="match_parent"
+                android:scaleType="centerCrop" android:alpha="0.34" android:contentDescription="@null" />
+            <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/scrim" />
+            <View android:layout_width="match_parent" android:layout_height="190dp"
+                android:layout_gravity="bottom" android:background="@drawable/developer_card_bottom_scrim" />
+            <ImageView android:id="@+id/aboutPhoto" android:layout_width="match_parent" android:layout_height="320dp"
+                android:layout_gravity="center_horizontal|top" android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="78dp"
                 android:background="@drawable/glass_card" android:clipToOutline="true"
                 android:scaleType="centerCrop" android:contentDescription="@string/about_name" />
-
-            <LinearLayout
-                android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_gravity="bottom" android:orientation="vertical"
-                android:gravity="center" android:paddingStart="10dp" android:paddingEnd="10dp"
-                android:paddingBottom="20dp">
-                <TextView
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:fontFamily="@font/pacifico_regular"
-                    android:text="@string/about_name" android:textColor="?attr/colorOnSurface" android:textSize="38sp" />
-                <TextView
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+            <LinearLayout android:id="@+id/ig" android:layout_width="wrap_content" android:layout_height="42dp"
+                android:layout_gravity="top|end" android:layout_marginTop="8dp" android:layout_marginEnd="14dp"
+                android:background="@drawable/developer_follow_live" android:gravity="center"
+                android:orientation="horizontal" android:paddingStart="14dp" android:paddingEnd="14dp"
+                android:clickable="true" android:focusable="true" android:contentDescription="Instagram @savanjee">
+                <ImageView android:layout_width="18dp" android:layout_height="18dp"
+                    android:src="@drawable/ic_instagram_mono" android:tint="?attr/colorOnSurface" android:contentDescription="@null" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp" android:text="@savanjee"
+                    android:textColor="#FF171B13" android:textSize="13sp"
+                    android:fontFamily="@font/poppins_medium" />
+            </LinearLayout>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_gravity="bottom" android:orientation="vertical" android:gravity="center"
+                android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingBottom="22dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:fontFamily="@font/montserrat_semibold" android:letterSpacing="0.16"
+                    android:text="DRISHYAM  ·  THE PEOPLE BEHIND THE FRAME"
+                    android:textColor="#FFFFFFFF" android:shadowColor="#CC000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" android:textSize="9sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="7dp" android:fontFamily="@font/ericaone" android:text="@string/about_name"
+                    android:textColor="#FFFFFFFF" android:shadowColor="#DD000000" android:shadowDx="0" android:shadowDy="2" android:shadowRadius="5" android:textSize="38sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginTop="4dp" android:fontFamily="@font/montserrat_semibold"
-                    android:letterSpacing="0.12" android:text="@string/about_role"
-                    android:textColor="?attr/colorSecondary" android:textSize="10sp" />
+                    android:letterSpacing="0.10" android:text="FOUNDER &amp; LEAD DEVELOPER"
+                    android:textColor="#FFE1D7A8" android:shadowColor="#DD000000" android:shadowDx="0" android:shadowDy="1" android:shadowRadius="3" android:textSize="10sp" />
             </LinearLayout>
         </FrameLayout>
 
-        <LinearLayout
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center"
-            android:weightSum="3">
-            <ImageView android:id="@+id/aboutPhoto2" android:layout_width="0dp" android:layout_height="116dp"
-                android:layout_weight="1" android:layout_marginEnd="5dp" android:background="@drawable/glass_card"
-                android:clipToOutline="true" android:scaleType="centerCrop" android:contentDescription="Photo of Savan and Akshat" />
-            <ImageView android:id="@+id/aboutPhoto3" android:layout_width="0dp" android:layout_height="116dp"
-                android:layout_weight="1" android:layout_marginHorizontal="3dp" android:background="@drawable/glass_card"
-                android:clipToOutline="true" android:scaleType="centerCrop" android:contentDescription="A college friendship memory" />
-            <ImageView android:id="@+id/aboutPhoto4" android:layout_width="0dp" android:layout_height="116dp"
-                android:layout_weight="1" android:layout_marginStart="5dp" android:background="@drawable/glass_card"
-                android:clipToOutline="true" android:scaleType="centerCrop" android:contentDescription="Another memory of the developers" />
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="9dp" android:gravity="center"
-            android:fontFamily="@font/montserrat_semibold" android:text="Akshat Jha · Second developer &amp; creative collaborator"
-            android:textColor="?attr/colorOnSurfaceVariant" android:textSize="11sp" />
-
-        <TextView
-            android:id="@+id/ig"
-            android:layout_width="match_parent" android:layout_height="52dp"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/accent_pill" android:gravity="center"
-            android:text="@string/follow" android:textColor="@android:color/white"
-            android:textSize="14sp" android:fontFamily="@font/poppins_medium"
-            android:clickable="true" android:focusable="true" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="42dp" android:text="TWO FRIENDS. ONE VISION."
+            android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.14"
+            android:fontFamily="@font/montserrat_semibold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="7dp" android:text="From a shared room to a shared vision."
+            android:textColor="@color/fg" android:textSize="22sp"
+            android:fontFamily="@font/montserrat_semibold" android:lineSpacingExtra="2dp" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:text="Our friendship began in a college hostel. Two friends from Bihar, sharing the same room, discovered a shared passion for professional photography—and an idea to build something of our own."
+            android:textColor="@color/fg" android:textSize="14sp" android:lineSpacingExtra="5dp"
+            android:fontFamily="@font/poppins_regular" />
     </LinearLayout>
 
-    <TextView style="@style/SectionLabel" android:text="@string/about_app_title" />
-    <TextView style="@style/CardText" android:text="@string/about_app_body" />
-
-    <TextView style="@style/SectionLabel" android:text="@string/story_title" />
-    <TextView style="@style/CardText" android:text="@string/story_body" />
-
-    <TextView style="@style/SectionLabel" android:text="@string/what_title" />
-    <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
-        android:orientation="vertical" android:background="@drawable/glass_card" android:padding="18dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="18dp"
+        android:orientation="vertical" android:background="@drawable/glass_card" android:padding="16dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fontFamily="@font/montserrat_semibold" android:text="@string/what_1_title"
-            android:textColor="?attr/colorOnSurface" android:textSize="15sp" />
+            android:text="THE PEOPLE BEHIND THE IDEA" android:textColor="@color/accent"
+            android:textSize="10sp" android:letterSpacing="0.12" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" android:fontFamily="@font/poppins_regular"
-            android:text="@string/what_1_body" android:textColor="?attr/colorOnSurfaceVariant" android:textSize="13sp" />
+            android:layout_marginTop="12dp" android:text="Savan Jee"
+            android:textColor="@color/fg" android:textSize="22sp" android:fontFamily="@font/montserrat_semibold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="3dp" android:text="FOUNDER &amp; LEAD DEVELOPER"
+            android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.08"
+            android:fontFamily="@font/montserrat_semibold" />
         <View android:layout_width="match_parent" android:layout_height="1dp"
-            android:layout_marginTop="14dp" android:layout_marginBottom="14dp"
-            android:background="@color/glassStroke" />
+            android:layout_marginTop="15dp" android:layout_marginBottom="15dp" android:background="@color/glassStroke" />
+        <ImageView android:id="@+id/aboutAkshatPhoto" android:layout_width="match_parent" android:layout_height="230dp"
+            android:background="@drawable/glass_card" android:clipToOutline="true"
+            android:scaleType="centerCrop" android:contentDescription="Portrait of Akshat Jha" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fontFamily="@font/montserrat_semibold" android:text="@string/what_2_title"
-            android:textColor="?attr/colorOnSurface" android:textSize="15sp" />
+            android:layout_marginTop="12dp" android:text="Akshat Jha"
+            android:textColor="@color/fg" android:textSize="22sp" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="4dp" android:fontFamily="@font/poppins_regular"
-            android:text="@string/what_2_body" android:textColor="?attr/colorOnSurfaceVariant" android:textSize="13sp" />
+            android:layout_marginTop="3dp" android:text="CO-DEVELOPER"
+            android:textColor="@color/accent" android:textSize="10sp" android:letterSpacing="0.08"
+            android:fontFamily="@font/montserrat_semibold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="A friend and collaborator in turning a shared idea into a real project."
+            android:textColor="@color/fg" android:textSize="14sp" android:lineSpacingExtra="5dp"
+            android:fontFamily="@font/poppins_regular" />
     </LinearLayout>
 
-    <TextView style="@style/SectionLabel" android:text="@string/gallery_title" />
-    <LinearLayout
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginStart="16dp" android:layout_marginEnd="16dp"
-        android:orientation="vertical" android:background="@drawable/glass_card" android:padding="18dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="18dp" android:layout_marginEnd="18dp" android:layout_marginTop="26dp"
+        android:text="LIFE BETWEEN THE FRAMES" android:textColor="@color/accent"
+        android:textSize="10sp" android:letterSpacing="0.14" android:fontFamily="@font/montserrat_semibold" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="18dp" android:layout_marginEnd="18dp" android:layout_marginTop="8dp"
+        android:text="Not every moment needs an explanation. Some are remembered for how they looked; others, for the people who were there."
+        android:textColor="@color/fg" android:textSize="18sp" android:lineSpacingExtra="4dp"
+        android:fontFamily="@font/montserrat_semibold" />
+
+    <ImageView android:id="@+id/aboutPhoto2" android:layout_width="match_parent" android:layout_height="250dp"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="18dp"
+        android:background="@drawable/glass_card" android:clipToOutline="true"
+        android:scaleType="centerCrop" android:contentDescription="A shared moment from Savan and Akshat's journey" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="22dp" android:layout_marginEnd="22dp" android:layout_marginTop="8dp"
+        android:text="“A familiar moment, seen a little differently.”" android:textColor="@color/accent"
+        android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
+
+    <ImageView android:id="@+id/aboutPhoto3" android:layout_width="match_parent" android:layout_height="220dp"
+        android:layout_gravity="end" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
+        android:background="@drawable/glass_card" android:clipToOutline="true"
+        android:scaleType="centerCrop" android:contentDescription="A college friendship memory" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="18dp" android:layout_marginEnd="18dp" android:layout_marginTop="8dp"
+        android:text="“Some memories live quietly between the frames.”" android:textColor="@color/accent"
+        android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
+
+    <ImageView android:id="@+id/aboutPhoto4" android:layout_width="match_parent" android:layout_height="250dp"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
+        android:background="@drawable/glass_card" android:clipToOutline="true"
+        android:scaleType="centerCrop" android:contentDescription="Another shared moment from the developers' journey" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="22dp" android:layout_marginEnd="22dp" android:layout_marginTop="8dp"
+        android:text="“Different moments. One shared journey.”" android:textColor="@color/accent"
+        android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="28dp"
+        android:orientation="vertical" android:background="@drawable/glass_card" android:padding="20dp">
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:fontFamily="@font/pacifico_regular" android:text="@string/gallery_heading"
-            android:textColor="?attr/colorOnSurface" android:textSize="19sp" />
+            android:text="MORE THAN AN IMAGE" android:textColor="@color/accent" android:textSize="10sp"
+            android:letterSpacing="0.14" android:fontFamily="@font/montserrat_semibold" />
         <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" android:lineSpacingExtra="3dp"
-            android:fontFamily="@font/poppins_regular"
-            android:text="@string/gallery_body" android:textColor="?attr/colorOnSurfaceVariant" android:textSize="13sp" />
+            android:layout_marginTop="10dp" android:text="What if great photographs were easier to discover?"
+            android:textColor="@color/fg" android:textSize="22sp" android:lineSpacingExtra="3dp"
+            android:fontFamily="@font/montserrat_semibold" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Our shared passion led to a simple idea: create an online platform where people could discover and enjoy high-quality photographs. That idea became Drishyam—a photography discovery and image-streaming app shaped by our interest in the art of seeing."
+            android:textColor="@color/fg" android:textSize="13sp" android:lineSpacingExtra="4dp"
+            android:fontFamily="@font/poppins_regular" />
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="26dp"
+        android:orientation="vertical" android:gravity="center" android:background="@drawable/glass_card" android:padding="24dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:gravity="center" android:text="BUILT WITH FRIENDSHIP.\nINSPIRED BY PHOTOGRAPHY.\nCREATED TO SHARE THE VIEW."
+            android:textColor="@color/fg" android:textSize="19sp" android:lineSpacingExtra="5dp"
+            android:fontFamily="@font/montserrat_semibold" />
+        <View android:layout_width="42dp" android:layout_height="2dp"
+            android:layout_marginTop="20dp" android:layout_marginBottom="18dp" android:background="#89945A" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_gravity="start" android:layout_marginTop="14dp"
-            android:background="@drawable/glass_pill"
-            android:paddingStart="14dp" android:paddingEnd="14dp"
-            android:paddingTop="7dp" android:paddingBottom="7dp"
-            android:text="@string/gallery_badge" android:textColor="?attr/colorSecondary"
-            android:textSize="11sp" android:textStyle="bold" android:fontFamily="@font/montserrat_semibold" />
+            android:text="AKSHAT JHA · CO-DEVELOPER" android:textColor="@color/accent"
+            android:textSize="10sp" android:letterSpacing="0.08" android:fontFamily="@font/montserrat_semibold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="by Savan" android:textColor="@color/fg"
+            android:textSize="32sp" android:fontFamily="@font/pacifico_regular" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:text="FOUNDER &amp; LEAD DEVELOPER · DRISHYAM"
+            android:textColor="@color/accent" android:textSize="9sp" android:letterSpacing="0.06"
+            android:fontFamily="@font/montserrat_semibold" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/footer"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="26dp" android:gravity="center"
+    <TextView android:id="@+id/footer" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="24dp" android:layout_marginBottom="8dp" android:gravity="center"
         android:fontFamily="@font/montserrat_semibold" android:text="@string/footer"
-        android:textColor="?attr/colorOnSurfaceVariant" android:textSize="11sp" />
+        android:textColor="@color/mute" android:textSize="11sp" />
 </LinearLayout>

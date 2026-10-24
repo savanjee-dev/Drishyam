@@ -1,3 +1,4 @@
+// Trigger safe debug APK build for Cloudflare proxy integration.
 package com.savan.drishyam
 
 import android.content.Context
@@ -8,8 +9,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object Config {
-    // Injected at build time from the UNSPLASH_ACCESS_KEY GitHub Actions secret.
-    val UNSPLASH_KEY: String get() = BuildConfig.UNSPLASH_ACCESS_KEY
+    // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
+    // Do not add an Unsplash key to the Android app.
+    const val UNSPLASH_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -81,26 +83,58 @@ object Store {
 }
 
 object Api {
-    private fun get(url: String, headers: Map<String, String>): String {
-        val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 15000
-        c.readTimeout = 20000
-        c.instanceFollowRedirects = true
-        c.setRequestProperty("Accept", "application/json")
-        c.setRequestProperty("Cache-Control", "no-cache")
-        headers.forEach { (k, v) -> c.setRequestProperty(k, v) }
-        if (c.responseCode != 200) {
-            val code = c.responseCode
-            val detail = try {
-                (if (code >= 400) c.errorStream else null)?.bufferedReader()?.use { it.readText() }?.take(240)
-            } catch (_: Exception) { null }
-            throw Exception("HTTP $code" + if (!detail.isNullOrBlank()) ": $detail" else "")
+    private fun readLimited(stream: java.io.InputStream, maxBytes: Int): String {
+        stream.use { input ->
+            val out = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var total = 0
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                total += count
+                if (total > maxBytes) throw java.io.IOException("Response body exceeded the size limit.")
+                out.write(buffer, 0, count)
+            }
+            return out.toString(Charsets.UTF_8.name())
         }
-        return c.inputStream.bufferedReader().use { it.readText() }
     }
 
-    fun ping(url: String) {
-        try { get(url, mapOf("Authorization" to "Client-ID " + Config.UNSPLASH_KEY)) } catch (e: Exception) { }
+    private fun get(url: String, headers: Map<String, String>): String {
+        val c = URL(url).openConnection() as HttpURLConnection
+        try {
+            c.connectTimeout = 15000
+            c.readTimeout = 20000
+            c.instanceFollowRedirects = true
+            c.requestMethod = "GET"
+            c.setRequestProperty("Accept", "application/json")
+            c.setRequestProperty("Cache-Control", "no-cache")
+            headers.forEach { (k, v) -> c.setRequestProperty(k, v) }
+
+            val code = c.responseCode
+            if (code != HttpURLConnection.HTTP_OK) {
+                val detail = try {
+                    c.errorStream?.let { readLimited(it, 2048) }?.take(240)
+                } catch (_: Exception) { null }
+                throw Exception("HTTP $code" + if (!detail.isNullOrBlank()) ": $detail" else "")
+            }
+            // Bound untrusted API responses so a bad upstream response cannot exhaust app memory.
+            return readLimited(c.inputStream, 5 * 1024 * 1024)
+        } finally {
+            c.disconnect()
+        }
+    }
+
+    fun ping(downloadLocation: String) {
+        // Unsplash requires its download endpoint to be triggered when a user downloads a photo.
+        // Extract only the photo ID; never proxy a caller-supplied arbitrary URL.
+        try {
+            val id = Regex("/photos/([A-Za-z0-9_-]+)/download").find(downloadLocation)?.groupValues?.get(1)
+                ?: return
+            get(
+                Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') + "/photos/" + id + "/download",
+                emptyMap()
+            )
+        } catch (_: Exception) { }
     }
 
     /** Returns photos and the "after" token ("" when there is no more). */
@@ -197,9 +231,12 @@ object Api {
 
     /** Returns photos and whether this was the last page. */
     fun unsplash(query: String, page: Int): Pair<List<Photo>, Boolean> {
-        val url = "https://api.unsplash.com/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
+        require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
+        require(page in 1..10000) { "Invalid page." }
+        val url = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') +
+            "/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
             "&orientation=portrait&per_page=20&page=$page"
-        val j = JSONObject(get(url, mapOf("Authorization" to "Client-ID " + Config.UNSPLASH_KEY, "Accept-Version" to "v1")))
+        val j = JSONObject(get(url, emptyMap()))
         val arr = j.getJSONArray("results")
         val out = ArrayList<Photo>()
         for (i in 0 until arr.length()) {
@@ -208,7 +245,7 @@ object Api {
             val raw = urls.getString("raw")
             val full = raw + (if (raw.contains("?")) "&" else "?") + "w=1440&q=85&fm=jpg&fit=max"
             val user = p.getJSONObject("user")
-            val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (e: Exception) { 0xFF222222.toInt() }
+            val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
             out.add(Photo(p.getString("id"), urls.getString("small"), full,
                 p.optString("alt_description", "Photo").let { if (it == "null") "Photo" else it },
                 "📷 " + user.optString("name"),

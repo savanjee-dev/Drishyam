@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Drishyam 2.6: Moss & Olive — cinematic dark mode -->
     <color name="transparent">#00000000</color>
-
-    <!-- Forest Editorial dark palette -->
-    <color name="bg">#111B18</color>
-    <color name="surface">#1C2923</color>
-    <color name="fg">#F2EEE4</color>
-    <color name="mute">#B6C2B5</color>
-    <color name="accent">#D8C6A1</color>
-    <color name="accent2">#819581</color>
-
-    <!-- Subtle forest glass effects -->
-    <color name="glassFill">#D9263931</color>
-    <color name="glassHighlight">#24FFFFFF</color>
-    <color name="glassClear">#00FFFFFF</color>
-    <color name="glassStroke">#55819581</color>
-    <color name="glassDialog">#F21C2923</color>
-    <color name="glassTint">#18D8C6A1</color>
-    <color name="glassRimStart">#66FFFFFF</color>
-    <color name="glassRimEnd">#22819581</color>
+    <color name="bg">#0A0D08</color>
+    <color name="surface">#1B2117</color>
+    <color name="fg">#F3F1E7</color>
+    <color name="mute">#C0C4AE</color>
+    <color name="accent">#89945A</color>
+    <color name="accent2">#D0C79A</color>
+    <color name="glassFill">#F21B2117</color>
+    <color name="glassHighlight">#22FFFFFF</color>
+    <color name="glassClear">#00000000</color>
+    <color name="glassStroke">#6689945A</color>
+    <color name="glassDialog">#F21B2117</color>
+    <color name="glassTint">#CC0A0D08</color>
+    <color name="glassRimStart">#55FFFFFF</color>
+    <color name="glassRimEnd">#2289945A</color>
 </resources>

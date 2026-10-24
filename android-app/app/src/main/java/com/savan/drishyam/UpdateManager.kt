@@ -1,12 +1,10 @@
 package com.savan.drishyam
 
-import android.app.DownloadManager
 import android.app.Activity
 import android.content.Context
-import android.net.Uri
 import android.os.Handler
+import android.net.Uri
 import android.os.Looper
-import android.os.Environment
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -23,8 +21,14 @@ object UpdateManager {
     private const val RELEASE_API = "https://api.github.com/repos/savanjee-dev/Drishyam/releases/latest"
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var checking = false
+    private const val PREFS_UPDATES = "drishyam_update_state"
+    private const val KEY_LAST_SUCCESSFUL_CHECK = "last_successful_check_ms"
+    private const val CHECK_INTERVAL_MS = 24L * 60L * 60L * 1000L
+    private val dismissedThisSession = mutableSetOf<String>()
 
     fun check(context: Activity, popupSource: View, manual: Boolean = false) {
+        val prefs = context.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE)
+        if (!manual && System.currentTimeMillis() - prefs.getLong(KEY_LAST_SUCCESSFUL_CHECK, 0L) < CHECK_INTERVAL_MS) return
         if (checking) return
         checking = true
         Thread {
@@ -49,28 +53,35 @@ object UpdateManager {
                     if (manual) Toast.makeText(context, "Update check failed. Check your internet and GitHub Releases.", Toast.LENGTH_LONG).show()
                     return@post
                 }
-                val tag = result.optString("tag_name", "").ifBlank { "Latest release" }
+                val tag = result.optString("tag_name", "").trim()
                 val version = tag.removePrefix("v").trim()
-                val current = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0" } catch (_: Exception) { "0" }
-                if (!manual && compareVersions(version, current) <= 0) return@post
-                val asset = result.optJSONArray("assets")
-                var apkUrl: String? = null
-                var apkName = "Drishyam-$tag.apk"
-                if (asset != null) for (i in 0 until asset.length()) {
-                    val a = asset.optJSONObject(i) ?: continue
-                    val name = a.optString("name", "")
-                    if (name.lowercase(Locale.ROOT).endsWith(".apk")) {
-                        apkUrl = a.optString("browser_download_url").takeIf { it.startsWith("https://") }
-                        apkName = "Drishyam-$version.apk"
-                        if (apkUrl != null) break
-                    }
+                if (version.isBlank() || Regex("\\d+").find(version) == null) {
+                    if (manual) Toast.makeText(context, "GitHub did not return a valid release version.", Toast.LENGTH_LONG).show()
+                    return@post
                 }
+                // A valid release response is the successful check; failed network/API calls never reset the interval.
+                prefs.edit().putLong(KEY_LAST_SUCCESSFUL_CHECK, System.currentTimeMillis()).apply()
+                synchronized(dismissedThisSession) {
+                    if (!manual && dismissedThisSession.contains(version)) return@post
+                }
+                val current = try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "0" } catch (_: Exception) { "0" }
+                val versionComparison = compareVersions(version, current)
+                if (versionComparison <= 0) {
+                    if (manual) {
+                        val message = if (versionComparison == 0) "You're using the latest Drishyam version." else "No newer Drishyam release is available."
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    }
+                    return@post
+                }
+                val verifiedAsset = VerifiedReleaseApk.fromRelease(result, version)
+                val apkUrl = verifiedAsset?.url
+                val apkName = verifiedAsset?.fileName ?: "Drishyam-$version.apk"
                 if (apkUrl == null) {
                     if (manual) Toast.makeText(context, "Release found, but no APK asset is attached yet.", Toast.LENGTH_LONG).show()
                     return@post
                 }
                 val safeSource = context.findViewById<View>(android.R.id.content)
-                try { showReleaseDialog(context, safeSource, tag, result.optString("body", "No changelog was provided."), result.optString("html_url"), apkUrl!!, apkName, manual) }
+                try { showReleaseDialog(context, safeSource, tag, version, result.optString("body", "No changelog was provided."), result.optString("html_url"), verifiedAsset!!, manual) }
                 catch (_: Exception) { if (manual) Toast.makeText(context, "Update found, but the dialog could not open. Open the release page instead.", Toast.LENGTH_LONG).show() }
             }
         }.start()
@@ -86,7 +97,7 @@ object UpdateManager {
         return 0
     }
 
-    private fun showReleaseDialog(a: Activity, source: View, version: String, notes: String, pageUrl: String?, apkUrl: String, apkName: String, manual: Boolean) {
+    private fun showReleaseDialog(a: Activity, source: View, tag: String, version: String, notes: String, pageUrl: String?, releaseApk: VerifiedReleaseApk, manual: Boolean) {
         showGlassPopup(a, source) { box, close ->
             box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
             box.addView(TextView(a).apply {
@@ -122,7 +133,8 @@ object UpdateManager {
                 setTextColor(ContextCompat.getColor(a, R.color.mute))
                 setPadding(0, 8.dp(), 0, 0)
             })
-            val download = TextView(a).apply {
+            val download = TextView(a)
+            download.apply {
                 text = "Download update"
                 gravity = Gravity.CENTER
                 textSize = 15f
@@ -131,34 +143,55 @@ object UpdateManager {
                 background = ContextCompat.getDrawable(a, R.drawable.accent_pill)
                 pressFx()
                 setOnClickListener {
-                    try {
-                        val request = DownloadManager.Request(Uri.parse(apkUrl))
-                            .setTitle("Drishyam $version")
-                            .setDescription("Downloading Drishyam update")
-                            .setMimeType("application/vnd.android.package-archive")
-                            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                            .setAllowedOverMetered(true)
-                            .setAllowedOverRoaming(false)
-                            .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, apkName)
-                        (a.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-                        Toast.makeText(a, "Download started. Open the completed download to install.", Toast.LENGTH_LONG).show()
-                        close()
-                    } catch (_: Exception) {
-                        Toast.makeText(a, "Couldn't start the download. Opening the release page.", Toast.LENGTH_LONG).show()
-                        try { a.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(pageUrl ?: apkUrl))) } catch (_: Exception) { }
-                        close()
+                    download.isEnabled = false
+                    download.text = "Verifying download…"
+                    VerifiedUpdateInstaller.downloadAndInstall(a, releaseApk) { message ->
+                        download.text = message
+                        download.isEnabled = true
                     }
                 }
             }
             box.addView(download, LinearLayout.LayoutParams(-1, 52.dp()).apply { topMargin = 18.dp() })
+
+            // Fallback link follows the release currently returned by GitHub, never an outdated hardcoded tag.
+            val releasePage = pageUrl?.takeIf { it.startsWith("https://github.com/savanjee-dev/Drishyam/releases/") }
+                ?: "https://github.com/savanjee-dev/Drishyam/releases/latest"
+            val githubRelease = TextView(a).apply {
+                text = "⌘  Download from GitHub Releases\n       Open official $tag release page  ↗"
+                gravity = Gravity.CENTER_VERTICAL
+                textSize = 14f
+                setLineSpacing(3.dp().toFloat(), 1f)
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(a, R.font.poppins_medium)
+                setTextColor(ContextCompat.getColor(a, R.color.fg))
+                setPadding(16.dp(), 12.dp(), 16.dp(), 12.dp())
+                background = ContextCompat.getDrawable(a, R.drawable.glass_pill)
+                isClickable = true
+                isFocusable = true
+                pressFx()
+                contentDescription = "Download from GitHub Releases. Opens the official Drishyam $tag release page."
+                setOnClickListener {
+                    try {
+                        a.startActivity(android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            Uri.parse(releasePage)
+                        ))
+                    } catch (_: Exception) {
+                        Toast.makeText(a, "Couldn't open GitHub Releases. Please try again.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            box.addView(githubRelease, LinearLayout.LayoutParams(-1, 68.dp()).apply { topMargin = 10.dp() })
             box.addView(TextView(a).apply {
-                text = "Not now"
+                text = "Later"
                 gravity = Gravity.CENTER
                 textSize = 14f
                 setTextColor(ContextCompat.getColor(a, R.color.mute))
                 isClickable = true
                 setPadding(0, 14.dp(), 0, 0)
-                setOnClickListener { close() }
+                setOnClickListener {
+                    synchronized(dismissedThisSession) { dismissedThisSession.add(version) }
+                    close()
+                }
             }, LinearLayout.LayoutParams(-1, 42.dp()))
         }
     }

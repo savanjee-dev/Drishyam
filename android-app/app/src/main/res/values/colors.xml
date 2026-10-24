@@ -1,22 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="transparent">#00000000</color>
-
-    <!-- Forest Editorial light palette -->
-    <color name="bg">#F2EEE4</color>
-    <color name="surface">#FFFCF5</color>
-    <color name="fg">#252B27</color>
-    <color name="mute">#626D63</color>
-    <color name="accent">#263C32</color>
-    <color name="accent2">#819581</color>
-
-    <!-- Glass surfaces adapted to the editorial palette -->
-    <color name="glassFill">#E8E8DC</color>
+    <!-- Drishyam 2.6: Moss & Olive — warm editorial light mode -->
+    <color name="bg">#F3F1E7</color>
+    <color name="surface">#FFFCF4</color>
+    <color name="fg">#1B2117</color>
+    <color name="mute">#5F6753</color>
+    <color name="accent">#414D2D</color>
+    <color name="accent2">#89945A</color>
+    <color name="glassFill">#F7F5EC</color>
     <color name="glassHighlight">#CCFFFFFF</color>
     <color name="glassClear">#00000000</color>
-    <color name="glassStroke">#99819581</color>
-    <color name="glassDialog">#FFFCF5</color>
-    <color name="glassTint">#26D8C6A1</color>
+    <color name="glassStroke">#7089945A</color>
+    <color name="glassDialog">#FFFCF4</color>
+    <color name="glassTint">#CCF3F1E7</color>
     <color name="glassRimStart">#FFFFFFFF</color>
-    <color name="glassRimEnd">#66819581</color>
+    <color name="glassRimEnd">#6689945A</color>
 </resources>

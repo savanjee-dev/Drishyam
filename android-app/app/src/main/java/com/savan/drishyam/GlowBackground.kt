@@ -18,7 +18,7 @@ class GlowBackground @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val colors = intArrayOf(0x809D7BFF.toInt(), 0x80FF7AB6.toInt(), 0x66FF9966.toInt())
+    private val colors = intArrayOf(0x508BA08B.toInt(), 0x3DD8C6A1.toInt(), 0x354F725D.toInt())
     private var phase = 0f
 
     private val anim = ValueAnimator.ofFloat(0f, (2 * Math.PI).toFloat()).apply {

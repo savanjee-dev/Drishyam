@@ -34,7 +34,7 @@ class GlassLayout @JvmOverloads constructor(
 
     companion object {
         private const val DOWN = 4f        // the backdrop is captured at 1/6 size
-        private const val BLUR_R = 3       // blur radius in shrunken pixels
+        private const val BLUR_R = 1       // subtle blur: keep text and controls behind glass recognisable
         private const val PAD = 10         // extra border so blurred edges stay clean
     }
 
@@ -46,6 +46,8 @@ class GlassLayout @JvmOverloads constructor(
     var radiusPx: Float = 100 * Resources.getSystem().displayMetrics.density
         set(v) { field = v; invalidate() }
     var dark: Boolean = false
+        set(v) { field = v; invalidate() }
+    var solid: Boolean = false
         set(v) { field = v; invalidate() }
 
     private val density = Resources.getSystem().displayMetrics.density
@@ -86,6 +88,7 @@ class GlassLayout @JvmOverloads constructor(
             val a = context.obtainStyledAttributes(attrs, R.styleable.GlassLayout)
             radiusPx = a.getDimension(R.styleable.GlassLayout_glassRadius, radiusPx)
             dark = a.getBoolean(R.styleable.GlassLayout_glassDark, false)
+            solid = a.getBoolean(R.styleable.GlassLayout_glassSolid, false)
             a.recycle()
         }
     }
@@ -195,7 +198,7 @@ if (!solid) {
             val p = pix!!
             val t = tmp!!
             b.getPixels(p, 0, cw, 0, 0, cw, ch)
-            for (i in 0 until 2) {
+            for (i in 0 until 1) {
                 blurH(p, t, cw, ch, BLUR_R)
                 blurV(t, p, cw, ch, BLUR_R)
             }

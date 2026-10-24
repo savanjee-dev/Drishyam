@@ -1,0 +1,7 @@
+Drishyam 2.4.10
+
+- Corrected follow-up release to supersede the prematurely published 2.4.9 package.
+- Bound API response bodies to protect memory on unexpectedly large or malformed upstream responses.
+- Ensure HTTP connections are disconnected on both successful and failed requests.
+- Preserve proxy-backed Unsplash photo loading and the existing interface.
+- Keep application ID com.savan.drishyam and increment version code to 21.

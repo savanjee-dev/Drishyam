@@ -16,7 +16,6 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         installScrollBounce(findViewById(R.id.settingsScroll))
@@ -40,7 +39,7 @@ class SettingsActivity : AppCompatActivity() {
                 setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFBBBBBB.toInt()))
                 setPadding(0, 4.dp(), 0, 0)
             })
-            setOnClickListener { UpdateManager.check(this@SettingsActivity, findViewById(R.id.glassSource), manual = true) }
+            setOnClickListener { startActivity(android.content.Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
         }
         (findViewById<View>(R.id.rowCredits).parent as? ViewGroup)?.let { parent ->
             parent.addView(updateRow, parent.indexOfChild(findViewById(R.id.rowCredits)) + 1,
@@ -149,11 +148,30 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<View>(R.id.rowWhatsNew).apply {
             pressFx()
             setOnClickListener {
-                MaterialAlertDialogBuilder(this@SettingsActivity)
-                    .setTitle(R.string.whats_new_title)
-                    .setMessage(R.string.whats_new_body)
+                val notesView = TextView(this@SettingsActivity).apply {
+                    text = "Loading changelog for installed version ${BuildConfig.VERSION_NAME}…"
+                    textSize = 15f
+                    setLineSpacing(5.dp().toFloat(), 1f)
+                    setTextColor(com.google.android.material.color.MaterialColors.getColor(
+                        this, com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF.toInt()))
+                    setPadding(24.dp(), 8.dp(), 24.dp(), 8.dp())
+                    maxHeight = 420.dp()
+                    isVerticalScrollBarEnabled = true
+                    movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
+                }
+                val dialog = MaterialAlertDialogBuilder(this@SettingsActivity)
+                    .setTitle(getString(R.string.whats_new_title, BuildConfig.VERSION_NAME))
+                    .setView(notesView)
                     .setPositiveButton(R.string.ok, null)
                     .show()
+                Thread {
+                    val fetched = ReleaseChangelog.fetch(BuildConfig.VERSION_NAME)
+                    runOnUiThread {
+                        if (isFinishing || isDestroyed || !dialog.isShowing) return@runOnUiThread
+                        notesView.text = fetched
+                            ?: "The changelog for installed version ${BuildConfig.VERSION_NAME} could not be loaded. Connect to the internet and try again later."
+                    }
+                }.start()
             }
         }
         findViewById<View>(R.id.rowCredits).apply {
@@ -167,7 +185,7 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<TextView>(R.id.settingsVersion).text = getString(R.string.settings_version)
+        findViewById<TextView>(R.id.settingsVersion).text = getString(R.string.settings_version, BuildConfig.VERSION_NAME)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")

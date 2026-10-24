@@ -1,0 +1,6 @@
+Drishyam 2.4.12
+
+- Fixed remaining hard-coded version labels in Settings and the What's new dialog.
+- The Settings footer and What's new heading now read the installed app version dynamically.
+- Updated release notes to reflect this release rather than outdated 2.4.7 changes.
+- Preserved the existing app ID, signing setup, photo-loading proxy, and local saved data.

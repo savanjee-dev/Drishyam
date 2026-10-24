@@ -1,0 +1,7 @@
+Drishyam 2.7.4 — Photo View 2.0
+
+• Refreshed photo-view action controls with translucent charcoal glass, subtle borders and highlights.
+• Improved control spacing and visual consistency while retaining existing positions and actions.
+• Added spring feedback to like and bookmark changes, respecting the system animation scale.
+• Preserved the existing photo feed, developer page, themes, photo metadata, source link, download, sharing, wallpaper, likes, bookmarks and stored user data.
+• Version code: 32

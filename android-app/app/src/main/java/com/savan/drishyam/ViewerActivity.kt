@@ -5,14 +5,21 @@ import android.content.ContentValues
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.updateLayoutParams
 import com.bumptech.glide.Glide
 import org.json.JSONObject
 
@@ -24,9 +31,32 @@ class ViewerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_viewer)
+        // Keep system-bar icons readable over the viewer's pale Light Mode bars.
+        val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        window.statusBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
+        window.navigationBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !nightMode
+            isAppearanceLightNavigationBars = !nightMode
+        }
+        // Keep the floating photo controls clear of gesture/navigation and status bars.
+        val viewerOverlay = findViewById<View>(R.id.viewerOverlay)
+        val viewerTopBar = findViewById<View>(R.id.viewerTopBar)
+        val detailSheet = findViewById<View>(R.id.sheet)
+        ViewCompat.setOnApplyWindowInsetsListener(viewerOverlay) { _, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            viewerTopBar.updateLayoutParams<FrameLayout.LayoutParams> {
+                topMargin = bars.top + 8.dp()
+            }
+            detailSheet.updateLayoutParams<FrameLayout.LayoutParams> {
+                bottomMargin = bars.bottom + 12.dp()
+            }
+            insets
+        }
+        ViewCompat.requestApplyInsets(viewerOverlay)
         animatePageEntrance(findViewById(android.R.id.content))
 
         val payload = intent.getStringExtra("p")
@@ -80,8 +110,16 @@ class ViewerActivity : AppCompatActivity() {
         bookmark = findViewById(R.id.bookmark)
         like.pressFx()
         bookmark.pressFx()
-        like.setOnClickListener { Store.toggle(this, p); refreshLike() }
-        bookmark.setOnClickListener { Store.toggleBookmark(this, p); refreshBookmark() }
+        like.setOnClickListener {
+            Store.toggle(this, p)
+            animateIcon(like)
+            refreshLike()
+        }
+        bookmark.setOnClickListener {
+            Store.toggleBookmark(this, p)
+            animateIcon(bookmark)
+            refreshBookmark()
+        }
 
         findViewById<View>(R.id.dl).apply { pressFx(); setOnClickListener { fetchBitmap { saveToGallery(it) } } }
         findViewById<View>(R.id.setwp).apply { pressFx(); setOnClickListener { chooseWallpaperTarget(viewerSource) } }
@@ -119,6 +157,18 @@ class ViewerActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(send, getString(R.string.share_title)))
     }
 
+    private fun animateIcon(view: View) {
+        if (android.provider.Settings.Global.getFloat(contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f) return
+        view.animate().cancel()
+        view.scaleX = 1f
+        view.scaleY = 1f
+        view.animate().scaleX(0.82f).scaleY(0.82f).setDuration(90)
+            .withEndAction {
+                view.animate().scaleX(1f).scaleY(1f).setDuration(220)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(2.2f)).start()
+            }.start()
+    }
+
     private fun refreshLike() {
         val liked = Store.isFav(this, p.id)
         like.setHeart(liked)
@@ -127,7 +177,7 @@ class ViewerActivity : AppCompatActivity() {
 
     private fun refreshBookmark() {
         val saved = Store.isBookmarked(this, p.id)
-        bookmark.imageTintList = ColorStateList.valueOf(if (saved) 0xFF9D7BFF.toInt() else 0xFFFFFFFF.toInt())
+        bookmark.imageTintList = ColorStateList.valueOf(if (saved) ContextCompat.getColor(this, R.color.accent2) else 0xFFFFFFFF.toInt())
         bookmark.contentDescription = getString(if (saved) R.string.unbookmark_desc else R.string.bookmark_desc)
     }
 

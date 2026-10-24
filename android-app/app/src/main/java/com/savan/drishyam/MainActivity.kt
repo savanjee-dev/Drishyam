@@ -7,6 +7,7 @@ import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.RenderEffect
 import android.graphics.Shader
+import android.graphics.drawable.AnimationDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -108,12 +109,24 @@ class MainActivity : AppCompatActivity() {
     private var lowFxAtCreate = false
     private var lastTopPad = -1
     private var lastBottomPad = -1
+    private var transientStatus: String? = null
+    private var statusGeneration = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        // Match system-bar icon contrast to the active theme; keep Dark Mode unchanged.
+        window.statusBarColor = ContextCompat.getColor(this, R.color.bg)
+        @Suppress("DEPRECATION")
+        val systemUi = window.decorView.systemUiVisibility
+        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = if (night) {
+            systemUi and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+        } else {
+            systemUi or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        }
         lowFxAtCreate = lowFx(this)
 
         rv = findViewById(R.id.rv)
@@ -121,6 +134,10 @@ class MainActivity : AppCompatActivity() {
         statusPill = findViewById(R.id.statusPill)
         chips = findViewById(R.id.chips)
         chipScroll = findViewById(R.id.chipScroll)
+        chipScroll.isHorizontalFadingEdgeEnabled = true
+        chipScroll.setFadingEdgeLength(24.dp())
+        chipScroll.clipChildren = true
+        chipScroll.clipToPadding = true
         sortBar = findViewById(R.id.sortBar)
         savedBar = findViewById(R.id.savedBar)
         swipe = findViewById(R.id.swipe)
@@ -144,7 +161,7 @@ class MainActivity : AppCompatActivity() {
         overlay.addOnLayoutChangeListener(relayout)
         aboutScroll.setOnScrollChangeListener { _, _, _, _, _ -> pokeGlass() }
 
-        swipe.setColorSchemeColors(0xFF9D7BFF.toInt(), 0xFFFF7AB6.toInt())
+        swipe.setColorSchemeColors(ContextCompat.getColor(this, R.color.accent), ContextCompat.getColor(this, R.color.accent2))
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
         swipe.setOnRefreshListener { refreshCurrent() }
 
@@ -152,8 +169,15 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
-        findViewById<View>(R.id.searchButton).apply { pressFx(); setOnClickListener { showSearch() } }
-        findViewById<View>(R.id.settingsButton).apply {
+        findViewById<ImageView>(R.id.searchButton).apply {
+            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
+            pressFx()
+            setOnClickListener { showSearch() }
+        }
+        findViewById<ImageView>(R.id.settingsButton).apply {
+            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
             pressFx()
             setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
@@ -171,8 +195,13 @@ class MainActivity : AppCompatActivity() {
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(r: RecyclerView, dx: Int, dy: Int) {
                 pokeGlass()
-                if (tab == 0 && dy > 3) setNavVisible(false)
-                else if (dy < -1) setNavVisible(true)
+                if (tab == 0 && dy > 3) {
+                    setNavVisible(false)
+                    setTopVisible(true)
+                } else if (dy < -1) {
+                    setNavVisible(true)
+                    setTopVisible(true)
+                }
                 val lm = r.layoutManager as LinearLayoutManager
                 if (dy > 0 && lm.findLastVisibleItemPosition() >= adapter.itemCount - 4) loadMore()
             }
@@ -182,8 +211,12 @@ class MainActivity : AppCompatActivity() {
 
         buildChips()
 
-        listOf(R.id.n0 to 0, R.id.n1 to 1, R.id.n2 to 2).forEach { (id, n) ->
-            findViewById<View>(id).apply { pressFx(); setOnClickListener { showTab(n) } }
+        findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { showTab(0) } }
+        findViewById<View>(R.id.navItem1).apply { pressFx(); setOnClickListener { showSearch() } }
+        findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
+        findViewById<View>(R.id.navItem3).apply {
+            pressFx()
+            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
         segBook.apply { pressFx(); setOnClickListener { setSaved(1) } }
@@ -194,8 +227,96 @@ class MainActivity : AppCompatActivity() {
         shownSort = currentSort()
         styleSort()
         showTab(0)
-        glassSource.postDelayed({ UpdateManager.check(this, glassSource) }, 1800L)
+        if (intent.getBooleanExtra("open_about", false)) showTab(2)
+        glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) showTab(2)
+    }
+
+    /**
+     * Shows release notes after an update initiated inside Drishyam has actually installed.
+     * If installation was cancelled, keep the pending version until a matching/newer version
+     * is installed. The dialog is shown once and never replaces the saved-photo state.
+     */
+    private fun showPendingWhatsNewIfNeeded(): Boolean {
+        val prefs = getSharedPreferences("drishyam_update_state", Context.MODE_PRIVATE)
+        val pendingVersion = prefs.getString("pending_whats_new_version", null) ?: return false
+        val currentVersion = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: return false
+        } catch (_: Exception) {
+            return false
+        }
+        if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
+
+        Thread {
+            val notes = ReleaseChangelog.fetch(currentVersion)
+            runOnUiThread {
+                if (isFinishing || isDestroyed || !::glassSource.isInitialized) return@runOnUiThread
+                showGlassPopup(this, glassSource) { box, close ->
+                    box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
+                    box.addView(TextView(this).apply {
+                        text = "Drishyam $currentVersion"
+                        textSize = 24f
+                        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_bold)
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                    })
+                    box.addView(TextView(this).apply {
+                        text = "What’s new"
+                        textSize = 15f
+                        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
+                        setPadding(0, 14.dp(), 0, 5.dp())
+                    })
+                    val formatted = notes.orEmpty().lineSequence().map { it.trim() }.filter { it.isNotBlank() }
+                        .map { line -> if (line.startsWith("-") || line.startsWith("•") || line.startsWith("*")) "•  " + line.drop(1).trim() else "•  " + line }
+                        .joinToString("\n")
+                    box.addView(TextView(this).apply {
+                        text = formatted.ifBlank { "• Bug fixes and improvements in this version." }
+                        textSize = 14f
+                        setLineSpacing(4.dp().toFloat(), 1f)
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                        maxHeight = 260.dp()
+                        isVerticalScrollBarEnabled = true
+                        movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
+                        setPadding(0, 0, 0, 8.dp())
+                    })
+                    box.addView(TextView(this).apply {
+                        text = "Your photos, saved items, preferences, and Dark Mode remain on this device."
+                        textSize = 12f
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
+                        setPadding(0, 8.dp(), 0, 0)
+                    })
+                    box.addView(TextView(this).apply {
+                        text = "Continue"
+                        gravity = Gravity.CENTER
+                        textSize = 14f
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                        isClickable = true
+                        isFocusable = true
+                        setPadding(0, 14.dp(), 0, 0)
+                        setOnClickListener { close() }
+                    }, LinearLayout.LayoutParams(-1, 42.dp()))
+                }
+                prefs.edit().remove("pending_whats_new_version").apply()
+            }
+        }.start()
+        return true
+    }
+
+    private fun compareVersionNumbers(a: String, b: String): Int {
+        val aa = Regex("""\d+""").findAll(a).mapNotNull { it.value.toIntOrNull() }.toList()
+        val bb = Regex("""\d+""").findAll(b).mapNotNull { it.value.toIntOrNull() }.toList()
+        for (i in 0 until maxOf(aa.size, bb.size)) {
+            val x = aa.getOrElse(i) { 0 }
+            val y = bb.getOrElse(i) { 0 }
+            if (x != y) return x.compareTo(y)
+        }
+        return 0
     }
 
     override fun onResume() {
@@ -209,7 +330,9 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
-        if (!PopupStack.dismiss()) super.onBackPressed()
+        if (PopupStack.dismiss()) return
+        if (tab == 2) { finish(); return }
+        super.onBackPressed()
     }
 
     // ---------- Floating glass bars ----------
@@ -227,11 +350,27 @@ class MainActivity : AppCompatActivity() {
         lastTopPad = top
         lastBottomPad = bottom
         rv.setPadding(14.dp(), top, 14.dp(), bottom)
-        aboutScroll.setPadding(0, top, 0, bottom)
+        aboutScroll.setPadding(0, top, 0, 12.dp())
         swipe.setProgressViewOffset(false, top, top + 60.dp())
     }
 
     private var navShown = true
+    private var topShown = true
+
+    private fun setTopVisible(visible: Boolean) {
+        if (topShown == visible || tab != 0) return
+        topShown = visible
+        glassTop.animate().cancel()
+        if (visible) glassTop.visibility = View.VISIBLE
+        glassTop.animate()
+            .translationY(if (visible) 0f else -glassTop.height.toFloat() - 16.dp())
+            .alpha(if (visible) 1f else 0f)
+            .setDuration(if (visible) 260L else 210L)
+            .setInterpolator(if (visible) android.view.animation.OvershootInterpolator(0.65f) else AccelerateDecelerateInterpolator())
+            .withEndAction { glassTop.visibility = if (visible) View.VISIBLE else View.INVISIBLE }
+            .start()
+    }
+
     private fun setNavVisible(visible: Boolean) {
         if (navShown == visible || tab != 0) return
         navShown = visible
@@ -240,7 +379,7 @@ class MainActivity : AppCompatActivity() {
             .translationY(if (visible) 0f else glassNav.height.toFloat() + 28.dp())
             .alpha(if (visible) 1f else 0f)
             .setDuration(if (visible) 210L else 180L)
-            .setInterpolator(AccelerateDecelerateInterpolator())
+            .setInterpolator(if (visible) android.view.animation.OvershootInterpolator(0.65f) else AccelerateDecelerateInterpolator())
             .withEndAction {
                 glassNav.visibility = if (visible) View.VISIBLE else View.INVISIBLE
                 lastBottomPad = -1
@@ -255,7 +394,9 @@ class MainActivity : AppCompatActivity() {
     // ---------- About page ----------
 
     private fun setupAbout() {
+        findViewById<TextView>(R.id.footer).text = getString(R.string.footer, BuildConfig.VERSION_NAME)
         findViewById<ImageView>(R.id.aboutPhoto).setImageResource(R.drawable.savan)
+        findViewById<ImageView>(R.id.aboutAkshatPhoto).setImageResource(R.drawable.akshat_portrait)
         findViewById<ImageView>(R.id.aboutPhoto2).setImageResource(R.drawable.akshat_photo_1)
         findViewById<ImageView>(R.id.aboutPhoto3).setImageResource(R.drawable.akshat_photo_2)
         findViewById<ImageView>(R.id.aboutPhoto4).setImageResource(R.drawable.akshat_photo_3)
@@ -273,20 +414,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun animateAbout() {
         if (lowFx(this)) return
-        val halo = findViewById<View>(R.id.aboutHalo)
-        ValueAnimator.ofFloat(0.88f, 1.12f).apply {
-            duration = 3200
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-            interpolator = AccelerateDecelerateInterpolator()
-            addUpdateListener { a ->
-                val s = a.animatedValue as Float
-                halo.scaleX = s
-                halo.scaleY = s
-                halo.alpha = 0.5f + (s - 0.88f) * 1.2f
-            }
-            start()
+        val revealIds = listOf(
+            R.id.aboutPhoto, R.id.aboutAkshatPhoto,
+            R.id.aboutPhoto2, R.id.aboutPhoto3, R.id.aboutPhoto4, R.id.ig
+        )
+        revealIds.forEachIndexed { index, id ->
+            val view = findViewById<View>(id)
+            view.animate().cancel()
+            view.alpha = 0f
+            view.translationY = 16.dp().toFloat()
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 55L)
+                .setDuration(420L)
+                .start()
         }
+        // Keep the Instagram pill subtly alive; reduced-motion mode skips this animation.
+        (findViewById<View>(R.id.ig).background as? AnimationDrawable)?.start()
     }
 
     private fun animateTitle() {
@@ -294,12 +439,17 @@ class MainActivity : AppCompatActivity() {
         val t = findViewById<TextView>(R.id.title)
         t.post {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
-            val colors = intArrayOf(0xFFFF9966.toInt(), 0xFFFF5E62.toInt(), 0xFFC04BFF.toInt(), 0xFF5B8CFF.toInt(), 0xFFFF9966.toInt())
+            val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val colors = if (night) {
+                intArrayOf(0xFFD0C79A.toInt(), 0xFF89945A.toInt(), 0xFFF3F1E7.toInt(), 0xFF89945A.toInt(), 0xFFD0C79A.toInt())
+            } else {
+                intArrayOf(0xFF414D2D.toInt(), 0xFF89945A.toInt(), 0xFFD0C79A.toInt(), 0xFF89945A.toInt(), 0xFF414D2D.toInt())
+            }
             val sh = LinearGradient(0f, 0f, w, 0f, colors, null, Shader.TileMode.REPEAT)
             t.paint.shader = sh
             val m = Matrix()
             ValueAnimator.ofFloat(0f, w).apply {
-                duration = 5000
+                duration = 9000
                 repeatCount = ValueAnimator.INFINITE
                 interpolator = LinearInterpolator()
                 addUpdateListener { m.setTranslate(it.animatedValue as Float, 0f); sh.setLocalMatrix(m); t.invalidate() }
@@ -313,18 +463,34 @@ class MainActivity : AppCompatActivity() {
     private fun showTab(n: Int) {
         tab = n
         navShown = true
+        topShown = true
+        glassTop.animate().cancel()
+        glassTop.visibility = View.VISIBLE
+        glassTop.translationY = 0f
+        glassTop.alpha = 1f
         glassNav.animate().cancel()
         glassNav.visibility = View.VISIBLE
         glassNav.translationY = 0f
         glassNav.alpha = 1f
-        listOf(R.id.n0, R.id.n1, R.id.n2).forEachIndexed { i, id ->
-            val v = findViewById<TextView>(id)
-            val on = i == n
+        val selectedNav = when (n) { 0 -> 0; 1 -> 2; else -> -1 }
+        listOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3).forEachIndexed { i, id ->
+            val v = findViewById<ImageView>(id)
+            val on = i == selectedNav
             v.background = if (on) ContextCompat.getDrawable(this, R.drawable.accent_pill) else null
-            v.setTextColor(ContextCompat.getColor(this, if (on) android.R.color.white else R.color.mute))
+            val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val iconColor = when {
+                on && night -> 0xFF0A0D08.toInt()
+                on -> 0xFFF3F1E7.toInt()
+                night -> 0xFFD0C79A.toInt()
+                else -> 0xFF414D2D.toInt()
+            }
+            v.setColorFilter(iconColor)
         }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
+        glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
+        if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
+        glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
         chipScroll.visibility = if (n == 0) View.VISIBLE else View.GONE
         sortBar.visibility = View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
@@ -338,6 +504,7 @@ class MainActivity : AppCompatActivity() {
             if (cur.items.isEmpty()) loadMore()
         }
         pokeGlass()
+        if (n == 2) animateAbout()
     }
 
     // ---------- Chips ----------
@@ -477,16 +644,33 @@ class MainActivity : AppCompatActivity() {
             }
             tab == 2 -> ""
             cur.loading -> getString(R.string.loading_more)
+            transientStatus != null -> transientStatus!!
             cur.err != null -> cur.err + " " + getString(R.string.retry_suffix)
             cur.done -> getString(R.string.end_of_feed)
             else -> ""
         }
         status.text = text
-        statusPill.visibility = if (text.isBlank()) View.GONE else View.VISIBLE
+        statusPill.visibility = if (text.isBlank() || (cur.err != null && statusPill.getTag(R.id.statusPill) == "dismissed")) View.GONE else View.VISIBLE
+    }
+
+    private fun showTransientStatus(message: String) {
+        transientStatus = message
+        val generation = ++statusGeneration
+        updateStatus()
+        statusPill.animate().cancel()
+        statusPill.alpha = 1f
+        statusPill.postDelayed({
+            if (generation == statusGeneration) {
+                transientStatus = null
+                updateStatus()
+            }
+        }, 3500L)
     }
 
     private fun refreshCurrent() {
         if (tab != 0 || cur.loading) { swipe.isRefreshing = false; return }
+        transientStatus = null
+        statusGeneration++
         cur.reset()
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
@@ -516,7 +700,7 @@ class MainActivity : AppCompatActivity() {
                 val m = e.message ?: ""
                 error = when {
                     m.contains("429") -> "Unsplash is temporarily rate-limiting requests. Please wait and try again."
-                    m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied this request. Check the Access Key and try again."
+                    m.contains("403") || m.contains("Forbidden", true) -> "Photo service authorization failed (403). Check proxy settings."
                     m.contains("404") -> "This feed was not found."
                     m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet."
                     else -> "Couldn’t load photos from Unsplash ($m)."
@@ -529,6 +713,7 @@ class MainActivity : AppCompatActivity() {
                 swipe.isRefreshing = false
                 if (error != null) {
                     s.err = error
+                    statusPill.setTag(R.id.statusPill, null)
                 } else {
                     s.after = nextAfter
                     s.page = page + 1
@@ -539,8 +724,19 @@ class MainActivity : AppCompatActivity() {
                 s.items.addAll(fresh)
                 if (s === cur && tab == 0) {
                     adapter.notifyItemRangeInserted(start, fresh.size)
-                    updateStatus()
-                    rv.post { if (!rv.canScrollVertically(1)) loadMore() }
+                    if (error != null) {
+                        showTransientStatus(error + " " + getString(R.string.retry_suffix))
+                        statusPill.postDelayed({ if (s === cur && s.err != null) { statusPill.setTag(R.id.statusPill, "dismissed"); statusPill.visibility = View.GONE } }, 3500L)
+                    } else {
+                        val message = when {
+                            fresh.isNotEmpty() -> "Loaded ${fresh.size} photos"
+                            s.done -> getString(R.string.end_of_feed)
+                            else -> "No new photos returned"
+                        }
+                        showTransientStatus(message)
+                    }
+                    // Avoid immediately chaining requests when the first page is shorter than the viewport.
+                    // Recursive loads made the status pill flash repeatedly.
                 }
             }
         }.start()
@@ -572,7 +768,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: VH, pos: Int) {
             val p = data[pos]
-            h.lbl.text = p.credit.ifBlank { getString(R.string.unknown_photographer) }
+            h.lbl.text = "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
             h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             h.heart.contentDescription = getString(R.string.like_desc)
             val screenWidth = resources.displayMetrics.widthPixels - 28.dp()

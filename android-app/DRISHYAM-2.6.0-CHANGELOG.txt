@@ -1,0 +1,23 @@
+Drishyam 2.6.0 — Complete UI redesign
+
+DESIGN
+• Introduces the Moss & Olive visual identity across light and dark themes.
+• Adds a coordinated Home, Search, Favourites and Settings bottom navigation.
+• Redesigns the Settings hub with an editorial hierarchy and rounded preference cards.
+• Reimagines the About experience with an updated developer/story presentation.
+• Refines glass surfaces, card shapes, colour contrast and selected navigation states.
+
+EXPERIENCE
+• Adds an accessible route from Settings to the About story.
+• Keeps wallpaper actions inside the full-screen photo viewer.
+• Retains System, Light and Dark theme preferences.
+• Updates the What's New information for the redesign.
+
+PRESERVATION
+• The existing photo-loading and API implementation is intentionally retained.
+• Existing saved photos, likes, bookmarks and settings are intended to remain intact.
+• No change to package ID: com.savan.drishyam.
+
+VERIFICATION
+• This release must pass the automated Android build and APK signature checks before distribution.
+• Real-device visual and interaction testing is still required after installation.

@@ -54,8 +54,8 @@
             android:id="@+id/glassTop"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_gravity="top"
-            android:layout_marginStart="10dp" android:layout_marginEnd="10dp" android:layout_marginTop="6dp"
-            app:glassRadius="30dp">
+            android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="8dp"
+            app:glassRadius="28dp">
 
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -68,30 +68,30 @@
 
                     <LinearLayout
                         android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:orientation="vertical">
-                        <TextView
-                            android:id="@+id/title"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="horizontal"
+                        android:gravity="start|center_vertical">
+                        <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:fontFamily="@font/ericaone" android:text="@string/app_name"
                             android:textSize="27sp" android:textColor="?attr/colorPrimary" />
-                        <TextView
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginStart="2dp" android:fontFamily="@font/poppins_medium"
-                            android:text="@string/tagline" android:textSize="10sp" android:textColor="?attr/colorOnSurfaceVariant" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_gravity="center_vertical" android:layout_marginStart="5dp"
+                            android:layout_marginTop="7dp" android:fontFamily="@font/pacifico_regular"
+                            android:text="@string/tagline" android:textSize="11sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
                     <ImageView
                         android:id="@+id/searchButton"
-                        android:layout_width="42dp" android:layout_height="42dp"
-                        android:background="@drawable/glass_pill_purple" android:padding="12dp"
+                        android:layout_width="46dp" android:layout_height="46dp"
+                        android:background="@drawable/glass_pill" android:padding="13dp"
                         android:src="@drawable/ic_search" android:scaleType="fitCenter"
                         android:contentDescription="@string/search_desc"
                         android:clickable="true" android:focusable="true" />
                     <ImageView
                         android:id="@+id/settingsButton"
                         android:layout_width="42dp" android:layout_height="42dp"
-                        android:layout_marginStart="10dp"
-                        android:background="@drawable/glass_pill_pink" android:padding="12dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/glass_pill" android:padding="13dp"
                         android:src="@drawable/ic_settings" android:scaleType="fitCenter"
                         android:contentDescription="@string/settings_desc"
                         android:clickable="true" android:focusable="true" />
@@ -100,7 +100,11 @@
                 <HorizontalScrollView
                     android:id="@+id/chipScroll"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:scrollbars="none">
+                    android:scrollbars="none"
+                    android:clipChildren="true"
+                    android:clipToPadding="true"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
                     <LinearLayout
                         android:id="@+id/chips"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -159,14 +163,42 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginStart="24dp" android:layout_marginEnd="24dp" android:layout_marginBottom="10dp"
                 android:padding="6dp"
-app:glassRadius="100dp"
-app:glassSolid="true">
+app:glassRadius="100dp">
                 <LinearLayout
                     android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <TextView android:id="@+id/n0" style="@style/NavTab" android:text="@string/nav_explore" />
-                    <TextView android:id="@+id/n1" style="@style/NavTab" android:text="@string/nav_saved" />
-                    <TextView android:id="@+id/n2" style="@style/NavTab" android:text="@string/nav_about" />
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:id="@+id/navItem0" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1"
+                        android:orientation="vertical" android:gravity="center" android:clickable="true" android:focusable="true">
+                        <ImageView android:id="@+id/n0" android:layout_width="30dp" android:layout_height="30dp"
+                            android:padding="6dp" android:src="@drawable/ic_nav_explore" android:contentDescription="@string/nav_home" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/nav_home" android:textSize="10sp" android:textColor="?attr/colorOnSurface"
+                            android:fontFamily="@font/montserrat_semibold" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/navItem1" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1"
+                        android:orientation="vertical" android:gravity="center" android:clickable="true" android:focusable="true">
+                        <ImageView android:id="@+id/n1" android:layout_width="30dp" android:layout_height="30dp"
+                            android:padding="6dp" android:src="@drawable/ic_search" android:contentDescription="@string/nav_search" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/nav_search" android:textSize="10sp" android:textColor="?attr/colorOnSurface"
+                            android:fontFamily="@font/montserrat_semibold" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/navItem2" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1"
+                        android:orientation="vertical" android:gravity="center" android:clickable="true" android:focusable="true">
+                        <ImageView android:id="@+id/n2" android:layout_width="30dp" android:layout_height="30dp"
+                            android:padding="6dp" android:src="@drawable/ic_heart_fill" android:contentDescription="@string/nav_favourites" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/nav_favourites" android:textSize="10sp" android:textColor="?attr/colorOnSurface"
+                            android:fontFamily="@font/montserrat_semibold" />
+                    </LinearLayout>
+                    <LinearLayout android:id="@+id/navItem3" android:layout_width="0dp" android:layout_height="58dp" android:layout_weight="1"
+                        android:orientation="vertical" android:gravity="center" android:clickable="true" android:focusable="true">
+                        <ImageView android:id="@+id/n3" android:layout_width="30dp" android:layout_height="30dp"
+                            android:padding="6dp" android:src="@drawable/ic_settings" android:contentDescription="@string/nav_settings" />
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/nav_settings" android:textSize="10sp" android:textColor="?attr/colorOnSurface"
+                            android:fontFamily="@font/montserrat_semibold" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.savan.drishyam.GlassLayout>
         </LinearLayout>
