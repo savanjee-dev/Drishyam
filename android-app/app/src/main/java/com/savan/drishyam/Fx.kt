@@ -36,6 +36,12 @@ fun lowFx(c: Context): Boolean =
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
     setOnTouchListener { v, e ->
+        if (lowFx(v.context)) {
+            if (e.actionMasked == MotionEvent.ACTION_DOWN && hapticsOn(v.context)) {
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            }
+            return@setOnTouchListener false
+        }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
