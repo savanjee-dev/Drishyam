@@ -1,7 +1,5 @@
 package com.savan.drishyam
 
-import android.animation.ValueAnimator
-import android.os.Build
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 
@@ -10,7 +8,7 @@ import android.view.animation.DecelerateInterpolator
  * preference and Android's system animator setting; content never stays hidden.
  */
 fun animatePageEntrance(view: View) {
-    if (lowFx(view.context) || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ValueAnimator.areAnimatorsEnabled())) {
+    if (!motionEnabled(view.context)) {
         view.alpha = 1f
         view.translationY = 0f
         return
