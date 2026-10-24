@@ -239,68 +239,16 @@ class MainActivity : AppCompatActivity() {
      * If installation was cancelled, keep the pending version until a matching/newer version
      * is installed. The dialog is shown once and never replaces the saved-photo state.
      */
+    /** Opens the full What's New page once an update installed from inside Drishyam is detected. */
     private fun showPendingWhatsNewIfNeeded(): Boolean {
         val prefs = getSharedPreferences("drishyam_update_state", Context.MODE_PRIVATE)
         val pendingVersion = prefs.getString("pending_whats_new_version", null) ?: return false
         val currentVersion = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: return false
-        } catch (_: Exception) {
-            return false
-        }
+        } catch (_: Exception) { return false }
         if (compareVersionNumbers(currentVersion, pendingVersion) < 0) return false
-
-        Thread {
-            val notes = ReleaseChangelog.fetch(currentVersion)
-            runOnUiThread {
-                if (isFinishing || isDestroyed || !::glassSource.isInitialized) return@runOnUiThread
-                showGlassPopup(this, glassSource) { box, close ->
-                    box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
-                    box.addView(TextView(this).apply {
-                        text = "Drishyam $currentVersion"
-                        textSize = 24f
-                        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_bold)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                    })
-                    box.addView(TextView(this).apply {
-                        text = "What’s new"
-                        textSize = 15f
-                        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.poppins_medium)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.accent))
-                        setPadding(0, 14.dp(), 0, 5.dp())
-                    })
-                    val formatted = notes.orEmpty().lineSequence().map { it.trim() }.filter { it.isNotBlank() }
-                        .map { line -> if (line.startsWith("-") || line.startsWith("•") || line.startsWith("*")) "•  " + line.drop(1).trim() else "•  " + line }
-                        .joinToString("\n")
-                    box.addView(TextView(this).apply {
-                        text = formatted.ifBlank { "• Bug fixes and improvements in this version." }
-                        textSize = 14f
-                        setLineSpacing(4.dp().toFloat(), 1f)
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                        maxHeight = 260.dp()
-                        isVerticalScrollBarEnabled = true
-                        movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
-                        setPadding(0, 0, 0, 8.dp())
-                    })
-                    box.addView(TextView(this).apply {
-                        text = "Your photos, saved items, preferences, and Dark Mode remain on this device."
-                        textSize = 12f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.mute))
-                        setPadding(0, 8.dp(), 0, 0)
-                    })
-                    box.addView(TextView(this).apply {
-                        text = "Continue"
-                        gravity = Gravity.CENTER
-                        textSize = 14f
-                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
-                        isClickable = true
-                        isFocusable = true
-                        setPadding(0, 14.dp(), 0, 0)
-                        setOnClickListener { close() }
-                    }, LinearLayout.LayoutParams(-1, 42.dp()))
-                }
-                prefs.edit().remove("pending_whats_new_version").apply()
-            }
-        }.start()
+        prefs.edit().remove("pending_whats_new_version").apply()
+        startActivity(Intent(this, WhatsNewActivity::class.java).putExtra("highlight_version", currentVersion))
         return true
     }
 
@@ -719,19 +667,38 @@ class MainActivity : AppCompatActivity() {
             var nextAfter = after
             var finished = false
             var error: String? = null
+            var unsplashError: String? = null
+            val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
+            val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
             try {
-                val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
                 val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
-                finished = last
-                added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
+                if (list.isNotEmpty()) {
+                    finished = last
+                    added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
+                } else {
+                    // HTTP 200 with an empty results array is still a feed failure; try the backup source.
+                    unsplashError = "Unsplash returned no photos."
+                }
             } catch (e: Exception) {
-                val m = e.message ?: ""
-                error = when {
-                    m.contains("429") -> "Unsplash is temporarily rate-limiting requests. Please wait and try again."
-                    m.contains("403") || m.contains("Forbidden", true) -> "Photo service authorization failed (403). Check proxy settings."
-                    m.contains("404") -> "This feed was not found."
-                    m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet."
-                    else -> "Couldn’t load photos from Unsplash ($m)."
+                unsplashError = e.message ?: "Photo service unavailable."
+            }
+
+            // Try Wikimedia Commons both when Unsplash errors and when it returns an empty feed.
+            if (added.isEmpty()) {
+                try {
+                    val (fallbackPhotos, fallbackLast) = Api.commons(fallbackQuery, page)
+                    if (fallbackPhotos.isEmpty()) throw Exception("No backup photos returned.")
+                    added.addAll(fallbackPhotos)
+                    finished = fallbackLast
+                } catch (fallbackError: Exception) {
+                    val m = unsplashError ?: "Unsplash returned no photos."
+                    error = when {
+                        m.contains("429") -> "Unsplash is temporarily rate-limiting requests and backup photos are unavailable. Please retry."
+                        m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied the request and backup photos could not load. Check the connection and retry."
+                        m.contains("404") -> "This feed was not found and backup photos could not load."
+                        m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet and retry."
+                        else -> "Photo services are temporarily unavailable ($m). Please retry."
+                    }
                 }
             }
 
@@ -809,7 +776,14 @@ class MainActivity : AppCompatActivity() {
             h.root.animate().alpha(1f).translationY(0f).setDuration(320L)
                 .setInterpolator(AccelerateDecelerateInterpolator()).start()
             // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
-            Glide.with(h.img).load(p.thumb).disallowHardwareConfig().centerCrop().into(h.img)
+            // Some Unsplash thumbnail URLs can fail independently of the photo itself.
+            // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
+            Glide.with(h.img)
+                .load(p.thumb)
+                .disallowHardwareConfig()
+                .centerCrop()
+                .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop())
+                .into(h.img)
             h.heart.setOnClickListener {
                 Store.toggle(this@MainActivity, p)
                 if (tab == 1) refreshSaved() else h.heart.setHeart(Store.isFav(this@MainActivity, p.id))

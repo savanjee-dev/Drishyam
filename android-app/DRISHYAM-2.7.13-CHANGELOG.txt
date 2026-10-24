@@ -1,0 +1,9 @@
+Drishyam 2.7.13
+
+Material 3 Expressive update experience
+- Redesigned update checker with clearer version status and download progress.
+- Added a standalone What's New page with chronological release history.
+- Release notes are cached locally and available when offline.
+- Fixed nested scrolling in the update checker and release notes.
+- Improved feed loading and sorting reliability.
+- Preserved saved photos, preferences, and Dark Mode.

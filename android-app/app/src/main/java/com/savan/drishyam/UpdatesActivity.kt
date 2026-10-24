@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -29,6 +30,7 @@ class UpdatesActivity : AppCompatActivity() {
     private lateinit var checkButton: MaterialButton
     private lateinit var downloadButton: MaterialButton
     private lateinit var releaseButton: MaterialButton
+    private lateinit var downloadProgress: ProgressBar
     private var apkUrl: String? = null
     private var verifiedApk: VerifiedReleaseApk? = null
     private var releasePage: String? = null
@@ -163,9 +165,6 @@ class UpdatesActivity : AppCompatActivity() {
             textSize = 14f
             setLineSpacing(6.dp().toFloat(), 1f)
             setTextColor(onSurface)
-            maxHeight = 340.dp()
-            isVerticalScrollBarEnabled = true
-            movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
         }
         notesCard.addView(notes)
         root.addView(notesCard)
@@ -190,6 +189,17 @@ class UpdatesActivity : AppCompatActivity() {
         }
         root.addView(downloadButton, LinearLayout.LayoutParams(-1, 54.dp()).apply {
             topMargin = 10.dp()
+        })
+        downloadProgress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            progress = 0
+            isIndeterminate = false
+            visibility = View.GONE
+            progressTintList = android.content.res.ColorStateList.valueOf(primary)
+        }
+        root.addView(downloadProgress, LinearLayout.LayoutParams(-1, 6.dp()).apply {
+            topMargin = 8.dp()
+            bottomMargin = 4.dp()
         })
         releaseButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "View GitHub release"
@@ -262,7 +272,6 @@ class UpdatesActivity : AppCompatActivity() {
 
                 if (result == null) {
                     status.text = failure ?: "Update check failed. Please try again."
-                    notes.text = "Release notes are unavailable because the release check did not complete."
                     Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
                     return@runOnUiThread
                 }
@@ -288,17 +297,25 @@ class UpdatesActivity : AppCompatActivity() {
 
                 val rawNotes = result.opt("body")
                 val releaseNotes = (rawNotes as? String)?.trim().orEmpty()
-                notes.text = "Loading notes for v$version…"
-                Thread {
-                    val exactNotes = ReleaseChangelog.fetch(version)
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed) return@runOnUiThread
-                        if (latestVersion != version) return@runOnUiThread
-                        notes.text = exactNotes
-                            ?: releaseNotes.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
-                            ?: "The changelog for v$version is unavailable. Open the official release to review its details."
-                    }
-                }.start()
+                val cachedNotes = ReleaseNotesCache.cachedNotes(this, version)
+                notes.text = cachedNotes
+                    ?: releaseNotes.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+                    ?: "Loading release notes for v$version…"
+                if (cachedNotes == null) {
+                    Thread {
+                        val exactNotes = ReleaseNotesCache.fetchNotes(this, version)
+                            ?: ReleaseChangelog.fetch(version)
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed || latestVersion != version) return@runOnUiThread
+                            if (!exactNotes.isNullOrBlank()) {
+                                ReleaseNotesCache.saveNotes(this, version, exactNotes)
+                                notes.text = exactNotes
+                            } else if (notes.text.isNullOrBlank() || notes.text.startsWith("Loading release notes")) {
+                                notes.text = "The changelog for v$version is unavailable. Open the official release to review its details."
+                            }
+                        }
+                    }.start()
+                }
 
                 val verifiedAsset = VerifiedReleaseApk.fromRelease(result, version)
                 verifiedApk = verifiedAsset
@@ -324,8 +341,24 @@ class UpdatesActivity : AppCompatActivity() {
         VerifiedUpdateInstaller.downloadAndInstall(this, release) { message ->
             if (isFinishing || isDestroyed) return@downloadAndInstall
             status.text = message
-            downloadButton.isEnabled = true
-            downloadButton.text = "Download v${release.version}"
+            val percent = Regex("(\\d{1,3})%").find(message)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (percent != null) {
+                downloadProgress.visibility = View.VISIBLE
+                downloadProgress.isIndeterminate = false
+                downloadProgress.progress = percent.coerceIn(0, 100)
+            } else if (message.contains("Downloading", ignoreCase = true)) {
+                downloadProgress.visibility = View.VISIBLE
+                downloadProgress.isIndeterminate = true
+            } else {
+                downloadProgress.visibility = View.GONE
+                downloadProgress.isIndeterminate = false
+                downloadProgress.progress = 0
+            }
+            val downloading = message.contains("Downloading update", ignoreCase = true)
+            downloadButton.isEnabled = !downloading
+            downloadButton.text = if (downloading) {
+                if (percent != null) "Downloading… $percent%" else "Downloading…"
+            } else "Download v${release.version}"
         }
     }
 

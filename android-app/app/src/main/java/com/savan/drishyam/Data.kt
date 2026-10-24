@@ -205,7 +205,7 @@ object Api {
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
             java.net.URLEncoder.encode("filetype:bitmap $search", "UTF-8") +
             "&gsrnamespace=6&gsrlimit=20&gsroffset=${(page - 1) * 20}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640&format=json&origin=*"
-        val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/1.2 (wallpaper viewer; contact: support@example.com)")))
+        val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/2.7.13 (https://github.com/savanjee-dev/Drishyam)")))
         val pages = root.optJSONObject("query")?.optJSONObject("pages") ?: JSONObject()
         val out = ArrayList<Photo>()
         val keys = pages.keys()
@@ -253,8 +253,8 @@ object Api {
             val full = raw + (if (raw.contains("?")) "&" else "?") + "w=1440&q=85&fm=jpg&fit=max"
             val user = p.getJSONObject("user")
             val createdAt = p.optString("created_at", "")
-            val location = p.optJSONObject("location")
-            if (indiaOnly && !(location?.optString("name", "")?.contains("India", ignoreCase = true) == true || location?.optString("city", "")?.contains("India", ignoreCase = true) == true || location?.optString("country", "")?.contains("India", ignoreCase = true) == true)) continue
+            // Unsplash location metadata is optional. Keep valid photos when metadata is missing;
+            // the India search query biases results without risking an empty feed.
             val publishedAt = try { java.time.Instant.parse(createdAt).toEpochMilli() } catch (_: Exception) { 0L }
             val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
             out.add(Photo(p.getString("id"), urls.getString("small"), full,

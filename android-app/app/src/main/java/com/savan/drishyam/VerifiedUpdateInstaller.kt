@@ -59,6 +59,12 @@ internal object VerifiedUpdateInstaller {
                                 total += n
                                 if (total > 200L * 1024L * 1024L) throw IllegalStateException("APK is unexpectedly large.")
                                 output.write(buffer, 0, n)
+                                if (expectedLength > 0L) {
+                                    val percent = ((total * 100L) / expectedLength).toInt().coerceIn(0, 100)
+                                    main.post {
+                                        if (!activity.isFinishing && !activity.isDestroyed) status("Downloading update securely… $percent%")
+                                    }
+                                }
                             }
                         }
                     }
