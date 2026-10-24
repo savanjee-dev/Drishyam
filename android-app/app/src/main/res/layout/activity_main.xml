@@ -129,8 +129,8 @@
                     android:layout_marginBottom="10dp"
                     android:text="Explore"
                     android:textColor="?attr/colorOnSurface"
-                    android:fontFamily="@font/ericaone"
-                    android:textSize="32sp" />
+                    android:fontFamily="@font/nothingyoucoulddo"
+                    android:textSize="36sp" />
 
                 <LinearLayout
                     android:id="@+id/homeSearchField"
