@@ -10,6 +10,8 @@ import java.net.URL
 internal object ReleaseNotesCache {
     private const val PREFS = "drishyam_release_notes_cache"
     private const val KEY_HISTORY = "release_history_json"
+    private const val KEY_HISTORY_UPDATED = "release_history_updated_at"
+    private const val HISTORY_TTL_MS = 6L * 60L * 60L * 1000L
     private const val KEY_PREFIX = "release_notes_"
     private const val API = "https://api.github.com/repos/savanjee-dev/Drishyam/releases"
 
@@ -17,6 +19,12 @@ internal object ReleaseNotesCache {
 
     fun cachedHistory(context: Context): List<Release> =
         parseHistory(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_HISTORY, null))
+
+    fun shouldRefreshHistory(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val savedAt = prefs.getLong(KEY_HISTORY_UPDATED, 0L)
+        return savedAt == 0L || System.currentTimeMillis() - savedAt >= HISTORY_TTL_MS
+    }
 
     fun cachedNotes(context: Context, version: String): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_PREFIX + version, null)
@@ -48,7 +56,7 @@ internal object ReleaseNotesCache {
         if (releases.isEmpty()) return null
         val json = JSONArray()
         releases.forEach { r -> json.put(JSONObject().put("version", r.version).put("title", r.title).put("date", r.date).put("notes", r.notes).put("url", r.url)) }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_HISTORY, json.toString()).apply()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_HISTORY, json.toString()).putLong(KEY_HISTORY_UPDATED, System.currentTimeMillis()).apply()
         return releases
     }
 
