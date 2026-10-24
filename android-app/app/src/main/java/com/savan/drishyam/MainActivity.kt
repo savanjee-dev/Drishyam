@@ -32,6 +32,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
+import com.google.android.material.chip.Chip
+import android.content.res.ColorStateList
 
 class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false) {
     val items = ArrayList<Photo>()
@@ -459,21 +461,47 @@ class MainActivity : AppCompatActivity() {
         styleChips()
     }
 
-    private fun chip(label: String, key: Any, onTap: () -> Unit): TextView = TextView(this).apply {
+    private fun chip(label: String, key: Any, onTap: () -> Unit): Chip = Chip(this).apply {
         text = label
-        textSize = 14f
-        gravity = Gravity.CENTER
-        setPadding(15.dp(), 0, 15.dp(), 0)
         tag = key
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 36.dp()).apply { marginEnd = 8.dp() }
+        isCheckable = false
+        isClickable = true
+        isFocusable = true
+        chipMinHeight = 42.dp().toFloat()
+        chipCornerRadius = 21.dp().toFloat()
+        textSize = 13f
+        setEnsureMinTouchTargetSize(false)
+        setPadding(4.dp(), 0, 4.dp(), 0)
+        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42.dp()).apply {
+            marginEnd = 8.dp()
+        }
         pressFx()
         setOnClickListener { onTap() }
     }
 
     private fun styleChips() {
+        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val selected = if (night) 0xFFD0C79A.toInt() else 0xFF414D2D.toInt()
+        val onSelected = if (night) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
+        val surface = if (night) 0xFF293022.toInt() else 0xFFE8E6DA.toInt()
+        val onSurface = if (night) 0xFFE5E7D8.toInt() else 0xFF41483A.toInt()
         for (i in 0 until chips.childCount) {
-            val tv = chips.getChildAt(i) as TextView
-            tv.styleSeg(tv.tag === cur)
+            val item = chips.getChildAt(i) as? Chip ?: continue
+            val active = item.tag === cur
+            item.chipBackgroundColor = ColorStateList.valueOf(if (active) selected else surface)
+            item.setTextColor(if (active) onSelected else onSurface)
+            item.chipStrokeWidth = if (active) 0f else 1.dp().toFloat()
+            item.chipStrokeColor = ColorStateList.valueOf(if (night) 0xFF59634A.toInt() else 0xFFC8CCB9.toInt())
+            item.elevation = if (active) 2.dp().toFloat() else 0f
+            item.animate().cancel()
+            if (motionEnabled(this)) {
+                item.animate().scaleX(if (active) 1.02f else 1f).scaleY(if (active) 1.02f else 1f)
+                    .setDuration(180L).setInterpolator(AccelerateDecelerateInterpolator()).start()
+            } else {
+                item.scaleX = 1f
+                item.scaleY = 1f
+            }
         }
     }
 
