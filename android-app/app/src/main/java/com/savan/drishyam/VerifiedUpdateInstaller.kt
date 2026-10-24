@@ -78,7 +78,7 @@ internal object VerifiedUpdateInstaller {
                     val archiveCerts = archiveInfo.apkContentsSigners
                     val matches = archiveCerts.any { apkSigner ->
                         installedCerts.any { it.toByteArray().contentEquals(apkSigner.toByteArray()) } ||
-                            installedInfo.hasSigningCertificate(apkSigner.toByteArray(), android.content.pm.PackageManager.CERT_INPUT_SHA256)
+                            installedInfo.signingCertificateHistory.any { it.toByteArray().contentEquals(apkSigner.toByteArray()) }
                     }
                     if (!matches) throw SecurityException("APK signing identity doesn't match the installed app. Installation was blocked.")
                 }
