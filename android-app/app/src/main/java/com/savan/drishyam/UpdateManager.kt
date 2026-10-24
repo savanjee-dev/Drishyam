@@ -98,7 +98,7 @@ object UpdateManager {
     }
 
     private fun showReleaseDialog(a: Activity, source: View, tag: String, version: String, notes: String, pageUrl: String?, releaseApk: VerifiedReleaseApk, manual: Boolean) {
-        val apkUrl = releaseApk.url\n        showGlassPopup(a, source) { box, close ->
+        showGlassPopup(a, source) { box, close ->
             box.setPadding(24.dp(), 24.dp(), 24.dp(), 20.dp())
             box.addView(TextView(a).apply {
                 text = if (manual) "Drishyam updates" else "Drishyam $version is here"
