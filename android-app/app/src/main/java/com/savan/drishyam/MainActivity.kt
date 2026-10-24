@@ -757,7 +757,14 @@ class MainActivity : AppCompatActivity() {
             h.root.animate().alpha(1f).translationY(0f).setDuration(320L)
                 .setInterpolator(AccelerateDecelerateInterpolator()).start()
             // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
-            Glide.with(h.img).load(p.thumb).disallowHardwareConfig().centerCrop().into(h.img)
+            // Some Unsplash thumbnail URLs can fail independently of the photo itself.
+            // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
+            Glide.with(h.img)
+                .load(p.thumb)
+                .disallowHardwareConfig()
+                .centerCrop()
+                .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop())
+                .into(h.img)
             h.heart.setOnClickListener {
                 Store.toggle(this@MainActivity, p)
                 if (tab == 1) refreshSaved() else h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
