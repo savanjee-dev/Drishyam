@@ -158,14 +158,22 @@ class ViewerActivity : AppCompatActivity() {
     }
 
     private fun animateIcon(view: View) {
-        if (android.provider.Settings.Global.getFloat(contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f) return
+        // Keep the richer confirmation animation in the normal experience, but honour
+        // both Drishyam's explicit Low Effects preference and Android's motion settings.
+        if (!motionEnabled(this)) {
+            view.animate().cancel()
+            view.scaleX = 1f
+            view.scaleY = 1f
+            return
+        }
         view.animate().cancel()
         view.scaleX = 1f
         view.scaleY = 1f
-        view.animate().scaleX(0.82f).scaleY(0.82f).setDuration(90)
+        view.animate().scaleX(0.78f).scaleY(0.78f).setDuration(100)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.4f))
             .withEndAction {
-                view.animate().scaleX(1f).scaleY(1f).setDuration(220)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                view.animate().scaleX(1f).scaleY(1f).setDuration(240)
+                    .setInterpolator(android.view.animation.OvershootInterpolator(1.15f)).start()
             }.start()
     }
 
