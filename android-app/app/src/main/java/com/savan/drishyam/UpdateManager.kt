@@ -86,20 +86,7 @@ object UpdateManager {
         }.start()
     }
 
-    private fun hasActiveDownload(context: Context, manager: Any): Boolean { return false /* legacy helper retained temporarily */\n    /*
-        val id = context.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE).getLong(KEY_DOWNLOAD_ID, -1L)
-        if (id < 0L) return false
-        val cursor = manager.query(DownloadManager.Query().setFilterById(id)) ?: return false
-        cursor.use {
-            if (!it.moveToFirst()) return false
-            return when (it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))) {
-                DownloadManager.STATUS_PENDING, DownloadManager.STATUS_RUNNING, DownloadManager.STATUS_PAUSED -> true
-                else -> false
-            }
-        }
-    }
-
-    */\n    private fun compareVersions(a: String, b: String): Int {
+    private fun compareVersions(a: String, b: String): Int {
         val aa = Regex("\\d+").findAll(a).mapNotNull { it.value.toIntOrNull() }.toList()
         val bb = Regex("\\d+").findAll(b).mapNotNull { it.value.toIntOrNull() }.toList()
         for (i in 0 until maxOf(aa.size, bb.size)) {
