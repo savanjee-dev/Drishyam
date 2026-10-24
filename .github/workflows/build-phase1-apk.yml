@@ -108,7 +108,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          APK="$RUNNER_TEMP/drishyam-phase1-output/Drishyam-Phase1.apk"
+          APK="$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2.apk"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
@@ -116,6 +116,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Drishyam-Phase2-Test-APK
-          path: ${{ runner.temp }}/drishyam-phase1-output/Drishyam-Phase1.apk
+          path: ${{ runner.temp }}/drishyam-phase2-output/Drishyam-Phase2.apk
           if-no-files-found: error
           retention-days: 30
