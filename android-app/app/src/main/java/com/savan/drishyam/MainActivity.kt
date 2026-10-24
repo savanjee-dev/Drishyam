@@ -430,6 +430,24 @@ class MainActivity : AppCompatActivity() {
                 else -> 0xFF414D2D.toInt()
             }
             v.setColorFilter(iconColor)
+            v.animate().cancel()
+            if (motionEnabled(this)) {
+                v.animate().scaleX(if (on) 1.12f else 1f).scaleY(if (on) 1.12f else 1f)
+                    .setDuration(220L).setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            } else {
+                v.scaleX = 1f
+                v.scaleY = 1f
+            }
+            val itemId = when (i) {
+                0 -> R.id.navItem0
+                1 -> R.id.navItem1
+                2 -> R.id.navItem2
+                else -> R.id.navItem3
+            }
+            findViewById<View>(itemId).setBackgroundResource(
+                if (on) R.drawable.glass_pill else android.R.color.transparent
+            )
         }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
