@@ -106,7 +106,7 @@ class WhatsNewActivity : AppCompatActivity() {
         }
 
         // Keep navigation instant: don't hit the network again while the saved history is fresh.
-        if (cached.isNotEmpty() && !ReleaseNotesCache.shouldRefreshHistory(this)) {
+        if (cached.isNotEmpty() && !ReleaseNotesCache.shouldRefreshHistory(this, BuildConfig.VERSION_NAME)) {
             loading.text = "Saved release history · available offline"
         } else {
             Thread {
@@ -168,10 +168,15 @@ class WhatsNewActivity : AppCompatActivity() {
             })
             hero.addView(heroBody)
             content.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 18.dp() })
-            hero.alpha = 0f
-            hero.translationY = 10.dp().toFloat()
-            hero.animate().alpha(1f).translationY(0f).setStartDelay(40L).setDuration(240)
-                .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            if (motionEnabled(this)) {
+                hero.alpha = 0f
+                hero.translationY = 14.dp().toFloat()
+                hero.scaleX = 0.985f
+                hero.scaleY = 0.985f
+                hero.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setStartDelay(40L).setDuration(280L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            }
         }
 
         releases.forEachIndexed { index, release ->
@@ -218,11 +223,15 @@ class WhatsNewActivity : AppCompatActivity() {
             content.addView(card, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = 12.dp()
             })
-            card.alpha = 0f
-            card.translationY = 8.dp().toFloat()
-            card.animate().alpha(1f).translationY(0f)
-                .setStartDelay((index * 32L).coerceAtMost(160L))
-                .setDuration(220).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            if (motionEnabled(this@WhatsNewActivity)) {
+                card.alpha = 0f
+                card.translationY = 14.dp().toFloat()
+                card.scaleX = 0.985f
+                card.scaleY = 0.985f
+                card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setStartDelay((70L + index.coerceAtMost(8) * 38L))
+                    .setDuration(280L).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            }
         }
         scroll.post { scroll.scrollTo(0, restoreScrollY.coerceAtMost((content.height - scroll.height).coerceAtLeast(0))) }
     }

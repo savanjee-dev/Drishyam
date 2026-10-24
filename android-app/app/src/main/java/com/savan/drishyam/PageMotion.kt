@@ -4,17 +4,22 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 
 /**
- * Applies a short, restrained page entrance. Keeps motion consistent without
- * spring overshoot and safely ignores views that are not attached yet.
+ * Consistent Material-inspired entrance motion. Respects the app's low-effects
+ * preference and Android's system animator setting; content never stays hidden.
  */
 fun animatePageEntrance(view: View) {
-    view.alpha = 0f
-    view.translationY = 12f * view.resources.displayMetrics.density
+    if (!motionEnabled(view.context)) {
+        view.alpha = 1f
+        view.translationY = 0f
+        return
+    }
     view.animate().cancel()
+    view.alpha = 0f
+    view.translationY = 16f * view.resources.displayMetrics.density
     view.animate()
         .alpha(1f)
         .translationY(0f)
-        .setDuration(220L)
+        .setDuration(280L)
         .setInterpolator(DecelerateInterpolator())
         .start()
 }

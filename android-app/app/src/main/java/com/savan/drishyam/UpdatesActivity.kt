@@ -217,6 +217,18 @@ class UpdatesActivity : AppCompatActivity() {
 
         setContentView(scroll)
         animatePageEntrance(scroll)
+        if (motionEnabled(this)) {
+            val expressiveCards = listOf(statusCard, notesCard)
+            expressiveCards.forEachIndexed { index, card ->
+                card.alpha = 0f
+                card.translationY = 18.dp().toFloat()
+                card.scaleX = 0.985f
+                card.scaleY = 0.985f
+                card.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setStartDelay(90L + index * 85L).setDuration(280L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+            }
+        }
     }
 
     private fun checkForUpdates() {

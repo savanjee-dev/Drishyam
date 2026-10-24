@@ -27,10 +27,30 @@ class FullscreenActivity : AppCompatActivity() {
 
         val image = findViewById<ImageView>(R.id.fullscreenImage)
         Glide.with(this).load(p.full).thumbnail(Glide.with(this).load(p.thumb)).fitCenter().into(image)
-        findViewById<View>(R.id.closeFullscreen).apply { pressFx(); setOnClickListener { finish() } }
+        val close = findViewById<View>(R.id.closeFullscreen)
+        close.pressFx()
+        close.setOnClickListener { finish() }
         image.setOnClickListener {
-            val close = findViewById<View>(R.id.closeFullscreen)
-            close.visibility = if (close.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            if (!motionEnabled(this)) {
+                close.visibility = if (close.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            } else if (close.visibility == View.VISIBLE) {
+                close.animate().cancel()
+                close.animate().alpha(0f).scaleX(0.92f).scaleY(0.92f).setDuration(130L)
+                    .withEndAction {
+                        close.visibility = View.GONE
+                        close.alpha = 1f
+                        close.scaleX = 1f
+                        close.scaleY = 1f
+                    }.start()
+            } else {
+                close.animate().cancel()
+                close.alpha = 0f
+                close.scaleX = 0.92f
+                close.scaleY = 0.92f
+                close.visibility = View.VISIBLE
+                close.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.3f)).start()
+            }
         }
     }
 

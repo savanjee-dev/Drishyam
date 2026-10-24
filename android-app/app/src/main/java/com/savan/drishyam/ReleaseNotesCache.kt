@@ -20,10 +20,14 @@ internal object ReleaseNotesCache {
     fun cachedHistory(context: Context): List<Release> =
         parseHistory(context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_HISTORY, null))
 
-    fun shouldRefreshHistory(context: Context): Boolean {
+    fun shouldRefreshHistory(context: Context, minimumVersion: String? = null): Boolean {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val savedAt = prefs.getLong(KEY_HISTORY_UPDATED, 0L)
-        return savedAt == 0L || System.currentTimeMillis() - savedAt >= HISTORY_TTL_MS
+        val cachedLatest = cachedHistory(context).firstOrNull()?.version
+        val cacheTrailsInstalledVersion = minimumVersion != null &&
+            cachedLatest != null && compareVersions(cachedLatest, minimumVersion) < 0
+        return savedAt == 0L || System.currentTimeMillis() - savedAt >= HISTORY_TTL_MS ||
+            cacheTrailsInstalledVersion
     }
 
     fun cachedNotes(context: Context, version: String): String? =
@@ -54,6 +58,7 @@ internal object ReleaseNotesCache {
                     ?: "https://github.com/savanjee-dev/Drishyam/releases"))
         }
         if (releases.isEmpty()) return null
+        releases.sortWith { left, right -> compareVersions(right.version, left.version) }
         val json = JSONArray()
         releases.forEach { r -> json.put(JSONObject().put("version", r.version).put("title", r.title).put("date", r.date).put("notes", r.notes).put("url", r.url)) }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_HISTORY, json.toString()).putLong(KEY_HISTORY_UPDATED, System.currentTimeMillis()).apply()
@@ -92,7 +97,19 @@ internal object ReleaseNotesCache {
             if (!validVersion(version)) return@mapNotNull null
             Release(version, o.optString("title", "Drishyam $version"), o.optString("date"), o.optString("notes"),
                 o.optString("url", "https://github.com/savanjee-dev/Drishyam/releases"))
+        }.sortedWith { left, right -> compareVersions(right.version, left.version) }
+    }
+
+    /** Numeric semantic comparison: 2.7.14 sorts newer than 2.7.9. */
+    private fun compareVersions(a: String, b: String): Int {
+        val aa = a.split(".").map { it.toIntOrNull() ?: 0 }
+        val bb = b.split(".").map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(aa.size, bb.size)) {
+            val x = aa.getOrElse(i) { 0 }
+            val y = bb.getOrElse(i) { 0 }
+            if (x != y) return x.compareTo(y)
         }
+        return 0
     }
 
     private fun validVersion(version: String) = Regex("^\\d+\\.\\d+\\.\\d+$").matches(version)

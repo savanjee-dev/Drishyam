@@ -1,6 +1,8 @@
 package com.savan.drishyam
 
 import android.app.Activity
+import android.animation.ValueAnimator
+import android.os.Build
 import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Resources
@@ -33,9 +35,19 @@ fun hapticsOn(c: Context): Boolean =
 fun lowFx(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
 
+/** Single motion gate shared by page and component transitions. */
+fun motionEnabled(c: Context): Boolean =
+    !lowFx(c) && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
+
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
     setOnTouchListener { v, e ->
+        if (lowFx(v.context)) {
+            if (e.actionMasked == MotionEvent.ACTION_DOWN && hapticsOn(v.context)) {
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            }
+            return@setOnTouchListener false
+        }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
@@ -134,20 +146,32 @@ fun showGlassPopup(
             closed = true
             PopupStack.set(null)
             hideKeyboard(activity, scrim)
-            card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150).start()
-            scrim.animate().alpha(0f).setDuration(170).withEndAction { host.removeView(scrim) }.start()
+            if (motionEnabled(activity)) {
+                card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150).start()
+                scrim.animate().alpha(0f).setDuration(170)
+                    .withEndAction { host.removeView(scrim) }.start()
+            } else {
+                host.removeView(scrim)
+            }
         }
     }
     scrim.setOnClickListener { close() }
     PopupStack.set(close)
     build(box, close)
 
-    card.scaleX = 0.9f
-    card.scaleY = 0.9f
-    card.alpha = 0f
-    scrim.animate().alpha(1f).setDuration(180).start()
-    card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(190)
-        .setInterpolator(DecelerateInterpolator()).start()
+    if (motionEnabled(activity)) {
+        card.scaleX = 0.9f
+        card.scaleY = 0.9f
+        card.alpha = 0f
+        scrim.animate().alpha(1f).setDuration(180).start()
+        card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(190)
+            .setInterpolator(DecelerateInterpolator()).start()
+    } else {
+        card.scaleX = 1f
+        card.scaleY = 1f
+        card.alpha = 1f
+        scrim.alpha = 1f
+    }
 }
 
 private fun popupTitle(a: Activity, text: String) = TextView(a).apply {
