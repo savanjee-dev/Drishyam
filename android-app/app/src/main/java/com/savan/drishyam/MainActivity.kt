@@ -32,6 +32,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.text.SpannableString
+import android.text.Editable
+import android.text.TextWatcher
 import android.text.Spanned
 import android.text.style.StyleSpan
 import androidx.appcompat.app.AppCompatActivity
@@ -184,6 +186,13 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
+        findViewById<ImageView>(R.id.headerSearchButton).apply {
+            imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
+            pressFx()
+            setOnClickListener { showSearch() }
+        }
+
         findViewById<ImageView>(R.id.sortButton).apply {
             imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
             background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
@@ -296,8 +305,14 @@ class MainActivity : AppCompatActivity() {
         val slowerStart = taglineText.indexOf("slower.")
         if (slowerStart >= 0) taglineText.setSpan(StyleSpan(Typeface.BOLD), slowerStart, taglineText.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         tagline.text = taglineText
-        tagline.alpha = 0f; tagline.translationY = 8.dp().toFloat()
-        tagline.postDelayed({ if (splash.visibility == View.VISIBLE) tagline.animate().alpha(1f).translationY(0f).setDuration(500L).setInterpolator(DecelerateInterpolator()).start() }, 2700L)
+        tagline.alpha = 0f
+        tagline.translationY = 8.dp().toFloat()
+        tagline.postDelayed({
+            if (splash.visibility == View.VISIBLE) {
+                tagline.animate().alpha(1f).translationY(0f).setDuration(500L)
+                    .setInterpolator(DecelerateInterpolator()).start()
+            }
+        }, 2700L)
         caption.alpha = 0f
         caption.postDelayed({ if (splash.visibility == View.VISIBLE) caption.animate().alpha(1f).setDuration(350L).start() }, 3000L)
 
@@ -596,9 +611,7 @@ class MainActivity : AppCompatActivity() {
             val itemId = when (i) {
                 0 -> R.id.navItem0
                 1 -> R.id.navItem1
-                2 -> R.id.navItem2
-                else -> R.id.navItem3
-            }
+                2 -> R.id.navItem2                else -> R.id.navItem3            }
             findViewById<View>(itemId).setBackgroundResource(
                 if (on) R.drawable.glass_pill else android.R.color.transparent
             )
@@ -776,7 +789,46 @@ class MainActivity : AppCompatActivity() {
             box.addView(view)
             val input = view.findViewById<EditText>(R.id.searchInput)
             val go = view.findViewById<View>(R.id.searchGo)
+            val suggestions = view.findViewById<LinearLayout>(R.id.searchSuggestions)
             view.findViewById<View>(R.id.searchCancel).apply { pressFx(); setOnClickListener { close() } }
+
+            fun refreshSuggestions(value: String) {
+                suggestions.removeAllViews()
+                val q = value.trim()
+                val results = if (q.isEmpty()) {
+                    PHOTO_CATEGORIES.filter { it.first in listOf("Nature", "Mountains", "Ocean", "Architecture") }
+                } else {
+                    PHOTO_CATEGORIES.filter { it.first.contains(q, true) || it.second.contains(q, true) }.take(4)
+                }
+                val choices = ArrayList<Pair<String, String>>()
+                if (q.isNotEmpty()) choices.add(Pair("Search: " + q, q))
+                results.forEach { (label, terms) -> choices.add(Pair(label, terms)) }
+                choices.distinctBy { it.second }.take(5).forEach { (label, terms) ->
+                    val item = Chip(this).apply {
+                        text = label
+                        isCheckable = false
+                        chipMinHeight = 42.dp().toFloat()
+                        chipCornerRadius = 21.dp().toFloat()
+                        setEnsureMinTouchTargetSize(false)
+                        chipBackgroundColor = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.surface))
+                        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                        layoutParams = LinearLayout.LayoutParams(-1, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = 6.dp() }
+                        pressFx()
+                        setOnClickListener { close(); runSearch(terms) }
+                    }
+                    suggestions.addView(item)
+                }
+                suggestions.visibility = if (choices.isEmpty()) View.GONE else View.VISIBLE
+            }
+
+            refreshSuggestions("")
+            input.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    refreshSuggestions(s?.toString().orEmpty())
+                }
+                override fun afterTextChanged(s: Editable?) = Unit
+            })
             go.apply {
                 pressFx()
                 setOnClickListener {
@@ -897,8 +949,7 @@ class MainActivity : AppCompatActivity() {
                         m.contains("404") -> "This feed was not found and backup photos could not load."
                         m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet and retry."
                         else -> "Photo services are temporarily unavailable ($m). Please retry."
-                    }
-                }
+                    }                }
             }
 
             runOnUiThread {
