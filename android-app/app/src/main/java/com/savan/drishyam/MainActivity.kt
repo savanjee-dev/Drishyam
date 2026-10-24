@@ -758,6 +758,8 @@ class MainActivity : AppCompatActivity() {
             return VH(v)
         }
 
+        private val animatedPhotoIds = HashSet<String>()
+
         override fun getItemCount() = data.size
 
         override fun onBindViewHolder(h: VH, pos: Int) {
@@ -769,11 +771,29 @@ class MainActivity : AppCompatActivity() {
             val ratio = if (p.width > 0 && p.height > 0) p.height.toFloat() / p.width.toFloat() else 1.18f
             h.img.layoutParams.height = (screenWidth * ratio).toInt().coerceIn(200.dp(), 650.dp())
             h.img.setBackgroundColor(p.color)
-            h.root.animate().cancel()
-            h.root.alpha = 0.86f
-            h.root.translationY = 12.dp().toFloat()
-            h.root.animate().alpha(1f).translationY(0f).setDuration(320L)
-                .setInterpolator(AccelerateDecelerateInterpolator()).start()
+            // Animate each photo only on its first bind. RecyclerView rebinds happen during
+            // scrolling and state updates; replaying the entrance there causes distracting flicker.
+            if (!lowFx(this@MainActivity) && animatedPhotoIds.add(p.id)) {
+                h.root.animate().cancel()
+                h.root.alpha = 0.78f
+                h.root.translationY = 18.dp().toFloat()
+                h.root.scaleX = 0.985f
+                h.root.scaleY = 0.985f
+                h.root.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(420L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
+                    .start()
+            } else {
+                h.root.animate().cancel()
+                h.root.alpha = 1f
+                h.root.translationY = 0f
+                h.root.scaleX = 1f
+                h.root.scaleY = 1f
+            }
             // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
             // Some Unsplash thumbnail URLs can fail independently of the photo itself.
             // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
