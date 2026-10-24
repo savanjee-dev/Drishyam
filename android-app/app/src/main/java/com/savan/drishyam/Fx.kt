@@ -146,20 +146,32 @@ fun showGlassPopup(
             closed = true
             PopupStack.set(null)
             hideKeyboard(activity, scrim)
-            card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150).start()
-            scrim.animate().alpha(0f).setDuration(170).withEndAction { host.removeView(scrim) }.start()
+            if (motionEnabled(activity)) {
+                card.animate().alpha(0f).scaleX(0.94f).scaleY(0.94f).setDuration(150)
+                    .withEndAction { host.removeView(scrim) }.start()
+                scrim.animate().alpha(0f).setDuration(170).start()
+            } else {
+                host.removeView(scrim)
+            }
         }
     }
     scrim.setOnClickListener { close() }
     PopupStack.set(close)
     build(box, close)
 
-    card.scaleX = 0.9f
-    card.scaleY = 0.9f
-    card.alpha = 0f
-    scrim.animate().alpha(1f).setDuration(180).start()
-    card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(190)
-        .setInterpolator(DecelerateInterpolator()).start()
+    if (motionEnabled(activity)) {
+        card.scaleX = 0.9f
+        card.scaleY = 0.9f
+        card.alpha = 0f
+        scrim.animate().alpha(1f).setDuration(180).start()
+        card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(190)
+            .setInterpolator(DecelerateInterpolator()).start()
+    } else {
+        card.scaleX = 1f
+        card.scaleY = 1f
+        card.alpha = 1f
+        scrim.alpha = 1f
+    }
 }
 
 private fun popupTitle(a: Activity, text: String) = TextView(a).apply {
