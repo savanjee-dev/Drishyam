@@ -106,7 +106,7 @@ class WhatsNewActivity : AppCompatActivity() {
         }
 
         // Keep navigation instant: don't hit the network again while the saved history is fresh.
-        if (cached.isNotEmpty() && !ReleaseNotesCache.shouldRefreshHistory(this)) {
+        if (cached.isNotEmpty() && !ReleaseNotesCache.shouldRefreshHistory(this, BuildConfig.VERSION_NAME)) {
             loading.text = "Saved release history · available offline"
         } else {
             Thread {
