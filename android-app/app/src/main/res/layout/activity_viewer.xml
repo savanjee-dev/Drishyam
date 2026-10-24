@@ -61,12 +61,16 @@
             </com.savan.drishyam.GlassLayout>
         </LinearLayout>
 
-        <com.savan.drishyam.GlassLayout
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/sheet"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginBottom="12dp"
-            app:glassDark="true" app:glassRadius="34dp">
+            app:cardBackgroundColor="#E61B2117"
+            app:cardCornerRadius="34dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#40FFFFFF"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -136,6 +140,6 @@
                     android:fontFamily="@font/poppins_medium" android:textStyle="bold"
                     android:clickable="true" android:focusable="true" />
             </LinearLayout>
-        </com.savan.drishyam.GlassLayout>
+        </com.google.android.material.card.MaterialCardView>
     </FrameLayout>
 </FrameLayout>
