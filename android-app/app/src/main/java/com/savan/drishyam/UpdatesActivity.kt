@@ -163,9 +163,6 @@ class UpdatesActivity : AppCompatActivity() {
             textSize = 14f
             setLineSpacing(6.dp().toFloat(), 1f)
             setTextColor(onSurface)
-            maxHeight = 340.dp()
-            isVerticalScrollBarEnabled = true
-            movementMethod = android.text.method.ScrollingMovementMethod.getInstance()
         }
         notesCard.addView(notes)
         root.addView(notesCard)
@@ -262,7 +259,6 @@ class UpdatesActivity : AppCompatActivity() {
 
                 if (result == null) {
                     status.text = failure ?: "Update check failed. Please try again."
-                    notes.text = "Release notes are unavailable because the release check did not complete."
                     Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
                     return@runOnUiThread
                 }
@@ -288,17 +284,25 @@ class UpdatesActivity : AppCompatActivity() {
 
                 val rawNotes = result.opt("body")
                 val releaseNotes = (rawNotes as? String)?.trim().orEmpty()
-                notes.text = "Loading notes for v$version…"
-                Thread {
-                    val exactNotes = ReleaseChangelog.fetch(version)
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed) return@runOnUiThread
-                        if (latestVersion != version) return@runOnUiThread
-                        notes.text = exactNotes
-                            ?: releaseNotes.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
-                            ?: "The changelog for v$version is unavailable. Open the official release to review its details."
-                    }
-                }.start()
+                val cachedNotes = ReleaseNotesCache.cachedNotes(this, version)
+                notes.text = cachedNotes
+                    ?: releaseNotes.takeUnless { it.isBlank() || it.equals("null", ignoreCase = true) }
+                    ?: "Loading release notes for v$version…"
+                if (cachedNotes == null) {
+                    Thread {
+                        val exactNotes = ReleaseNotesCache.fetchNotes(this, version)
+                            ?: ReleaseChangelog.fetch(version)
+                        runOnUiThread {
+                            if (isFinishing || isDestroyed || latestVersion != version) return@runOnUiThread
+                            if (!exactNotes.isNullOrBlank()) {
+                                ReleaseNotesCache.saveNotes(this, version, exactNotes)
+                                notes.text = exactNotes
+                            } else if (notes.text.isNullOrBlank() || notes.text.startsWith("Loading release notes")) {
+                                notes.text = "The changelog for v$version is unavailable. Open the official release to review its details."
+                            }
+                        }
+                    }.start()
+                }
 
                 val verifiedAsset = VerifiedReleaseApk.fromRelease(result, version)
                 verifiedApk = verifiedAsset
