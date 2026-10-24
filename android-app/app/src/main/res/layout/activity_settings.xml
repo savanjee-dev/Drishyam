@@ -92,7 +92,7 @@
             <TextView android:id="@+id/sectionAppearance" style="@style/SectionLabel" android:text="@string/settings_appearance" />
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:id="@+id/cardTheme" android:orientation="vertical" android:background="@drawable/glass_row" android:padding="20dp">
+                android:id="@+id/cardTheme" android:orientation="vertical" android:background="@drawable/m3_surface_card" android:padding="20dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:fontFamily="@font/poppins_medium" android:text="@string/theme_title"
                     android:textColor="?attr/colorOnSurface" android:textSize="17sp" />
@@ -114,7 +114,7 @@
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:id="@+id/cardHaptics" android:orientation="horizontal" android:gravity="center_vertical"
-                android:background="@drawable/glass_row" android:padding="20dp">
+                android:background="@drawable/m3_surface_card" android:padding="20dp">
                 <LinearLayout
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:orientation="vertical">
@@ -134,7 +134,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:id="@+id/cardLowFx" android:orientation="horizontal" android:gravity="center_vertical"
-                android:background="@drawable/glass_row" android:padding="20dp">
+                android:background="@drawable/m3_surface_card" android:padding="20dp">
                 <LinearLayout
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:orientation="vertical">
@@ -154,7 +154,7 @@
             <TextView android:id="@+id/sectionFeed" style="@style/SectionLabel" android:text="@string/settings_feed" />
             <LinearLayout
                 android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:id="@+id/cardSort" android:orientation="vertical" android:background="@drawable/glass_row" android:padding="20dp">
+                android:id="@+id/cardSort" android:orientation="vertical" android:background="@drawable/m3_surface_card" android:padding="20dp">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:fontFamily="@font/poppins_medium" android:text="@string/sort_title"
                     android:textColor="?attr/colorOnSurface" android:textSize="17sp" />
@@ -177,7 +177,7 @@
                 android:id="@+id/rowClear"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="horizontal" android:gravity="center_vertical"
-                android:background="@drawable/glass_row" android:padding="20dp"
+                android:background="@drawable/m3_surface_card" android:padding="20dp"
                 android:clickable="true" android:focusable="true">
                 <LinearLayout
                     android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
@@ -197,7 +197,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="horizontal" android:gravity="center_vertical"
-                android:background="@drawable/glass_row" android:padding="20dp"
+                android:background="@drawable/m3_surface_card" android:padding="20dp"
                 android:clickable="true" android:focusable="true">
                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:fontFamily="@font/poppins_medium" android:text="@string/whats_new_row"
@@ -210,7 +210,7 @@
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:orientation="horizontal" android:gravity="center_vertical"
-                android:background="@drawable/glass_row" android:padding="20dp"
+                android:background="@drawable/m3_surface_card" android:padding="20dp"
                 android:clickable="true" android:focusable="true">
                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
                     android:fontFamily="@font/poppins_medium" android:text="@string/credits_row"
