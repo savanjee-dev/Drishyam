@@ -165,7 +165,7 @@ class ViewerActivity : AppCompatActivity() {
         view.animate().scaleX(0.82f).scaleY(0.82f).setDuration(90)
             .withEndAction {
                 view.animate().scaleX(1f).scaleY(1f).setDuration(220)
-                    .setInterpolator(android.view.animation.OvershootInterpolator(2.2f)).start()
+                    .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
             }.start()
     }
 
