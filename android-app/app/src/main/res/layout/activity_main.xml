@@ -70,14 +70,24 @@
                         android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:orientation="horizontal"
                         android:gravity="start|center_vertical">
-                        <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:fontFamily="@font/ericaone" android:text="@string/app_name"
-                            android:textSize="27sp" android:textColor="?attr/colorPrimary" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_gravity="center_vertical" android:layout_marginStart="5dp"
-                            android:layout_marginTop="7dp" android:fontFamily="@font/pacifico_regular"
-                            android:text="@string/tagline" android:textSize="11sp"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
+                        <ImageView
+                            android:id="@+id/splashLogoTarget"
+                            android:layout_width="52dp" android:layout_height="52dp"
+                            android:layout_marginEnd="8dp"
+                            android:src="@mipmap/ic_launcher"
+                            android:scaleType="fitCenter"
+                            android:contentDescription="Drishyam app icon" />
+                        <LinearLayout
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:orientation="vertical" android:gravity="start">
+                            <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:fontFamily="@font/ericaone" android:text="@string/app_name"
+                                android:textSize="27sp" android:textColor="?attr/colorPrimary" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:layout_marginTop="-2dp" android:fontFamily="@font/pacifico_regular"
+                                android:text="@string/tagline" android:textSize="11sp"
+                                android:textColor="?attr/colorOnSurfaceVariant" />
+                        </LinearLayout>
                     </LinearLayout>
 
                     <ImageView
@@ -222,4 +232,10 @@ app:glassRadius="100dp">
             </com.savan.drishyam.GlassLayout>
         </LinearLayout>
     </FrameLayout>
+
+    <!-- Phase 1 cold-start splash; kept above the existing Home UI. -->
+    <include
+        layout="@layout/view_launch_splash"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 </FrameLayout>
