@@ -1,4 +1,5 @@
 name: Phase 1 APK Build (No Release)
+# Dedicated test build only; intentionally does not publish a GitHub Release.
 
 on:
   workflow_dispatch:
