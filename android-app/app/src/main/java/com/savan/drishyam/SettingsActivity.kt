@@ -20,6 +20,23 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
         installScrollBounce(findViewById(R.id.settingsScroll))
         animatePageEntrance(findViewById(android.R.id.content))
+        if (motionEnabled(this)) {
+            val motionTargets = listOf(
+                R.id.sectionAppearance, R.id.cardTheme, R.id.sectionEffects, R.id.cardHaptics,
+                R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.sectionAbout,
+                R.id.rowClear, R.id.rowWhatsNew, R.id.rowCredits
+            )
+            motionTargets.forEachIndexed { index, id ->
+                val target = findViewById<View>(id)
+                target.alpha = 0f
+                target.translationY = 12.dp().toFloat()
+                target.animate().alpha(1f).translationY(0f)
+                    .setStartDelay((45L + index * 32L).coerceAtMost(360L))
+                    .setDuration(240L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .start()
+            }
+        }
         val prefs = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
         val updateRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
