@@ -43,10 +43,11 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     var err: String? = null
     var gen = 0          // bumps on reset so late results from an old sort are ignored
     var extra = false    // searched photo topics, removed when the next search runs
+    var forceFresh = false
 
     fun reset() {
         items.clear(); ids.clear()
-        after = ""; page = 1; done = false; err = null; loading = false
+        after = ""; page = 1; done = false; err = null; loading = false; forceFresh = false
         gen++
     }
 }
@@ -169,17 +170,12 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
-        findViewById<ImageView>(R.id.searchButton).apply {
+        findViewById<ImageView>(R.id.sortButton).apply {
             imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
             background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
             pressFx()
-            setOnClickListener { showSearch() }
-        }
-        findViewById<ImageView>(R.id.settingsButton).apply {
-            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
-            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
-            pressFx()
-            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
+            contentDescription = "Sort photos"
+            setOnClickListener { showSortPopup() }
         }
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, true, query))
@@ -572,6 +568,33 @@ class MainActivity : AppCompatActivity() {
         sortTop.styleSeg(shownSort == "top")
     }
 
+    private fun showSortPopup() {
+        val options = listOf("India" to "india", "Latest" to "new", "Hot" to "hot", "Top" to "top")
+        showGlassPopup(this, glassSource, topOffsetDp = 72) { box, close ->
+            box.setPadding(16.dp(), 14.dp(), 16.dp(), 14.dp())
+            box.addView(TextView(this).apply {
+                text = "Explore photos"
+                textSize = 17f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_semibold)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            })
+            options.forEach { (label, key) ->
+                box.addView(TextView(this).apply {
+                    text = (if (currentSort() == key) "✓  " else "") + label
+                    gravity = Gravity.CENTER_VERTICAL
+                    textSize = 15f
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.fg))
+                    background = ContextCompat.getDrawable(this@MainActivity, if (currentSort() == key) R.drawable.accent_pill else R.drawable.glass_pill)
+                    setPadding(14.dp(), 0, 14.dp(), 0)
+                    isClickable = true
+                    isFocusable = true
+                    pressFx()
+                    setOnClickListener { close(); setSort(key) }
+                }, LinearLayout.LayoutParams(-1, 44.dp()).apply { topMargin = 5.dp() })
+            }
+        }
+    }
+
     private fun resetAll() {
         sources.forEach { it.reset() }
         if (tab == 0) {
@@ -672,6 +695,8 @@ class MainActivity : AppCompatActivity() {
         transientStatus = null
         statusGeneration++
         cur.reset()
+        cur.forceFresh = true
+        adapter.data = cur.items
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
         loadMore()
@@ -686,6 +711,8 @@ class MainActivity : AppCompatActivity() {
         val page = s.page
         val after = s.after
         val sort = currentSort()
+        val forceFresh = s.forceFresh
+        s.forceFresh = false
 
         Thread {
             val added = ArrayList<Photo>()
@@ -693,9 +720,10 @@ class MainActivity : AppCompatActivity() {
             var finished = false
             var error: String? = null
             try {
-                val (list, last) = Api.unsplash(s.q, page)
+                val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
+                val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
                 finished = last
-                added.addAll(list)
+                added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
             } catch (e: Exception) {
                 val m = e.message ?: ""
                 error = when {

@@ -18,13 +18,13 @@ object Config {
 data class Photo(
     val id: String, val thumb: String, val full: String, val title: String,
     val credit: String, val link: String, val dl: String, val color: Int,
-    val width: Int = 0, val height: Int = 0, val published: String = "",
+    val width: Int = 0, val height: Int = 0, val published: String = "", val publishedAt: Long = 0L, val likes: Int = 0,
     val camera: String = "", val aperture: String = "", val focalLength: String = "",
     val shutterSpeed: String = "", val iso: String = "", val downloads: String = ""
 ) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("thumb", thumb).put("full", full)
         .put("title", title).put("credit", credit).put("link", link).put("dl", dl).put("color", color)
-        .put("width", width).put("height", height).put("published", published).put("camera", camera)
+        .put("width", width).put("height", height).put("published", published).put("publishedAt", publishedAt).put("likes", likes).put("camera", camera)
         .put("aperture", aperture).put("focalLength", focalLength).put("shutterSpeed", shutterSpeed)
         .put("iso", iso).put("downloads", downloads)
 
@@ -32,7 +32,7 @@ data class Photo(
         fun from(o: JSONObject) = Photo(
             o.getString("id"), o.getString("thumb"), o.getString("full"), o.optString("title"),
             o.optString("credit"), o.optString("link"), o.optString("dl"), o.optInt("color", 0xFF222222.toInt()),
-            o.optInt("width"), o.optInt("height"), o.optString("published"), o.optString("camera"),
+            o.optInt("width"), o.optInt("height"), o.optString("published"), o.optLong("publishedAt"), o.optInt("likes"), o.optString("camera"),
             o.optString("aperture"), o.optString("focalLength"), o.optString("shutterSpeed"),
             o.optString("iso"), o.optString("downloads")
         )
@@ -230,14 +230,21 @@ object Api {
     }
 
     /** Returns photos and whether this was the last page. */
-    fun unsplash(query: String, page: Int): Pair<List<Photo>, Boolean> {
+    fun unsplash(query: String, page: Int, orderBy: String = "relevant", forceFresh: Boolean = false, indiaOnly: Boolean = false, popular: Boolean = false): Pair<List<Photo>, Boolean> {
         require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
         require(page in 1..10000) { "Invalid page." }
-        val url = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') +
-            "/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
-            "&orientation=portrait&per_page=20&page=$page"
-        val j = JSONObject(get(url, emptyMap()))
-        val arr = j.getJSONArray("results")
+        val base = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/')
+        val url = if (popular) {
+            "$base/photos?order_by=popular&per_page=20&page=$page" + if (forceFresh) "&refresh=1" else ""
+        } else {
+            "$base/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
+                "&orientation=portrait&per_page=20&page=$page&order_by=" + (if (orderBy == "latest") "latest" else "relevant") +
+                (if (forceFresh) "&refresh=1" else "")
+        }
+        val body = get(url, emptyMap())
+        val root = org.json.JSONTokener(body).nextValue()
+        val arr = if (root is JSONArray) root else (root as JSONObject).getJSONArray("results")
+        val totalPages = if (root is JSONObject) root.optInt("total_pages", 1) else Int.MAX_VALUE
         val out = ArrayList<Photo>()
         for (i in 0 until arr.length()) {
             val p = arr.getJSONObject(i)
@@ -245,6 +252,10 @@ object Api {
             val raw = urls.getString("raw")
             val full = raw + (if (raw.contains("?")) "&" else "?") + "w=1440&q=85&fm=jpg&fit=max"
             val user = p.getJSONObject("user")
+            val createdAt = p.optString("created_at", "")
+            val location = p.optJSONObject("location")
+            if (indiaOnly && !(location?.optString("name", "")?.contains("India", ignoreCase = true) == true || location?.optString("city", "")?.contains("India", ignoreCase = true) == true || location?.optString("country", "")?.contains("India", ignoreCase = true) == true)) continue
+            val publishedAt = try { java.time.Instant.parse(createdAt).toEpochMilli() } catch (_: Exception) { 0L }
             val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
             out.add(Photo(p.getString("id"), urls.getString("small"), full,
                 p.optString("alt_description", "Photo").let { if (it == "null") "Photo" else it },
@@ -252,8 +263,8 @@ object Api {
                 p.getJSONObject("links").optString("html") + "?utm_source=drishyam&utm_medium=referral",
                 p.getJSONObject("links").optString("download_location"), col,
                 p.optInt("width", 0), p.optInt("height", 0),
-                p.optString("created_at", "").take(10)))
+                createdAt.take(10), publishedAt, p.optInt("likes", 0)))
         }
-        return Pair(out, page >= j.optInt("total_pages", 1) || arr.length() == 0)
+        return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20))
     }
 }

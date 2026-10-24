@@ -1,0 +1,8 @@
+Drishyam 2.7.12
+
+- Add a compact home sort menu with India, Latest, Hot, and Top feeds.
+- Request Unsplash's newest-first ordering for Latest and support the popular photo feed for Hot.
+- Sort Top results by available Unsplash like counts.
+- Bypass the proxy's short-lived cache on pull-to-refresh and reset feed pagination cleanly.
+- Filter India results using Unsplash location metadata where it identifies India.
+- Preserve saved photos, bookmarks, preferences, Dark Mode, and existing app data.

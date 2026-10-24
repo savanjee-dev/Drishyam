@@ -50,18 +50,28 @@ export default {
     if (request.method==="OPTIONS") return new Response(null,{status:204,headers:CORS});
     if (request.method!=="GET") return fail(405,"Method not allowed.");
     if (url.pathname==="/health") return json({service:"drishyam-photo-proxy",status:"ok"});
+    if (url.pathname==="/photos") {
+      const page=positiveInt(url.searchParams.get("page"),1,10000);
+      const per=positiveInt(url.searchParams.get("per_page"),20,30);
+      const order=url.searchParams.get("order_by")||"popular";
+      if (page===null || per===null || !["popular","latest"].includes(order)) return fail(400,"Invalid photo feed parameters.");
+      const params=new URLSearchParams({page:String(page),per_page:String(per),order_by:order});
+      return upstream("/photos",params,env,ctx,url.searchParams.get("refresh")==="1"?0:20);
+    }
     if (url.pathname==="/search/photos") {
       const query=(url.searchParams.get("query")||"").trim();
       const page=positiveInt(url.searchParams.get("page"),1,10000);
       const per=positiveInt(url.searchParams.get("per_page"),20,30);
       if (!query || query.length>120) return fail(400,"A valid search query is required.");
       if (page===null || per===null) return fail(400,"Invalid pagination.");
-      const p=new URLSearchParams({query,page:String(page),per_page:String(per),orientation:"portrait"});
+      const order=url.searchParams.get("order_by")||"relevant";
+      if (!["relevant","latest"].includes(order)) return fail(400,"Invalid sort order.");
+      const p=new URLSearchParams({query,page:String(page),per_page:String(per),orientation:"portrait",order_by:order});
       const color=url.searchParams.get("color");
       if (color && /^[a-z-]{1,20}$/i.test(color)) p.set("color",color);
       const content=url.searchParams.get("content_filter");
       if (content && ["low","high"].includes(content)) p.set("content_filter",content);
-      return upstream("/search/photos",p,env,ctx,20);
+      return upstream("/search/photos",p,env,ctx,url.searchParams.get("refresh")==="1"?0:20);
     }
     const match=url.pathname.match(/^\/photos\/([A-Za-z0-9_-]{1,80})\/download$/);
     if (match) return upstream(`/photos/${encodeURIComponent(match[1])}/download`,null,env,ctx,0);
