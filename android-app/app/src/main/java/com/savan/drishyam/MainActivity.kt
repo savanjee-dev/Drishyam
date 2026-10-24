@@ -667,23 +667,31 @@ class MainActivity : AppCompatActivity() {
             var nextAfter = after
             var finished = false
             var error: String? = null
+            var unsplashError: String? = null
+            val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
+            val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
             try {
-                val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
                 val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
-                finished = last
-                added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
-            } catch (e: Exception) {
-                // Keep the feed usable when Unsplash or its proxy is temporarily unavailable.
-                // Wikimedia Commons is a separate public source and does not require an Unsplash key.
-                val unsplashError = e.message ?: "Photo service unavailable."
-                try {
-                    val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
-                    val (fallbackPhotos, last) = Api.commons(fallbackQuery, page)
-                    if (fallbackPhotos.isEmpty()) throw Exception("No fallback photos returned.")
-                    added.addAll(fallbackPhotos)
+                if (list.isNotEmpty()) {
                     finished = last
+                    added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
+                } else {
+                    // HTTP 200 with an empty results array is still a feed failure; try the backup source.
+                    unsplashError = "Unsplash returned no photos."
+                }
+            } catch (e: Exception) {
+                unsplashError = e.message ?: "Photo service unavailable."
+            }
+
+            // Try Wikimedia Commons both when Unsplash errors and when it returns an empty feed.
+            if (added.isEmpty()) {
+                try {
+                    val (fallbackPhotos, fallbackLast) = Api.commons(fallbackQuery, page)
+                    if (fallbackPhotos.isEmpty()) throw Exception("No backup photos returned.")
+                    added.addAll(fallbackPhotos)
+                    finished = fallbackLast
                 } catch (fallbackError: Exception) {
-                    val m = unsplashError
+                    val m = unsplashError ?: "Unsplash returned no photos."
                     error = when {
                         m.contains("429") -> "Unsplash is temporarily rate-limiting requests and backup photos are unavailable. Please retry."
                         m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied the request and backup photos could not load. Check the connection and retry."
