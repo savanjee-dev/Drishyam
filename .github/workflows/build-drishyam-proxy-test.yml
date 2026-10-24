@@ -3,7 +3,7 @@ name: Drishyam Proxy Integration Test Build
 on:
   push:
     branches:
-      - security/unsplash-proxy-integration
+      - fix/verified-update-downloads
     paths:
       - "android-app/**"
       - ".github/workflows/build-drishyam-proxy-test.yml"
@@ -16,7 +16,7 @@ jobs:
   test-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout security branch
+      - name: Checkout candidate branch
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -73,7 +73,7 @@ jobs:
       - name: Upload isolated test APK
         uses: actions/upload-artifact@v4
         with:
-          name: Drishyam-2.4.7-proxy-isolated-test
+          name: Drishyam-v2.7.11-proxy-isolated-test
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
