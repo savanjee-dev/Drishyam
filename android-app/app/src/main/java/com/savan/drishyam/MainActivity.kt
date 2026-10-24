@@ -1,5 +1,8 @@
 package com.savan.drishyam
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.Intent
@@ -7,6 +10,7 @@ import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.RenderEffect
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.net.Uri
 import android.os.Build
@@ -17,6 +21,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
+import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.HorizontalScrollView
@@ -25,6 +31,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.StyleSpan
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
@@ -114,6 +123,8 @@ class MainActivity : AppCompatActivity() {
     private var lastBottomPad = -1
     private var transientStatus: String? = null
     private var statusGeneration = 0
+    private val splashAnimators = mutableListOf<ValueAnimator>()
+    private var splashFinished = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
@@ -225,8 +236,150 @@ class MainActivity : AppCompatActivity() {
         styleSort()
         showTab(0)
         if (intent.getBooleanExtra("open_about", false)) showTab(2)
-        glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
+        startLaunchSplash()
+    }
+
+
+    /** Phase 1: animated cold-start splash and a logo hand-off into the existing Home header. */
+    private fun startLaunchSplash() {
+        val splash = findViewById<View>(R.id.splashRoot)
+        val logo = findViewById<ImageView>(R.id.splashLogo)
+        val target = findViewById<ImageView>(R.id.splashLogoTarget)
+        if (!motionEnabled(this)) {
+            splash.visibility = View.GONE
+            target.visibility = View.VISIBLE
+            finishSplashAndContinue()
+            return
+        }
+
+        target.visibility = View.VISIBLE
+        val nameRow = findViewById<LinearLayout>(R.id.splashName)
+        nameRow.removeAllViews()
+        val name = "Drishyam"
+        nameRow.contentDescription = name
+        val nameColor = ContextCompat.getColor(this, R.color.fg)
+        name.forEachIndexed { index, letter ->
+            val tv = TextView(this).apply {
+                text = letter.toString()
+                textSize = 42f
+                typeface = ContextCompat.getFont(this@MainActivity, R.font.ericaone)
+                setTextColor(nameColor)
+                alpha = 0f
+                translationY = 20.dp().toFloat()
+                includeFontPadding = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            nameRow.addView(tv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            tv.postDelayed({
+                if (!isFinishing && splash.visibility == View.VISIBLE) {
+                    tv.animate().alpha(1f).translationY(0f).setStartDelay(0L).setDuration(620L)
+                        .setInterpolator(DecelerateInterpolator()).start()
+                }
+            }, 1050L + index * 80L)
+        }
+
+        logo.scaleX = 0.55f
+        logo.scaleY = 0.55f
+        logo.rotation = -14f
+        logo.alpha = 0f
+        logo.animate().alpha(1f).scaleX(1f).scaleY(1f).rotation(0f)
+            .setStartDelay(200L).setDuration(1100L).setInterpolator(OvershootInterpolator(1.15f)).start()
+
+        val byline = findViewById<TextView>(R.id.splashByline)
+        val tagline = findViewById<TextView>(R.id.splashTagline)
+        val caption = findViewById<TextView>(R.id.splashCaption)
+        byline.alpha = 0f; byline.translationY = 8.dp().toFloat()
+        byline.postDelayed({ if (splash.visibility == View.VISIBLE) byline.animate().alpha(1f).translationY(0f).setDuration(500L).setInterpolator(DecelerateInterpolator()).start() }, 2100L)
+        val taglineText = SpannableString("See the world a little slower.")
+        val slowerStart = taglineText.indexOf("slower.")
+        if (slowerStart >= 0) taglineText.setSpan(StyleSpan(Typeface.BOLD), slowerStart, taglineText.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        tagline.text = taglineText
+        tagline.alpha = 0f; tagline.translationY = 8.dp().toFloat()
+        tagline.postDelayed({ if (splash.visibility == View.VISIBLE) tagline.animate().alpha(1f).translationY(0f).setDuration(500L).setInterpolator(DecelerateInterpolator()).start() }, 2700L)
+        caption.alpha = 0f
+        caption.postDelayed({ if (splash.visibility == View.VISIBLE) caption.animate().alpha(1f).setDuration(350L).start() }, 3000L)
+
+        val fill = findViewById<View>(R.id.splashProgressFill)
+        fill.scaleX = 0f
+        fill.postDelayed({
+            if (splash.visibility == View.VISIBLE) ObjectAnimator.ofFloat(fill, View.SCALE_X, 0f, 1f).apply {
+                duration = 3500L
+                interpolator = LinearInterpolator()
+                start()
+            }
+        }, 350L)
+
+        val glow = findViewById<View>(R.id.splashAmbientGlow)
+        val glowPulse = ValueAnimator.ofFloat(0.72f, 1f, 0.78f).apply {
+            duration = 4800L; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART
+            addUpdateListener { glow.alpha = it.animatedValue as Float }
+        }
+        splashAnimators.add(glowPulse); glowPulse.start()
+
+        val ring = findViewById<View>(R.id.splashRing)
+        ring.postDelayed({
+            if (splash.visibility == View.VISIBLE) {
+                val ringPulse = ValueAnimator.ofFloat(0.55f, 1.65f).apply {
+                    duration = 2600L; repeatCount = ValueAnimator.INFINITE; interpolator = LinearInterpolator()
+                    addUpdateListener {
+                        val fraction = it.animatedFraction
+                        ring.scaleX = it.animatedValue as Float
+                        ring.scaleY = it.animatedValue as Float
+                        ring.alpha = 1f - fraction
+                    }
+                }
+                splashAnimators.add(ringPulse); ringPulse.start()
+            }
+        }, 1100L)
+
+        splash.postDelayed({ handOffSplashLogo(splash, logo, target) }, 4500L)
+    }
+
+    private fun handOffSplashLogo(splash: View, logo: ImageView, target: ImageView) {
+        if (splashFinished || isFinishing) return
+        if (!motionEnabled(this)) {
+            splash.visibility = View.GONE
+            finishSplashAndContinue()
+            return
+        }
+        val logoPos = IntArray(2)
+        val targetPos = IntArray(2)
+        logo.getLocationOnScreen(logoPos)
+        target.getLocationOnScreen(targetPos)
+        val dx = targetPos[0] + target.width / 2f - (logoPos[0] + logo.width / 2f)
+        val dy = targetPos[1] + target.height / 2f - (logoPos[1] + logo.height / 2f)
+        val targetScale = target.width.toFloat() / logo.width.coerceAtLeast(1)
+        logo.animate().translationX(dx).translationY(dy).scaleX(targetScale).scaleY(targetScale)
+            .rotation(0f).setDuration(880L).setInterpolator(DecelerateInterpolator())
+            .setListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    splash.animate().alpha(0f).setDuration(220L).withEndAction {
+                        splash.visibility = View.GONE
+                        splash.alpha = 1f
+                        finishSplashAndContinue()
+                    }.start()
+                }
+            }).start()
+    }
+
+    private fun finishSplashAndContinue() {
+        if (splashFinished) return
+        splashFinished = true
+        splashAnimators.forEach { it.cancel() }
+        splashAnimators.clear()
+        val source = findViewById<View>(R.id.glassSource)
+        source.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, source)
+            }
+        }, 250L)
+    }
+
+    override fun onDestroy() {
+        splashAnimators.forEach { it.cancel() }
+        splashAnimators.clear()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
