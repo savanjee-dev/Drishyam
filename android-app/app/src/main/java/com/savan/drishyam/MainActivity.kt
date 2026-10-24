@@ -527,7 +527,7 @@ class MainActivity : AppCompatActivity() {
                     radius = 22.dp().toFloat()
                     cardElevation = 0f
                     strokeWidth = 1.dp()
-                    strokeColor = ContextCompat.getColor(this@MainActivity, R.color.outline)
+                    strokeColor = ContextCompat.getColor(this@MainActivity, R.color.glassStroke)
                     setCardBackgroundColor(ContextCompat.getColor(this@MainActivity, R.color.surface))
                 }
                 val row = LinearLayout(this).apply {
