@@ -176,7 +176,7 @@ test("successful photo search forwards validated parameters and returns CORS JSO
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("access-control-allow-origin"), "*");
   assert.match(response.headers.get("content-type"), /application\/json/);
-  assert.equal(capturedUrl, "https://api.unsplash.com/search/photos?query=forest&page=2&per_page=12&orientation=portrait&color=green&content_filter=high");
+  assert.equal(capturedUrl, "https://api.unsplash.com/search/photos?query=forest&page=2&per_page=12&orientation=portrait&order_by=relevant&color=green&content_filter=high");
   assert.equal(capturedHeaders.Authorization, "Client-ID test-only-key");
   assert.deepEqual(await response.json(), { results: [{ id: "photo-1" }], total: 1 });
 });
