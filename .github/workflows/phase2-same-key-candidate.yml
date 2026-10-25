@@ -104,8 +104,18 @@ jobs:
           mkdir -p "$RUNNER_TEMP/drishyam-phase2-output"
           cp "$APK" "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
-          "$APKSIGNER" verify --verbose --print-certs "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
-          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk" | grep -Fx "com.savan.drishyam"
+          CANDIDATE="$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
+          "$APKSIGNER" verify --verbose --print-certs "$CANDIDATE"
+          APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
+          APP_ID="$("$APKANALYZER" manifest application-id "$CANDIDATE")"
+          VERSION_CODE="$("$APKANALYZER" manifest version-code "$CANDIDATE")"
+          VERSION_NAME="$("$APKANALYZER" manifest version-name "$CANDIDATE")"
+          MIN_SDK="$("$APKANALYZER" manifest min-sdk "$CANDIDATE")"
+          echo "Verified candidate metadata: applicationId=$APP_ID versionCode=$VERSION_CODE versionName=$VERSION_NAME minSdk=$MIN_SDK"
+          test "$APP_ID" = "com.savan.drishyam"
+          test "$VERSION_CODE" = "45"
+          test "$VERSION_NAME" = "2.7.17-phase2"
+          test "$MIN_SDK" = "29"
 
       - name: Upload installable Phase 2 candidate
         uses: actions/upload-artifact@v4
