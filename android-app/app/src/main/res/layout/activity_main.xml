@@ -114,6 +114,23 @@
                         android:textColor="?attr/colorOnSurface"
                         android:fontFamily="@font/poppins_medium"
                         android:textSize="19sp" />
+
+                    <EditText
+                        android:id="@+id/homeSearchInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:background="@drawable/glass_pill"
+                        android:hint="Search photos by title"
+                        android:singleLine="true"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant"
+                        android:textSize="14sp"
+                        android:importantForAutofill="no" />
                 </LinearLayout>
 
                 <HorizontalScrollView
