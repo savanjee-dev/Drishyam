@@ -20,13 +20,13 @@ data class Photo(
     val credit: String, val link: String, val dl: String, val color: Int,
     val width: Int = 0, val height: Int = 0, val published: String = "", val publishedAt: Long = 0L, val likes: Int = 0,
     val camera: String = "", val aperture: String = "", val focalLength: String = "",
-    val shutterSpeed: String = "", val iso: String = "", val downloads: String = ""
+    val shutterSpeed: String = "", val iso: String = "", val downloads: String = "", val isIndia: Boolean = false
 ) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("thumb", thumb).put("full", full)
         .put("title", title).put("credit", credit).put("link", link).put("dl", dl).put("color", color)
         .put("width", width).put("height", height).put("published", published).put("publishedAt", publishedAt).put("likes", likes).put("camera", camera)
         .put("aperture", aperture).put("focalLength", focalLength).put("shutterSpeed", shutterSpeed)
-        .put("iso", iso).put("downloads", downloads)
+        .put("iso", iso).put("downloads", downloads).put("isIndia", isIndia)
 
     companion object {
         fun from(o: JSONObject) = Photo(
@@ -34,7 +34,7 @@ data class Photo(
             o.optString("credit"), o.optString("link"), o.optString("dl"), o.optInt("color", 0xFF222222.toInt()),
             o.optInt("width"), o.optInt("height"), o.optString("published"), o.optLong("publishedAt"), o.optInt("likes"), o.optString("camera"),
             o.optString("aperture"), o.optString("focalLength"), o.optString("shutterSpeed"),
-            o.optString("iso"), o.optString("downloads")
+            o.optString("iso"), o.optString("downloads"), o.optBoolean("isIndia", false)
         )
     }
 }
@@ -257,13 +257,17 @@ object Api {
             // the India search query biases results without risking an empty feed.
             val publishedAt = try { java.time.Instant.parse(createdAt).toEpochMilli() } catch (_: Exception) { 0L }
             val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
+            val location = p.optJSONObject("location")
+            val country = location?.optString("country", "").orEmpty()
+            val countryCode = location?.optString("country_code", "").orEmpty()
+            val isIndia = country.equals("India", ignoreCase = true) || countryCode.equals("IN", ignoreCase = true)
             out.add(Photo(p.getString("id"), urls.getString("small"), full,
                 p.optString("alt_description", "Photo").let { if (it == "null") "Photo" else it },
                 "📷 " + user.optString("name"),
                 p.getJSONObject("links").optString("html") + "?utm_source=drishyam&utm_medium=referral",
                 p.getJSONObject("links").optString("download_location"), col,
                 p.optInt("width", 0), p.optInt("height", 0),
-                createdAt.take(10), publishedAt, p.optInt("likes", 0)))
+                createdAt.take(10), publishedAt, p.optInt("likes", 0), isIndia = isIndia))
         }
         return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20))
     }
