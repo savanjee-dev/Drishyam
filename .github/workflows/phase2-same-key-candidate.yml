@@ -112,7 +112,8 @@ jobs:
           mv "$SIGNED_CANDIDATE" "$CANDIDATE"
           "$APKSIGNER" verify --verbose --print-certs "$CANDIDATE"
           "$APKSIGNER" verify --verbose "$CANDIDATE" | tee "$RUNNER_TEMP/drishyam-signature-verification.txt"
-          grep -q 'Verified using v1 scheme (JAR signing): true' "$RUNNER_TEMP/drishyam-signature-verification.txt"
+          # v2 is required for supported Android versions (minSdk 29).
+          # v1 is legacy-only and is not required for Android 10+ / Android 16.
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' "$RUNNER_TEMP/drishyam-signature-verification.txt"
           APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
           APP_ID="$("$APKANALYZER" manifest application-id "$CANDIDATE")"
