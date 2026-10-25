@@ -565,14 +565,13 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort", "hot") ?: "hot"
 
     private fun setSort(s: String) {
-        if (s == currentSort()) {
-            // Tapping the already-selected sort is also a useful manual refresh.
-            refreshCurrent()
-            return
-        }
+        if (s !in setOf("hot", "new", "top", "india")) return
+        if (s == currentSort()) return
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit().putString("sort", s).apply()
         shownSort = s
         styleSort()
+        findViewById<View>(R.id.sortButton).performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+        toast(if (s == "india") "Showing India first" else "Sorted by ${if (s == "new") "Latest" else s.replaceFirstChar { it.uppercase() }}")
         resetAll()
     }
 
@@ -739,13 +738,19 @@ class MainActivity : AppCompatActivity() {
             var finished = false
             var error: String? = null
             var unsplashError: String? = null
-            val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
-            val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
+            val query = s.q
+            val fallbackQuery = s.q
             try {
-                val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
+                val (list, last) = Api.unsplash(query, page, orderBy = "relevant", forceFresh = forceFresh, popular = sort == "hot")
                 if (list.isNotEmpty()) {
                     finished = last
-                    added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
+                    val ordered = when (sort) {
+                        "new" -> list.reversed()
+                        "top" -> list.sortedByDescending { it.likes }
+                        "india" -> list.sortedByDescending { it.isIndia }
+                        else -> list
+                    }
+                    added.addAll(ordered)
                 } else {
                     // HTTP 200 with an empty results array is still a feed failure; try the backup source.
                     unsplashError = "Unsplash returned no photos."
@@ -787,6 +792,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 val fresh = added.filter { s.ids.add(it.id) }
                 s.items.addAll(fresh)
+                if (sort == "india") s.items.sortByDescending { it.isIndia }
                 if (s === cur && tab == 0) {
                     adapter.data = visibleFeed()
                     adapter.notifyDataSetChanged()
