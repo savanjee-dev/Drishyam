@@ -1,5 +1,5 @@
 
-name: Build and Release Drishyam APK
+name: Build Drishyam APK (Legacy Candidate Only)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
       - ".github/workflows/build-from-zip.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -182,12 +182,3 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v2.4.2
-          name: Drishyam 2.4.2
-          files: ${{ runner.temp }}/drishyam-output/Drishyam-2.4.2.apk
-          target_commitish: ${{ github.sha }}
-          make_latest: true
-          fail_on_unmatched_files: true
