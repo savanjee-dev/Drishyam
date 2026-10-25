@@ -20,6 +20,10 @@ android {
             storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
             keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "drishyam"
             keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+            // Keep modern APK signatures and add v1/JAR signing for compatibility
+            // with OEM package installers and file-manager install flows.
+            enableV1Signing = true
+            enableV2Signing = true
         }
     }
     buildTypes {
