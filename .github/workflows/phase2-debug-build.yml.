@@ -3,6 +3,9 @@ name: Drishyam Phase 2 Debug Build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - phase2/debug-build
 
 permissions:
   contents: read
