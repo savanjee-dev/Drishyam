@@ -105,6 +105,8 @@ jobs:
           cp "$APK" "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
           CANDIDATE="$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
+          # Re-sign explicitly so the artifact definitely contains both schemes.
+          "$APKSIGNER" sign --ks "$ANDROID_KEYSTORE_FILE" --ks-key-alias "$ANDROID_KEY_ALIAS" --ks-pass env:ANDROID_KEYSTORE_PASSWORD --key-pass env:ANDROID_KEY_PASSWORD --v1-signing-enabled true --v2-signing-enabled true "$CANDIDATE"
           "$APKSIGNER" verify --verbose --print-certs "$CANDIDATE"
           APKANALYZER="$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer"
           APP_ID="$("$APKANALYZER" manifest application-id "$CANDIDATE")"
