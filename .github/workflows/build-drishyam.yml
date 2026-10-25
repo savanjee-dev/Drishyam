@@ -11,7 +11,7 @@ on:
       - ".github/workflows/build-drishyam.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 # Serialize all official publication attempts across refs.
 concurrency:
@@ -21,6 +21,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version_name: ${{ steps.app.outputs.version_name }}
+      version_code: ${{ steps.app.outputs.version_code }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -156,25 +161,46 @@ jobs:
           cd "$RUNNER_TEMP/drishyam-output"
           sha256sum "Drishyam-$VERSION_NAME.apk" > "Drishyam-$VERSION_NAME.apk.sha256"
 
-      - name: Upload APK artifact
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSETS_DIR="$RUNNER_TEMP/drishyam-release-assets"
+          mkdir -p "$ASSETS_DIR"
+          cp "$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk" "$ASSETS_DIR/"
+          cp "$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk.sha256" "$ASSETS_DIR/"
+          cp "$GITHUB_WORKSPACE/DRISHYAM-$VERSION_NAME-CHANGELOG.txt" "$ASSETS_DIR/"
+
+      - name: Upload release assets
         uses: actions/upload-artifact@v4
         with:
-          name: Drishyam-v${{ steps.app.outputs.version_name }}-release
-          path: ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
+          name: Drishyam-v${{ steps.app.outputs.version_name }}-release-assets
+          path: ${{ runner.temp }}/drishyam-release-assets/
           if-no-files-found: error
           retention-days: 30
 
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: Drishyam-v${{ needs.build.outputs.version_name }}-release-assets
+          path: ${{ runner.temp }}/drishyam-release-assets
+
       - name: Publish GitHub Release
-        # Publish only when an authorized maintainer manually dispatches this workflow from main.
-        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.app.outputs.version_name }}
-          name: Drishyam ${{ steps.app.outputs.version_name }}
+          tag_name: v${{ needs.build.outputs.version_name }}
+          name: Drishyam ${{ needs.build.outputs.version_name }}
           files: |
-            DRISHYAM-${{ steps.app.outputs.version_name }}-CHANGELOG.txt
-            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
-            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk.sha256
+            ${{ runner.temp }}/drishyam-release-assets/DRISHYAM-${{ needs.build.outputs.version_name }}-CHANGELOG.txt
+            ${{ runner.temp }}/drishyam-release-assets/Drishyam-${{ needs.build.outputs.version_name }}.apk
+            ${{ runner.temp }}/drishyam-release-assets/Drishyam-${{ needs.build.outputs.version_name }}.apk.sha256
           target_commitish: ${{ github.sha }}
           make_latest: true
           fail_on_unmatched_files: true
