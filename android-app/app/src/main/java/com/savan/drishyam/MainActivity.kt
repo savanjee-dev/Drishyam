@@ -516,7 +516,7 @@ class MainActivity : AppCompatActivity() {
                 val m = e.message ?: ""
                 error = when {
                     m.contains("429") -> "Unsplash is temporarily rate-limiting requests. Please wait and try again."
-                    m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied this request. Check the Access Key and try again."
+                    m.contains("403") || m.contains("Forbidden", true) -> "Photo service authorization failed (403). Check proxy settings."
                     m.contains("404") -> "This feed was not found."
                     m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet."
                     else -> "Couldn’t load photos from Unsplash ($m)."
@@ -572,7 +572,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: VH, pos: Int) {
             val p = data[pos]
-            h.lbl.text = p.credit.ifBlank { getString(R.string.unknown_photographer) }
+            h.lbl.text = "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
             h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             h.heart.contentDescription = getString(R.string.like_desc)
             val screenWidth = resources.displayMetrics.widthPixels - 28.dp()

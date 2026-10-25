@@ -76,8 +76,8 @@
                             android:textSize="27sp" android:textColor="?attr/colorPrimary" />
                         <TextView
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginStart="2dp" android:fontFamily="@font/poppins_medium"
-                            android:text="@string/tagline" android:textSize="10sp" android:textColor="?attr/colorOnSurfaceVariant" />
+                            android:layout_marginStart="3dp" android:fontFamily="@font/pacifico_regular"
+                            android:text="@string/tagline" android:textSize="12sp" android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
 
                     <ImageView

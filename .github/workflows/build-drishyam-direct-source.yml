@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -126,8 +127,6 @@ jobs:
 
       - name: Build release APK
         shell: bash
-        env:
-          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"

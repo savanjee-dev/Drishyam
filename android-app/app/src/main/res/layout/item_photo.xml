@@ -31,7 +31,7 @@
             android:paddingStart="14dp" android:paddingEnd="14dp"
             android:paddingTop="7dp" android:paddingBottom="7dp"
             android:maxWidth="260dp" android:maxLines="1" android:ellipsize="end"
-            android:fontFamily="@font/nothingyoucoulddo"
-            android:textColor="@android:color/white" android:textSize="15sp" />
+            android:fontFamily="@font/poppins_medium"
+            android:textColor="@android:color/white" android:textSize="12sp" />
     </FrameLayout>
 </com.google.android.material.card.MaterialCardView>
