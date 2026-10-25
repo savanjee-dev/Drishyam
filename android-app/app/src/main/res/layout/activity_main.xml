@@ -81,8 +81,18 @@
                     </LinearLayout>
 
                     <ImageView
+                        android:id="@+id/settingsButton"
+                        android:layout_width="46dp" android:layout_height="46dp"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/glass_pill" android:padding="13dp"
+                        android:src="@drawable/ic_settings" android:scaleType="fitCenter"
+                        android:contentDescription="Settings"
+                        android:clickable="true" android:focusable="true" />
+
+                    <ImageView
                         android:id="@+id/sortButton"
                         android:layout_width="46dp" android:layout_height="46dp"
+                        android:layout_marginStart="6dp"
                         android:background="@drawable/glass_pill" android:padding="12dp"
                         android:src="@drawable/ic_sliders" android:scaleType="fitCenter"
                         android:contentDescription="Sort and filter photos"
@@ -101,7 +111,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="FIND YOUR NEXT VIEW"
+                        android:text="PHOTOGRAPHY, SLOWED DOWN"
                         android:textColor="?attr/colorPrimary"
                         android:fontFamily="@font/poppins_medium"
                         android:textSize="10sp"
@@ -110,10 +120,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="A little wonder, every day."
+                        android:text="Explore"
                         android:textColor="?attr/colorOnSurface"
                         android:fontFamily="@font/poppins_medium"
-                        android:textSize="19sp" />
+                        android:textSize="34sp" />
 
                     <EditText
                         android:id="@+id/homeSearchInput"
@@ -150,7 +160,7 @@
 
                 <LinearLayout
                     android:id="@+id/sortBar"
-                    android:visibility="gone"
+                    android:visibility="visible"
                     android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingBottom="3dp">
@@ -159,6 +169,8 @@
                         android:layout_marginStart="8dp" android:text="@string/sort_new" />
                     <TextView android:id="@+id/sortTop" style="@style/Segment"
                         android:layout_marginStart="8dp" android:text="@string/sort_top" />
+                    <TextView android:id="@+id/sortIndia" style="@style/Segment"
+                        android:layout_marginStart="8dp" android:text="India" />
                 </LinearLayout>
 
                 <LinearLayout
