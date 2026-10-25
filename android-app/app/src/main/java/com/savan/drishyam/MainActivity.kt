@@ -715,7 +715,7 @@ class MainActivity : AppCompatActivity() {
         statusGeneration++
         cur.reset()
         cur.forceFresh = true
-        adapter.data = cur.items
+        adapter.data = visibleFeed()
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
         loadMore()
