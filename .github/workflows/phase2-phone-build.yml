@@ -47,11 +47,11 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Android project: $PROJECT_DIR"
 
-      - name: Build debug APK
+      - name: Build debug APK without optional Firebase config
         shell: bash
         run: |
           set -euo pipefail
-          gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+          gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug -x :app:processDebugGoogleServices --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
