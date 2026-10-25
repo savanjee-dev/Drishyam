@@ -1,0 +1,57 @@
+name: Drishyam Phase 2 Phone Build (Debug Only - Fix 2)
+
+on:
+  push:
+    branches: ["phase2/debug-build"]
+    paths:
+      - ".github/workflows/phase2-phone-build-fix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+      - name: Extract source
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q Drishyam_Phase2_Source_Alternate.zip -d phase2-source
+          PROJECT_DIR="$(find phase2-source -type f -name settings.gradle.kts -print -quit | xargs -r dirname)"
+          test -n "$PROJECT_DIR"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+      - name: Remove Google Services plugin from temporary build copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP_GRADLE="$PROJECT_DIR/app/build.gradle.kts"
+          python3 - "$APP_GRADLE" <<'PY'
+          import pathlib, sys
+          p = pathlib.Path(sys.argv[1])
+          s = p.read_text()
+          target = '    id("com.google.gms.google-services")\n'
+          if target not in s:
+              raise SystemExit("Expected Google Services plugin line not found in temporary source copy")
+          p.write_text(s.replace(target, "", 1))
+          PY
+          ! grep -q 'com.google.gms.google-services' "$APP_GRADLE"
+      - name: Build debug APK
+        run: gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: drishyam-phase2-debug-apk
+          path: phase2-source/**/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
