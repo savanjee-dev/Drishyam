@@ -1,4 +1,5 @@
 name: Drishyam Phase 2 Same-Key Candidate
+# Phase 2: logo and Poppins ExtraBold integration explicitly deferred until after Phase 11.
 
 on:
   workflow_dispatch:
