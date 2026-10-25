@@ -91,7 +91,7 @@ class SettingsHubActivity : AppCompatActivity() {
         row1.addView(tile("↕", "Browsing", "Hot · India on", false) {
             Toast.makeText(this@SettingsHubActivity, "Browsing page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
-        tiles.addView(row1, LinearLayout.LayoutParams(-1, 132.dp()))
+        tiles.addView(row1, LinearLayout.LayoutParams(-1, 176.dp()))
         val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         row2.addView(tile("⌁", "Storage", "42 MB cached", false) {
             Toast.makeText(this@SettingsHubActivity, "Storage page: next prototype step", Toast.LENGTH_SHORT).show()
@@ -99,7 +99,7 @@ class SettingsHubActivity : AppCompatActivity() {
         row2.addView(tile("✦", "About", "Version 2.7.16", false) {
             Toast.makeText(this@SettingsHubActivity, "About page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
-        tiles.addView(row2, LinearLayout.LayoutParams(-1, 132.dp()).apply { topMargin = 12.dp() })
+        tiles.addView(row2, LinearLayout.LayoutParams(-1, 176.dp()).apply { topMargin = 12.dp() })
         root.addView(tiles)
 
         val quick = addText(root, "QUICK ACTIONS", 11f, R.color.accent, 26, 8)
@@ -134,7 +134,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.START
-            setPadding(15.dp(), 14.dp(), 10.dp(), 12.dp())
+            setPadding(18.dp(), 18.dp(), 12.dp(), 16.dp())
         }
         body.addView(TextView(this).apply {
             text = glyph
@@ -199,7 +199,8 @@ class SettingsHubActivity : AppCompatActivity() {
             radius = 34.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 0
-            setCardBackgroundColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.accent))
+            minimumHeight = 214.dp()
+            setCardBackgroundColor(android.graphics.Color.rgb(31, 42, 22))
             isClickable = true
             isFocusable = true
             pressFx()
@@ -216,13 +217,13 @@ class SettingsHubActivity : AppCompatActivity() {
             setTextColor(0xCCFFFFFF.toInt())
         })
         copy.addView(TextView(this).apply {
-            text = "A little about us"; textSize = 22f
+            text = "The people & ideas behind Drishyam"; textSize = 24f
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 7.dp(), 0, 6.dp())
         })
         copy.addView(TextView(this).apply {
-            text = "Meet the people and ideas behind Drishyam"; textSize = 12f
+            text = "Started by one curious photographer, one frame at a time."; textSize = 13f
             setTextColor(0xE6FFFFFF.toInt())
         })
         body.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
@@ -230,10 +231,10 @@ class SettingsHubActivity : AppCompatActivity() {
             setImageResource(R.drawable.savan)
             contentDescription = "Savan, lead developer"
             scaleType = ImageView.ScaleType.CENTER_CROP
-            background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_pill)
+            background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.surface)) }
             clipToOutline = true
         }
-        body.addView(photo, LinearLayout.LayoutParams(92.dp(), 112.dp()).apply { leftMargin = 12.dp() })
+        body.addView(photo, LinearLayout.LayoutParams(132.dp(), 132.dp()).apply { leftMargin = 8.dp() })
         card.addView(body)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
     }
