@@ -13,6 +13,11 @@ on:
 permissions:
   contents: write
 
+# Serialize all official publication attempts across refs.
+concurrency:
+  group: drishyam-official-release
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -134,6 +139,23 @@ jobs:
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
 
+      - name: Verify APK package and embedded version
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)"
+          test -n "$AAPT" || { echo "::error::aapt not found"; exit 1; }
+          BADGING="$("$AAPT" dump badging "$APK")"
+          grep -F "package: name=" <<< "$BADGING" | grep -F "versionName='$VERSION_NAME'" | grep -F "versionCode='$VERSION_CODE'" || { echo "::error::APK package/version does not match Gradle metadata"; exit 1; }
+
+      - name: Generate APK checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/drishyam-output"
+          sha256sum "Drishyam-$VERSION_NAME.apk" > "Drishyam-$VERSION_NAME.apk.sha256"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -152,6 +174,7 @@ jobs:
           files: |
             DRISHYAM-${{ steps.app.outputs.version_name }}-CHANGELOG.txt
             ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
+            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk.sha256
           target_commitish: ${{ github.sha }}
           make_latest: true
           fail_on_unmatched_files: true
