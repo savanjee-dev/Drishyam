@@ -28,10 +28,8 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle
+      - name: Set up Gradle from Wrapper
         uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: "8.7"
 
       - name: Read app version
         id: app
@@ -121,7 +119,7 @@ jobs:
         run: |
           set -euo pipefail
           cd "$PROJECT_DIR"
-          gradle --no-daemon assembleRelease
+          ./gradlew --no-daemon --stacktrace assembleRelease
           APK_SOURCE="$PROJECT_DIR/app/build/outputs/apk/release/app-release.apk"
           test -f "$APK_SOURCE" || { echo "::error::Release APK was not generated"; exit 1; }
           mkdir -p "$RUNNER_TEMP/drishyam-output"
