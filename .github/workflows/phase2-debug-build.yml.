@@ -1,0 +1,58 @@
+
+name: Drishyam Phase 2 Debug Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-phase2:
+    name: Compile Phase 2 Debug APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout isolated branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Extract Phase 2 source archive
+        run: |
+          set -euo pipefail
+          mkdir -p phase2-source
+          unzip -q Drishyam_Phase2_Source_Alternate.zip -d phase2-source
+          find phase2-source -name settings.gradle.kts -print
+          find phase2-source -name build.gradle.kts -print
+
+      - name: Locate Android project
+        id: project
+        run: |
+          set -euo pipefail
+          PROJECT_DIR="$(dirname "$(find phase2-source -name settings.gradle.kts -print -quit)")"
+          test -n "$PROJECT_DIR"
+          test -f "$PROJECT_DIR/app/build.gradle.kts"
+          echo "dir=$PROJECT_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Build debug APK
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p "${{ steps.project.outputs.dir }}" :app:assembleDebug
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: drishyam-phase2-debug-apk
+          path: phase2-source/**/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
