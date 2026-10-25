@@ -1,9 +1,8 @@
-name: Drishyam Phase 2 Phone Build (Debug Only)
+name: Drishyam Phase 2 Phone Build (Real UI Fix)
 
 on:
   push:
-    branches:
-      - "phase2/debug-build"
+    branches: ["phase2/debug-build"]
     paths:
       - "Drishyam_Phase2_Source_Alternate.zip"
       - ".github/workflows/phase2-phone-build.yml"
@@ -17,47 +16,59 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - name: Checkout isolated Phase 2 branch
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: "8.7"
-
-      - name: Extract source archive
+      - name: Extract exact Phase 2 source archive
         shell: bash
         run: |
           set -euo pipefail
-          test -f Drishyam_Phase2_Source_Alternate.zip
-          mkdir -p phase2-source
           unzip -q Drishyam_Phase2_Source_Alternate.zip -d phase2-source
           PROJECT_DIR="$(find phase2-source -type f -name settings.gradle.kts -print -quit | xargs -r dirname)"
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "::error::No settings.gradle.kts found in the uploaded source ZIP."
-            find phase2-source -maxdepth 4 -type f | head -100
-            exit 1
-          fi
+          test -n "$PROJECT_DIR"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Android project: $PROJECT_DIR"
-
-      - name: Build debug APK without optional Firebase config
+      - name: Fix sort indicator height in temporary source
         shell: bash
         run: |
           set -euo pipefail
-          gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug -x :app:processDebugGoogleServices --stacktrace
-
-      - name: Upload debug APK
+          python3 - "$PROJECT_DIR/app/src/main/res/layout/activity_main.xml" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          old='android:id="@+id/sortIndicator" android:layout_width="1dp" android:layout_height="match_parent"'
+          new='android:id="@+id/sortIndicator" android:layout_width="1dp" android:layout_height="44dp"'
+          if old not in s: raise SystemExit("Expected sort indicator declaration not found; no unsafe patch applied.")
+          p.write_text(s.replace(old,new,1))
+          PY
+      - name: Remove Firebase plugin from temporary copy
+        shell: bash
+        run: |
+          python3 - "$PROJECT_DIR/app/build.gradle.kts" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          target='    id("com.google.gms.google-services")\n'
+          if target in s: p.write_text(s.replace(target,"",1))
+          PY
+      - name: Build separate debug app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/app/build.gradle.kts" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          if 'applicationIdSuffix = ".phase2debug"' not in s:
+              s += '\nandroid { buildTypes { getByName("debug") { applicationIdSuffix = ".phase2debug" } } }\n'
+          p.write_text(s)
+          PY
+          gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+      - name: Upload corrected debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: drishyam-phase2-debug-apk
-          path: |
-            phase2-source/**/app/build/outputs/apk/debug/*.apk
+          name: drishyam-phase2-real-ui-fix-apk
+          path: phase2-source/**/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
