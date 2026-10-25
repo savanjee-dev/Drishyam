@@ -105,6 +105,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sortHot: TextView
     private lateinit var sortNew: TextView
     private lateinit var sortTop: TextView
+    private lateinit var sortIndia: TextView
     private val adapter = PhotoAdapter()
     private val sources = ArrayList<Source>()
     private lateinit var cur: Source
@@ -157,6 +158,13 @@ class MainActivity : AppCompatActivity() {
         sortHot = findViewById(R.id.sortHot)
         sortNew = findViewById(R.id.sortNew)
         sortTop = findViewById(R.id.sortTop)
+        sortIndia = findViewById(R.id.sortIndia)
+
+        findViewById<ImageView>(R.id.settingsButton).apply {
+            imageTintList = ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
+            pressFx()
+            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
+        }
 
         val homeSearchInput = findViewById<EditText>(R.id.homeSearchInput)
         homeSearchInput.setOnEditorActionListener { _, _, _ ->
@@ -241,6 +249,7 @@ class MainActivity : AppCompatActivity() {
         sortHot.apply { pressFx(); setOnClickListener { setSort("hot") } }
         sortNew.apply { pressFx(); setOnClickListener { setSort("new") } }
         sortTop.apply { pressFx(); setOnClickListener { setSort("top") } }
+        sortIndia.apply { pressFx(); setOnClickListener { setSort("india") } }
 
         shownSort = currentSort()
         styleSort()
@@ -476,7 +485,7 @@ class MainActivity : AppCompatActivity() {
         if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
         glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
         chipScroll.visibility = if (n == 0) View.VISIBLE else View.GONE
-        sortBar.visibility = View.GONE
+        sortBar.visibility = if (n == 0) View.VISIBLE else View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
 
         if (n == 1) {
@@ -579,6 +588,7 @@ class MainActivity : AppCompatActivity() {
         sortHot.styleSeg(shownSort == "hot")
         sortNew.styleSeg(shownSort == "new")
         sortTop.styleSeg(shownSort == "top")
+        sortIndia.styleSeg(shownSort == "india")
     }
 
     private fun showSortPopup() {
