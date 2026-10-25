@@ -1,4 +1,4 @@
-name: Build and Release Drishyam APK
+name: Build Drishyam APK (Candidate Only)
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
       - ".github/workflows/build-drishyam.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -139,14 +139,3 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.app.outputs.version_name }}
-          name: Drishyam ${{ steps.app.outputs.version_name }}
-          files: |
-            DRISHYAM-${{ steps.app.outputs.version_name }}-CHANGELOG.txt
-            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
-          target_commitish: ${{ github.sha }}
-          make_latest: true
-          fail_on_unmatched_files: true
