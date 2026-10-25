@@ -11,6 +11,8 @@ import android.graphics.drawable.AnimationDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -109,6 +111,7 @@ class MainActivity : AppCompatActivity() {
     private var tab = 0
     private var savedMode = 0      // 0 = likes, 1 = bookmarks
     private var shownSort = "hot"
+    private var feedSearchQuery = ""
     private var lowFxAtCreate = false
     private var lastTopPad = -1
     private var lastBottomPad = -1
@@ -154,6 +157,24 @@ class MainActivity : AppCompatActivity() {
         sortHot = findViewById(R.id.sortHot)
         sortNew = findViewById(R.id.sortNew)
         sortTop = findViewById(R.id.sortTop)
+
+        val homeSearchInput = findViewById<EditText>(R.id.homeSearchInput)
+        homeSearchInput.setOnEditorActionListener { _, _, _ ->
+            (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                .hideSoftInputFromWindow(homeSearchInput.windowToken, 0)
+            true
+        }
+        homeSearchInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                feedSearchQuery = s?.toString()?.trim().orEmpty()
+                adapter.data = visibleFeed()
+                adapter.notifyDataSetChanged()
+                rv.scrollToPosition(0)
+            }
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
 
         bindGlass(overlay, glassSource, 70)
 
@@ -213,7 +234,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
         findViewById<View>(R.id.navItem3).apply {
             pressFx()
-            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
+            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsActivity::class.java)) }
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
         segBook.apply { pressFx(); setOnClickListener { setSaved(1) } }
@@ -461,7 +482,7 @@ class MainActivity : AppCompatActivity() {
         if (n == 1) {
             refreshSaved()
         } else {
-            adapter.data = cur.items
+            adapter.data = visibleFeed()
             adapter.notifyDataSetChanged()
             updateStatus()
             if (cur.items.isEmpty()) loadMore()
@@ -586,6 +607,11 @@ class MainActivity : AppCompatActivity() {
                 }, LinearLayout.LayoutParams(-1, 44.dp()).apply { topMargin = 5.dp() })
             }
         }
+    }
+
+    private fun visibleFeed(): List<Photo> {
+        val q = feedSearchQuery.lowercase(java.util.Locale.ROOT)
+        return if (q.isBlank()) cur.items else cur.items.filter { it.title.contains(q, ignoreCase = true) }
     }
 
     private fun resetAll() {
