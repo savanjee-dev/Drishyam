@@ -617,7 +617,7 @@ class MainActivity : AppCompatActivity() {
     private fun resetAll() {
         sources.forEach { it.reset() }
         if (tab == 0) {
-            adapter.data = cur.items
+            adapter.data = visibleFeed()
             adapter.notifyDataSetChanged()
             rv.scrollToPosition(0)
             updateStatus()
@@ -786,10 +786,10 @@ class MainActivity : AppCompatActivity() {
                     if (finished) s.done = true
                 }
                 val fresh = added.filter { s.ids.add(it.id) }
-                val start = s.items.size
                 s.items.addAll(fresh)
                 if (s === cur && tab == 0) {
-                    adapter.notifyItemRangeInserted(start, fresh.size)
+                    adapter.data = visibleFeed()
+                    adapter.notifyDataSetChanged()
                     if (error != null) {
                         showTransientStatus(error + " " + getString(R.string.retry_suffix))
                         statusPill.postDelayed({ if (s === cur && s.err != null) { statusPill.setTag(R.id.statusPill, "dismissed"); statusPill.visibility = View.GONE } }, 3500L)
