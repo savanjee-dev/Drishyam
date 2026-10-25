@@ -1,0 +1,63 @@
+name: Drishyam Phase 2 Phone Build (Debug Only)
+
+on:
+  push:
+    branches:
+      - "phase2/debug-build"
+    paths:
+      - "Drishyam_Phase2_Source_Alternate.zip"
+      - ".github/workflows/phase2-phone-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout isolated Phase 2 branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+
+      - name: Extract source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Drishyam_Phase2_Source_Alternate.zip
+          mkdir -p phase2-source
+          unzip -q Drishyam_Phase2_Source_Alternate.zip -d phase2-source
+          PROJECT_DIR="$(find phase2-source -type f -name settings.gradle.kts -print -quit | xargs -r dirname)"
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "::error::No settings.gradle.kts found in the uploaded source ZIP."
+            find phase2-source -maxdepth 4 -type f | head -100
+            exit 1
+          fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Android project: $PROJECT_DIR"
+
+      - name: Build debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p "$PROJECT_DIR" :app:assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: drishyam-phase2-debug-apk
+          path: |
+            phase2-source/**/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
