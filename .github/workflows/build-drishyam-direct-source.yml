@@ -1,4 +1,4 @@
-name: Build and Release Drishyam APK
+name: Build Drishyam APK (Branch Candidate Only)
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
       - "android-app/**"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -153,15 +153,3 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
-        if: github.ref == 'refs/heads/stability/drishyam-2.4.9' || github.ref == 'refs/heads/release/v2.7.4-photo-view-2.0' || github.ref == 'refs/heads/release/v2.7.8-update-fixes'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.app.outputs.version_name }}
-          name: Drishyam ${{ steps.app.outputs.version_name }}
-          files: |
-            DRISHYAM-${{ steps.app.outputs.version_name }}-CHANGELOG.txt
-            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
-          target_commitish: ${{ github.sha }}
-          make_latest: true
-          fail_on_unmatched_files: true
