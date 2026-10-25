@@ -17,6 +17,8 @@ concurrency:
 
 jobs:
   build:
+    # Safety guard: only build the isolated Phase 2 branch, never main.
+    if: github.ref == 'refs/heads/phase2/debug-build'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
