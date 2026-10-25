@@ -1,4 +1,4 @@
-name: Build and Release Drishyam APK
+name: Build Drishyam APK Candidate
 
 on:
   workflow_dispatch:
@@ -11,12 +11,7 @@ on:
       - ".github/workflows/build-drishyam.yml"
 
 permissions:
-  contents: write
-
-# Serialize all official publication attempts across refs.
-concurrency:
-  group: drishyam-official-release
-  cancel-in-progress: false
+  contents: read
 
 jobs:
   build:
@@ -164,17 +159,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
-        # Publish only when an authorized maintainer manually dispatches this workflow from main.
-        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v${{ steps.app.outputs.version_name }}
-          name: Drishyam ${{ steps.app.outputs.version_name }}
-          files: |
-            DRISHYAM-${{ steps.app.outputs.version_name }}-CHANGELOG.txt
-            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
-            ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk.sha256
-          target_commitish: ${{ github.sha }}
-          make_latest: true
-          fail_on_unmatched_files: true
+          name: Drishyam-v${{ steps.app.outputs.version_name }}-candidate-checksum
+          path: ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
