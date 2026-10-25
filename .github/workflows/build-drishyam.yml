@@ -1,4 +1,4 @@
-name: Build and Release Drishyam APK
+name: Build Drishyam APK (Branch Candidate Only)
 
 on:
   workflow_dispatch:
@@ -192,15 +192,3 @@ jobs:
           name: Drishyam-v${{ needs.build.outputs.version_name }}-release-assets
           path: ${{ runner.temp }}/drishyam-release-assets
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.build.outputs.version_name }}
-          name: Drishyam ${{ needs.build.outputs.version_name }}
-          files: |
-            ${{ runner.temp }}/drishyam-release-assets/DRISHYAM-${{ needs.build.outputs.version_name }}-CHANGELOG.txt
-            ${{ runner.temp }}/drishyam-release-assets/Drishyam-${{ needs.build.outputs.version_name }}.apk
-            ${{ runner.temp }}/drishyam-release-assets/Drishyam-${{ needs.build.outputs.version_name }}.apk.sha256
-          target_commitish: ${{ github.sha }}
-          make_latest: true
-          fail_on_unmatched_files: true
