@@ -22,6 +22,14 @@
         android:inputType="text" android:imeOptions="actionSearch" />
 
     <LinearLayout
+        android:id="@+id/searchSuggestions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="vertical"
+        android:visibility="visible" />
+
+    <LinearLayout
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="18dp" android:orientation="horizontal" android:gravity="end">
         <TextView
