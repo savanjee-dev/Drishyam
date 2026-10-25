@@ -1,0 +1,116 @@
+name: Drishyam Phase 2 Same-Key Candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["phase2/debug-build"]
+    paths:
+      - "android-app/**"
+      - ".github/workflows/phase2-same-key-candidate.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drishyam-phase2-candidate
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+
+      - name: Configure existing Drishyam signing key
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            test -n "${!name}" || { echo "::error::Missing required signing secret: $name"; exit 1; }
+          done
+          PROJECT_DIR="$GITHUB_WORKSPACE/android-app"
+          KEYSTORE_PATH="$RUNNER_TEMP/drishyam-release-key.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+          cp "$KEYSTORE_PATH" "$PROJECT_DIR/app/release-key.jks"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_FILE=$PROJECT_DIR/app/release-key.jks" >> "$GITHUB_ENV"
+          echo "ANDROID_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "ANDROID_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Configure Firebase
+        shell: bash
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          test -n "$GOOGLE_SERVICES_JSON" || { echo "::error::Missing GOOGLE_SERVICES_JSON secret"; exit 1; }
+          printf '%s' "$GOOGLE_SERVICES_JSON" > "$PROJECT_DIR/app/google-services.json"
+          python3 -m json.tool "$PROJECT_DIR/app/google-services.json" >/dev/null
+
+      - name: Prepare isolated candidate version and duplicate resource workaround
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$PROJECT_DIR/app/build.gradle.kts" "$PROJECT_DIR/app/src/main/res/values" <<'PY'
+          import sys
+          from pathlib import Path
+          import re, xml.etree.ElementTree as ET
+          gradle = Path(sys.argv[1])
+          source = gradle.read_text()
+          source = re.sub(r'versionCode\\s*=\\s*\\d+', 'versionCode = 45', source, count=1)
+          source = re.sub(r'versionName\\s*=\\s*"[^"]+"', 'versionName = "2.7.17-phase2"', source, count=1)
+          gradle.write_text(source)
+          res = Path(sys.argv[2])
+          base, v21 = res / "strings.xml", res / "strings_v21.xml"
+          if base.exists() and v21.exists():
+              base_names = {e.get("name") for e in ET.parse(base).getroot()}
+              tree = ET.parse(v21)
+              root = tree.getroot()
+              for item in list(root):
+                  if item.get("name") == "settings_version" and item.get("name") in base_names:
+                      root.remove(item)
+              tree.write(v21, encoding="utf-8", xml_declaration=True)
+          PY
+
+      - name: Build same-package signed candidate
+        shell: bash
+        env:
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+        run: |
+          set -euo pipefail
+          cd "$PROJECT_DIR"
+          gradle --no-daemon assembleRelease
+          APK="$PROJECT_DIR/app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          mkdir -p "$RUNNER_TEMP/drishyam-phase2-output"
+          cp "$APK" "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          "$APKSIGNER" verify --verbose --print-certs "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/apkanalyzer" manifest application-id "$RUNNER_TEMP/drishyam-phase2-output/Drishyam-Phase2-candidate.apk" | grep -Fx "com.savan.drishyam"
+
+      - name: Upload installable Phase 2 candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: Drishyam-Phase2-same-key-candidate
+          path: ${{ runner.temp }}/drishyam-phase2-output/Drishyam-Phase2-candidate.apk
+          if-no-files-found: error
+          retention-days: 30
