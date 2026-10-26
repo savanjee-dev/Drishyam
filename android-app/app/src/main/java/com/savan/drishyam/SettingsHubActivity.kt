@@ -54,12 +54,15 @@ class SettingsHubActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         val root = LinearLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
             orientation = LinearLayout.VERTICAL
             setPadding(20.dp(), 18.dp(), 20.dp(), 150.dp())
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         val scroll = ScrollView(this).apply {
             isFillViewport = true
+            clipChildren = false
             clipToPadding = false
             setPadding(0, 0, 0, 12.dp())
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -68,6 +71,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val page = android.widget.FrameLayout(this).apply {
             setBackgroundColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.bg))
             clipChildren = false
+            clipToPadding = false
         }
         val ambient = android.widget.FrameLayout(this)
         lowFxEnabled = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
@@ -189,6 +193,8 @@ class SettingsHubActivity : AppCompatActivity() {
             setOnClickListener { action() }
         }
         val body = LinearLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.START
             setPadding(18.dp(), 18.dp(), 18.dp(), 18.dp())
@@ -234,12 +240,13 @@ class SettingsHubActivity : AppCompatActivity() {
             text = value
             textSize = 12f
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute))
-            maxLines = 1
-            includeFontPadding = false
+            maxLines = 2
+            includeFontPadding = true
             if (title == "Storage") storageValueView = this
             if (title == "Appearance") appearanceValueView = this
         })
         card.addView(body)
+        disableAnimatedOverflowClipping(card)
         return card
     }
 
@@ -274,6 +281,7 @@ class SettingsHubActivity : AppCompatActivity() {
         card.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
         card.addView(PrototypeIconView(this, "chevron", ContextCompat.getColor(this, R.color.mute)), LinearLayout.LayoutParams(20.dp(), 20.dp()))
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 14.dp(); bottomMargin = 10.dp() })
+        disableAnimatedOverflowClipping(card)
     }
 
     private fun addOurStory(root: LinearLayout) {
@@ -511,6 +519,19 @@ class SettingsHubActivity : AppCompatActivity() {
 
         card.addView(body, android.widget.FrameLayout.LayoutParams(-1, -2))
         root.addView(card, LinearLayout.LayoutParams(-1, -2))
+    }
+
+    /** Allow press-scale animations to draw beyond their resting bounds on every side. */
+    private fun disableAnimatedOverflowClipping(target: View) {
+        var node: View? = target.parent as? View
+        while (node != null) {
+            if (node is android.view.ViewGroup) {
+                node.clipChildren = false
+                node.clipToPadding = false
+            }
+            if (node === window.decorView) break
+            node = node.parent as? View
+        }
     }
 
     private class BackArrowView(context: android.content.Context, private val tint: Int) : View(context) {
