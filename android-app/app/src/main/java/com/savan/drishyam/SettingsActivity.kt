@@ -255,8 +255,12 @@ class SettingsActivity : AppCompatActivity() {
         val glassLevel = prefs.getString("glass_level", if (lowFx(this)) "Off" else "Full")!!.replaceFirstChar { it.uppercase() }
         effectsCard.addView(segmentRow("Glass effects", "Turn glass off to save battery on older phones.", listOf("Off", "Subtle", "Full"), glassLevel) { choice ->
             prefs.edit().putString("glass_level", choice.lowercase()).putBoolean("low_fx", choice == "Off").apply()
-            // Apply the level consistently; keep the saved level as the source of truth.
-            recreate()
+            // Refresh glass views in place; recreating the Activity caused flicker.
+            fun refreshGlassViews(view: View) {
+                if (view is GlassLayout) view.poke()
+                if (view is ViewGroup) for (i in 0 until view.childCount) refreshGlassViews(view.getChildAt(i))
+            }
+            refreshGlassViews(findViewById(android.R.id.content))
         })
         // The prototype places haptics inside the same Effects card, between Glass and Motion.
         val hapticsRow = findViewById<LinearLayout>(R.id.cardHaptics)
@@ -271,8 +275,16 @@ class SettingsActivity : AppCompatActivity() {
         val motionChoice = if (prefs.getBoolean("motion_reduced", false)) "Reduced" else "Standard"
         effectsCard.addView(segmentRow("Motion", "Reduced replaces bouncy motion with simple fades.", listOf("Standard", "Reduced"), motionChoice) { choice ->
             prefs.edit().putBoolean("motion_reduced", choice == "Reduced").apply()
-            // Recreate to apply reduced-motion behaviour immediately across this page.
-            recreate()
+            // Apply reduced motion without restarting the Activity.
+            if (choice == "Reduced") {
+                fun stopMotion(view: View) {
+                    view.animate().cancel()
+                    view.alpha = 1f
+                    view.translationY = 0f
+                    if (view is ViewGroup) for (i in 0 until view.childCount) stopMotion(view.getChildAt(i))
+                }
+                stopMotion(findViewById(android.R.id.content))
+            }
         })
         val footer = TextView(this).apply {
             text = "Changes apply straight away."
@@ -316,8 +328,12 @@ class SettingsActivity : AppCompatActivity() {
         val lowFxSwitch = findViewById<MaterialSwitch>(R.id.swLowFx)
         lowFxSwitch.isChecked = lowFx(this)
         lowFxSwitch.setOnCheckedChangeListener { _, on ->
-            prefs.edit().putBoolean("low_fx", on).apply()
-            recreate()
+            prefs.edit().putBoolean("low_fx", on).putString("glass_level", if (on) "off" else "full").apply()
+            fun refreshGlassViews(view: View) {
+                if (view is GlassLayout) view.poke()
+                if (view is ViewGroup) for (i in 0 until view.childCount) refreshGlassViews(view.getChildAt(i))
+            }
+            refreshGlassViews(findViewById(android.R.id.content))
         }
 
         // Default feed order pills
