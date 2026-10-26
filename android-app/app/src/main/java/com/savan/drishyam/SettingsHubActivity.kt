@@ -28,12 +28,14 @@ import com.google.android.material.card.MaterialCardView
  */
 class SettingsHubActivity : AppCompatActivity() {
     private var storageValueView: TextView? = null
+    private var appearanceValueView: TextView? = null
     private var lowFxEnabled: Boolean = false
     private var reducedMotionEnabled: Boolean = false
 
     override fun onResume() {
         super.onResume()
         refreshCacheSize()
+        appearanceValueView?.text = currentThemeLabel()
     }
 
     private fun refreshCacheSize() {
@@ -68,9 +70,10 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
         }
         val ambient = android.widget.FrameLayout(this)
-        reducedMotionEnabled = !motionEnabled(this) || getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)
         lowFxEnabled = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
-        addAmbientGlows(ambient, this, animate = !reducedMotionEnabled, lowFx = lowFxEnabled)
+        reducedMotionEnabled = (!motionEnabled(this) && !lowFxEnabled) ||
+            getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false) || systemReducedMotion()
+        addS1AmbientGlows(ambient)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
         page.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         setContentView(page)
@@ -81,7 +84,13 @@ class SettingsHubActivity : AppCompatActivity() {
             textSize = 30f
             gravity = Gravity.CENTER
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.fg))
-            background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_pill)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.glassFill))
+                setStroke(1.dp(), ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke))
+            }
+            setPadding(0, 0, 0, 4.dp())
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
             layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isClickable = true
             isFocusable = true
@@ -91,9 +100,11 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         root.addView(back)
 
-        val eyebrow = addText(root, "Your space, your way".uppercase(), 11f, R.color.accent, 22, 0)
+        val eyebrow = addText(root, "Your space, your way".uppercase(), 11f, R.color.accent, 22, 6)
+        eyebrow.typeface = ResourcesCompat.getFont(this, R.font.montserrat_semibold)
         eyebrow.letterSpacing = 0.16f
         val heading = addText(root, "Settings", 38f, R.color.fg, 6, 4)
+        heading.typeface = ResourcesCompat.getFont(this, R.font.poppins_extrabold)
         heading.letterSpacing = -0.02f
         heading.setLineSpacing(0f, 1.1f)
         addText(root, "Make Drishyam feel like yours.", 14f, R.color.mute, 0, 6)
@@ -103,32 +114,33 @@ class SettingsHubActivity : AppCompatActivity() {
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
-            val darkMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                if (darkMode) intArrayOf(0xFF222A1A.toInt(), 0x991B2117.toInt())
-                else intArrayOf(0xFFE2E6CF.toInt(), 0x99FFFCF4.toInt())
-            ).apply { cornerRadius = 30.dp().toFloat() }
-            setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+                intArrayOf(ContextCompat.getColor(this@SettingsHubActivity, R.color.hero),
+                    ContextCompat.getColor(this@SettingsHubActivity, R.color.glassFill))
+            ).apply { cornerRadius = 30.dp().toFloat(); setStroke(1.dp(), ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)) }
             setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
         }
         val heroBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val brand = addText(heroBody, "DRISHYAM  /  MOSS & OLIVE", 11f, R.color.accent, 0, 10)
+        brand.typeface = ResourcesCompat.getFont(this, R.font.montserrat_bold)
         brand.letterSpacing = 0.16f
-        val heroTitle = addText(heroBody, "A more expressive way to see.", 24f, R.color.fg, 0, 8)
-        heroTitle.typeface = ResourcesCompat.getFont(this, R.font.montserrat_bold)
-        addText(heroBody, "Shape your space, tune the details, keep the focus on photography.", 13f, R.color.mute, 0, 14)
-        val version = addText(heroBody, "VERSION 2.7.16  ·  BY SAVAN", 10f, R.color.mute, 0, 0)
+        val heroTitle = addText(heroBody, "A more expressive way to see.", 24f, R.color.fg, 8, 8)
+        heroTitle.typeface = ResourcesCompat.getFont(this, R.font.poppins_bold)
+        heroTitle.setLineSpacing(0f, 1.2f)
+        addText(heroBody, "Shape your space, tune the details, keep the focus on photography.", 13f, R.color.mute, 0, 0).apply { setLineSpacing(2.dp().toFloat(), 1.5f) }
+        val version = addText(heroBody, "VERSION ${BuildConfig.VERSION_NAME}  ·  BY SAVAN", 10f, R.color.mute, 14, 0)
         version.letterSpacing = 0.06f
         hero.addView(heroBody)
         root.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 18.dp() })
 
         val section = addText(root, "PERSONALISE", 11f, R.color.accent, 28, 12)
+        section.typeface = ResourcesCompat.getFont(this, R.font.montserrat_semibold)
         section.letterSpacing = 0.14f
         val tiles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        row1.addView(tile("appearance", "Appearance", "System") {
+        row1.addView(tile("appearance", "Appearance", currentThemeLabel()) {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
         row1.addView(tile("browsing", "Browsing", "Hot · India on") {
@@ -139,13 +151,14 @@ class SettingsHubActivity : AppCompatActivity() {
         row2.addView(tile("storage", "Storage", "0.0 MB cached") {
             Toast.makeText(this@SettingsHubActivity, "Storage page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
-        row2.addView(tile("about", "About", "Version 2.7.16") {
+        row2.addView(tile("about", "About", "Version ${BuildConfig.VERSION_NAME}") {
             Toast.makeText(this@SettingsHubActivity, "About page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row2, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 12.dp() })
         root.addView(tiles)
 
         val quick = addText(root, "QUICK ACTIONS", 11f, R.color.accent, 28, 12)
+        quick.typeface = ResourcesCompat.getFont(this, R.font.montserrat_semibold)
         quick.letterSpacing = 0.14f
         addAction(root, "updates", "Check for updates", "Find the latest verified release") {
             startActivity(Intent(this, UpdatesActivity::class.java))
@@ -155,12 +168,13 @@ class SettingsHubActivity : AppCompatActivity() {
         }
 
         val more = addText(root, "MORE", 11f, R.color.accent, 28, 12)
+        more.typeface = ResourcesCompat.getFont(this, R.font.montserrat_semibold)
         more.letterSpacing = 0.14f
         addOurStory(root)
         addText(root, "Made with curiosity.\nBuilt for photography.", 18f, R.color.fg, 26, 0).apply {
             gravity = Gravity.CENTER
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.pacifico_regular)
-            setLineSpacing(2.dp().toFloat(), 1f)
+            setLineSpacing((-2).dp().toFloat(), 1f)
         }
         staggerIn((0 until root.childCount).map { root.getChildAt(it) }, resources.displayMetrics.density, enabled = motionEnabled(this) && !reducedMotionEnabled)
     }
@@ -227,6 +241,7 @@ class SettingsHubActivity : AppCompatActivity() {
             maxLines = 1
             includeFontPadding = false
             if (title == "Storage") storageValueView = this
+            if (title == "Appearance") appearanceValueView = this
         })
         card.addView(body)
         return card
@@ -252,7 +267,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(14.dp(), 0, 0, 0) }
         copy.addView(TextView(this).apply {
             text = title; textSize = 15f
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.poppins_semibold)
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.fg))
         })
         copy.addView(TextView(this).apply {
@@ -272,8 +287,8 @@ class SettingsHubActivity : AppCompatActivity() {
             cardElevation = 0f
             strokeWidth = 0
             minimumHeight = 214.dp()
-            background = storyBackground
             setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
+            background = storyBackground
             isClickable = true
             isFocusable = true
             attachPress(glowable = true, lowFx = lowFxEnabled, reduced = reducedMotionEnabled)
@@ -306,14 +321,14 @@ class SettingsHubActivity : AppCompatActivity() {
         val body = android.widget.FrameLayout(this).apply {
             setPadding(24.dp(), 24.dp(), 24.dp(), 24.dp())
         }
-        val copy = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            // Keep the heading clear of the portrait; the copy column is constrained to 48% of screen width.
-        }
+        val cardWidthPx = (resources.displayMetrics.widthPixels - 40.dp()).coerceAtLeast(280.dp())
+        val copyWidthPx = minOf((cardWidthPx * 0.58f).toInt(), cardWidthPx - 160.dp()).coerceAtLeast(150.dp())
+        val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         copy.addView(TextView(this).apply {
             text = "OUR STORY"
             textSize = 10f
             letterSpacing = 0.16f
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(0xCCFFFFFF.toInt())
             background = android.graphics.drawable.GradientDrawable().apply {
                 cornerRadius = 999.dp().toFloat()
@@ -326,23 +341,24 @@ class SettingsHubActivity : AppCompatActivity() {
             textSize = 24f
             maxLines = 3
             includeFontPadding = false
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_extrabold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 14.dp(), 0, 8.dp())
-            maxWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density - 40f) * 0.58f * resources.displayMetrics.density).toInt()
+            setLineSpacing(0f, 1.15f)
+            maxWidth = copyWidthPx
         })
         copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
             textSize = 13f
             setTextColor(0xE6FFFFFF.toInt())
-            maxWidth = (resources.displayMetrics.widthPixels - 190.dp()).coerceAtLeast(100.dp())
+            maxWidth = copyWidthPx
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
-            setLineSpacing(2.dp().toFloat(), 1.35f)
+            setLineSpacing(2.dp().toFloat(), 1.5f)
         })
         val storyButton = TextView(this).apply {
             text = "Read the story →"
             textSize = 13f
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(0xFF26301C.toInt())
             gravity = Gravity.CENTER
             setPadding(18.dp(), 12.dp(), 18.dp(), 12.dp())
@@ -355,9 +371,7 @@ class SettingsHubActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 22.dp() }
         }
         copy.addView(storyButton)
-        body.addView(copy, android.widget.FrameLayout.LayoutParams(
-            (resources.displayMetrics.widthPixels - 238.dp()).coerceAtLeast(100.dp()), -2, Gravity.TOP or Gravity.START
-        ))
+        body.addView(copy, android.widget.FrameLayout.LayoutParams(copyWidthPx, -2, Gravity.TOP or Gravity.START))
 
         // Soft radial halo behind the existing developer portrait, preserving R.drawable.savan.
         val halo = View(this).apply {
@@ -381,7 +395,7 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
         body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = 8.dp() })
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-46).dp(); bottomMargin = 2.dp() })
 
         val portrait = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -392,7 +406,7 @@ class SettingsHubActivity : AppCompatActivity() {
             clipToPadding = false
         }
         val photo = FadedCircleImage(this).apply {
-            setImageResource(R.drawable.savan)
+            setImageResource(R.drawable.developer_photo)
             contentDescription = "Savan, lead developer"
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -401,12 +415,12 @@ class SettingsHubActivity : AppCompatActivity() {
             }
             clipToOutline = true
         }
-        portrait.addView(photo, android.widget.FrameLayout.LayoutParams(132.dp(), 132.dp(), Gravity.CENTER))
+        portrait.addView(photo, android.widget.FrameLayout.LayoutParams(132.dp(), 132.dp(), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
         val photoTag = TextView(this).apply {
             text = "LEAD DEVELOPER"
             textSize = 8.5f
             letterSpacing = 0.08f
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(0xFF1B2117.toInt())
             setPadding(9.dp(), 4.dp(), 9.dp(), 4.dp())
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -416,9 +430,9 @@ class SettingsHubActivity : AppCompatActivity() {
             elevation = 4.dp().toFloat()
         }
         portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = 18.dp() })
-        body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 140.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-16).dp() })
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (-4).dp() })
+        body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 152.dp(),
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-36).dp(); bottomMargin = (-4).dp() })
         // A diagonal sheen and two restrained sparkle marks complete the story-card treatment.
         val sheen = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
@@ -429,11 +443,9 @@ class SettingsHubActivity : AppCompatActivity() {
             alpha = 0.8f
             isClickable = false
         }
-        body.addView(sheen, android.widget.FrameLayout.LayoutParams(42.dp(), 360.dp(),
-            Gravity.TOP or Gravity.START).apply { leftMargin = (-70).dp() })
-        val sheenAnimator = android.animation.ObjectAnimator.ofFloat(
-            sheen, View.TRANSLATION_X, (-70).dp().toFloat(), 420.dp().toFloat()
-        ).apply {
+        body.addView(sheen, android.widget.FrameLayout.LayoutParams(1, 1,
+            Gravity.TOP or Gravity.START).apply { leftMargin = (-24).dp(); topMargin = (-24).dp() })
+        val sheenAnimator = android.animation.ObjectAnimator.ofFloat(sheen, View.TRANSLATION_X, 0f, 1f).apply {
             duration = 3800L
             repeatCount = android.animation.ValueAnimator.INFINITE
             repeatMode = android.animation.ValueAnimator.RESTART
@@ -441,29 +453,33 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         sheen.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                if (motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled && !sheenAnimator.isStarted) sheenAnimator.start()
+                card.post {
+                    val params = sheen.layoutParams as android.widget.FrameLayout.LayoutParams
+                    params.width = (card.width * 0.4f).toInt()
+                    params.height = body.height
+                    params.leftMargin = (-24).dp()
+                    params.topMargin = (-24).dp()
+                    params.bottomMargin = (-24).dp()
+                    sheen.layoutParams = params
+                    sheen.translationX = -0.6f * card.width
+                    sheenAnimator.setFloatValues(-0.6f * card.width, 1.2f * card.width)
+                    if (motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled && !sheenAnimator.isStarted) sheenAnimator.start()
+                }
             }
-            override fun onViewDetachedFromWindow(v: View) {
-                sheenAnimator.cancel()
-            }
+            override fun onViewDetachedFromWindow(v: View) { sheenAnimator.cancel() }
         })
-        val sparkles = TextView(this).apply {
-            text = "✦  ·"
-            textSize = 16f
-            letterSpacing = 0.08f
-            setTextColor(0xD9FFFFFF.toInt())
-            gravity = Gravity.CENTER
+        val sparkles = SparkleView(this, 0xD9FFFFFF.toInt()).apply {
+            visibility = if (lowFxEnabled) View.GONE else View.VISIBLE
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
-        body.addView(sparkles, android.widget.FrameLayout.LayoutParams(24.dp(), 24.dp(),
-            Gravity.TOP or Gravity.END).apply { topMargin = 20.dp(); rightMargin = 64.dp() })
-        val spark2 = TextView(this).apply {
-            text = "✦"
-            textSize = 11f
-            setTextColor(0xD9FFFFFF.toInt())
-            gravity = Gravity.CENTER
+        body.addView(sparkles, android.widget.FrameLayout.LayoutParams(16.dp(), 16.dp(),
+            Gravity.TOP or Gravity.END).apply { topMargin = (-4).dp(); rightMargin = 40.dp() })
+        val spark2 = SparkleView(this, 0xD9FFFFFF.toInt()).apply {
+            visibility = if (lowFxEnabled) View.GONE else View.VISIBLE
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
-        body.addView(spark2, android.widget.FrameLayout.LayoutParams(18.dp(), 18.dp(),
-            Gravity.TOP or Gravity.END).apply { topMargin = 58.dp(); rightMargin = 170.dp() })
+        body.addView(spark2, android.widget.FrameLayout.LayoutParams(11.dp(), 11.dp(),
+            Gravity.TOP or Gravity.END).apply { topMargin = 34.dp(); rightMargin = 146.dp() })
         body.bringChildToFront(copy)
         body.bringChildToFront(portrait)
         body.bringChildToFront(sparkles)
@@ -485,13 +501,13 @@ class SettingsHubActivity : AppCompatActivity() {
             body.alpha = 1f
             body.translationY = 0f
             halo.alpha = 0.75f
-            sheen.alpha = 0f
-            sparkles.alpha = 1f
-            spark2.alpha = 1f
+            sheen.alpha = if (lowFxEnabled) 0f else 0.8f
+            sparkles.visibility = if (lowFxEnabled) View.GONE else View.VISIBLE
+            spark2.visibility = if (lowFxEnabled) View.GONE else View.VISIBLE
         }
 
-        card.addView(body)
-        root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
+        card.addView(body, android.widget.FrameLayout.LayoutParams(-1, -2))
+        root.addView(card, LinearLayout.LayoutParams(-1, -2))
     }
 
     private class PrototypeIconView(context: android.content.Context, private val kind: String, private val tint: Int) : View(context) {
@@ -526,6 +542,82 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
+    private fun currentThemeLabel(): String {
+        val theme = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getString("theme", "System") ?: "System"
+        return if (theme.equals("System", true)) "System default" else theme
+    }
+
+    private fun systemReducedMotion(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !android.animation.ValueAnimator.areAnimatorsEnabled()) return true
+        return try {
+            android.provider.Settings.Global.getFloat(contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        } catch (_: Exception) { false }
+    }
+
+    private fun addS1AmbientGlows(parent: android.widget.FrameLayout) {
+        if (lowFxEnabled) return
+        data class Glow(val color: Int, val alpha: Float, val duration: Long, val gravity: Int, val top: Int, val bottom: Int, val left: Int, val right: Int)
+        val d = resources.displayMetrics.density
+        val glows = listOf(
+            Glow(0xFF89945A.toInt(), 0.42f, 12000L, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
+            Glow(0xFFD0C79A.toInt(), 0.42f, 14000L, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
+            Glow(0xFF414D2D.toInt(), 0.22f, 16000L, Gravity.BOTTOM or Gravity.START, 0, 60, (resources.displayMetrics.widthPixels / d * 0.08f).toInt(), 0)
+        )
+        glows.forEach { glow ->
+            val view = object : View(this) {
+                private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = glow.color
+                    maskFilter = android.graphics.BlurMaskFilter(60f * d, android.graphics.BlurMaskFilter.Blur.NORMAL)
+                }
+                override fun onDraw(canvas: Canvas) {
+                    super.onDraw(canvas)
+                    if (Build.VERSION.SDK_INT < 31) canvas.drawCircle(width / 2f, height / 2f, 140f * d, glowPaint)
+                }
+            }.apply {
+                alpha = glow.alpha
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                if (Build.VERSION.SDK_INT >= 31) {
+                    background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(glow.color) }
+                    setRenderEffect(android.graphics.RenderEffect.createBlurEffect(60f * d, 60f * d, android.graphics.Shader.TileMode.CLAMP))
+                } else setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+            }
+            parent.addView(view, android.widget.FrameLayout.LayoutParams((280 * d).toInt(), (280 * d).toInt(), glow.gravity).apply {
+                topMargin = (glow.top * d).toInt(); bottomMargin = (glow.bottom * d).toInt()
+                leftMargin = (glow.left * d).toInt(); rightMargin = (glow.right * d).toInt()
+            })
+            if (motionEnabled(this) && !reducedMotionEnabled) {
+                val animator = android.animation.ObjectAnimator.ofPropertyValuesHolder(view,
+                    android.animation.PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, 40f * d),
+                    android.animation.PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, 30f * d),
+                    android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.15f),
+                    android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.15f)).apply {
+                    duration = glow.duration; repeatCount = android.animation.ValueAnimator.INFINITE
+                    repeatMode = android.animation.ValueAnimator.REVERSE; interpolator = S1Fx.easeInOut
+                }
+                view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) { if (!animator.isStarted) animator.start() }
+                    override fun onViewDetachedFromWindow(v: View) { animator.cancel() }
+                })
+            }
+        }
+    }
+
+    private class SparkleView(context: android.content.Context, private val tint: Int) : View(context) {
+        private val sparklePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint; style = Paint.Style.FILL }
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val cx = width / 2f; val cy = height / 2f; val r = minOf(width, height) * 0.48f
+            val path = Path().apply {
+                moveTo(cx, cy - r); cubicTo(cx + r * .1f, cy - r * .28f, cx + r * .28f, cy - r * .1f, cx + r, cy)
+                cubicTo(cx + r * .28f, cy + r * .1f, cx + r * .1f, cy + r * .28f, cx, cy + r)
+                cubicTo(cx - r * .1f, cy + r * .28f, cx - r * .28f, cy + r * .1f, cx - r, cy)
+                cubicTo(cx - r * .28f, cy - r * .1f, cx - r * .1f, cy - r * .28f, cx, cy - r)
+                close()
+            }
+            canvas.drawPath(path, sparklePaint)
+        }
+    }
+
     private fun addText(parent: LinearLayout, value: String, size: Float, color: Int, top: Int, bottom: Int): TextView {
         val tv = TextView(this).apply {
             text = value
@@ -533,7 +625,7 @@ class SettingsHubActivity : AppCompatActivity() {
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, when {
                 value == "Settings" -> R.font.poppins_extrabold
                 size >= 17f -> R.font.montserrat_bold
-                size == 11f -> R.font.poppins_semibold
+                size == 11f -> R.font.montserrat_semibold
                 else -> R.font.poppins_regular
             })
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, color))

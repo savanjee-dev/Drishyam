@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="hero">#E2E6CF</color>
     <color name="transparent">#00000000</color>
     <!-- Drishyam 2.6: Moss & Olive — warm editorial light mode -->
     <color name="bg">#F3F1E7</color>
