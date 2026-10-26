@@ -86,7 +86,7 @@ class SettingsActivity : AppCompatActivity() {
                 else -> "About Drishyam"
             }
             show(R.id.settingsHero, !appearance)
-            show(R.id.sectionAppearance, appearance); show(R.id.cardTheme, appearance)
+            show(R.id.sectionAppearance, appearance && section != "appearance"); show(R.id.cardTheme, appearance)
             show(R.id.sectionEffects, appearance); show(R.id.cardHaptics, appearance); show(R.id.cardLowFx, appearance)
             show(R.id.sectionFeed, preferences); show(R.id.cardSort, preferences)
             show(R.id.sectionAbout, storage || about)
@@ -487,6 +487,8 @@ private class ThemeCheckView(context: Context) : View(context) {
         p.style = android.graphics.Paint.Style.FILL; p.color = 0xFF414D2D.toInt()
         canvas.drawCircle(width/2f,height/2f,width/2f,p)
         p.style = android.graphics.Paint.Style.STROKE
+        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        p.color = if (night) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
         val path = android.graphics.Path().apply { moveTo(width*.25f,height*.52f); lineTo(width*.43f,height*.69f); lineTo(width*.76f,height*.32f) }
         canvas.drawPath(path,p)
     }
