@@ -220,8 +220,8 @@ class UpdatesActivity : AppCompatActivity() {
         })
 
         setContentView(scroll)
-        animatePageEntrance(scroll)
-        if (motionEnabled(this)) {
+        if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(scroll)
+        if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
             val expressiveCards = listOf(statusCard, notesCard)
             expressiveCards.forEachIndexed { index, card ->
                 card.alpha = 0f
