@@ -95,7 +95,6 @@ class SettingsHubActivity : AppCompatActivity() {
         eyebrow.letterSpacing = 0.16f
         val heading = addText(root, "Settings", 38f, R.color.fg, 6, 4)
         heading.letterSpacing = -0.02f
-        heading.typeface = ResourcesCompat.getFont(this, R.font.poppins_extrabold)
         heading.setLineSpacing(0f, 1.1f)
         addText(root, "Make Drishyam feel like yours.", 14f, R.color.mute, 0, 6)
 
@@ -302,7 +301,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            // Keep the copy clear of the portrait, matching the prototype's 58% text column.
+            // Keep the heading clear of the portrait; the copy column is constrained to 48% of screen width.
         }
         copy.addView(TextView(this).apply {
             text = "OUR STORY"
