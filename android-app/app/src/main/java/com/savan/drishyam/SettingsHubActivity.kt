@@ -144,15 +144,15 @@ class SettingsHubActivity : AppCompatActivity() {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
         row1.addView(tile("browsing", "Browsing", "Hot · India on") {
-            Toast.makeText(this@SettingsHubActivity, "Browsing page: next prototype step", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "preferences"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row1, LinearLayout.LayoutParams(-1, -2))
         val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         row2.addView(tile("storage", "Storage", "0.0 MB cached") {
-            Toast.makeText(this@SettingsHubActivity, "Storage page: next prototype step", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "storage"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
         row2.addView(tile("about", "About", "Version ${BuildConfig.VERSION_NAME}") {
-            Toast.makeText(this@SettingsHubActivity, "About page: next prototype step", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "about"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row2, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 12.dp() })
         root.addView(tiles)
