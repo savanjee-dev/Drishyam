@@ -341,9 +341,16 @@ class SettingsHubActivity : AppCompatActivity() {
                 intArrayOf(0x80D0C79A.toInt(), 0x40D0C79A, 0x00D0C79A)
             ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
             alpha = 0.75f
-            animate().alpha(1f).scaleX(1.08f).scaleY(1.08f).setDuration(1400).withEndAction {
-                animate().alpha(0.35f).scaleX(0.94f).scaleY(0.94f).setDuration(1400).start()
-            }.start()
+            post {
+                fun pulseHalo() {
+                    animate().alpha(1f).scaleX(1.08f).scaleY(1.08f).setDuration(1400).withEndAction {
+                        animate().alpha(0.35f).scaleX(0.94f).scaleY(0.94f).setDuration(1400).withEndAction {
+                            if (isAttachedToWindow) pulseHalo()
+                        }.start()
+                    }.start()
+                }
+                pulseHalo()
+            }
         }
         body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
             Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-12).dp() })
@@ -412,17 +419,27 @@ class SettingsHubActivity : AppCompatActivity() {
         body.bringChildToFront(copy)
         body.bringChildToFront(portrait)
         body.bringChildToFront(sparkles)
-        sparkles.animate().alpha(0.35f).setDuration(1300).withEndAction {
-            sparkles.animate().alpha(1f).setDuration(1300).start()
-        }.start()
+        fun twinkleSparkles() {
+            sparkles.animate().alpha(0.35f).setDuration(1300).withEndAction {
+                sparkles.animate().alpha(1f).setDuration(1300).withEndAction {
+                    if (sparkles.isAttachedToWindow) twinkleSparkles()
+                }.start()
+            }.start()
+        }
+        sparkles.post { twinkleSparkles() }
 
         // Subtle entrance and portrait motion; animations remain lightweight and stop with the view.
         body.alpha = 0f
         body.translationY = 8.dp().toFloat()
         body.animate().alpha(1f).translationY(0f).setDuration(240).start()
-        portrait.animate().translationY(-4.dp().toFloat()).setDuration(1700).withEndAction {
-            portrait.animate().translationY(0f).setDuration(1700).start()
-        }.start()
+        fun floatPortrait() {
+            portrait.animate().translationY(-4.dp().toFloat()).setDuration(1700).withEndAction {
+                portrait.animate().translationY(0f).setDuration(1700).withEndAction {
+                    if (portrait.isAttachedToWindow) floatPortrait()
+                }.start()
+            }.start()
+        }
+        portrait.post { floatPortrait() }
 
         card.addView(body)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
