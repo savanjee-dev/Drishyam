@@ -151,6 +151,20 @@ jobs:
           "$ZIPALIGN" -c -v 4 "$APK"
           echo "APK package, version metadata, and ZIP alignment verified."
 
+      - name: Download the latest published APK as an upgrade baseline
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/drishyam-upgrade"
+          curl --fail --location --retry 3 \
+            https://github.com/savanjee-dev/Drishyam/releases/download/v2.7.16/Drishyam-2.7.16.apk \
+            --output "$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk"
+          test -s "$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)"
+          BADGING="$("$AAPT" dump badging "$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk")"
+          grep -F "package: name='com.savan.drishyam' versionCode='44' versionName='2.7.16'" <<< "$BADGING"
+
       # Pushes are fast development candidates: compile + signing/package/alignment
       # checks still run, but emulator boot/install is reserved for manual RC builds.
       - name: Install APK on Android emulator (release-candidate smoke test)
@@ -162,7 +176,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            set -eu; APK="$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/release/app-release.apk"; test -s "$APK" || { echo "APK not found or empty: $APK"; find "$GITHUB_WORKSPACE/android-app/app/build/outputs/apk" -type f -name '*.apk' -print; exit 1; }; adb wait-for-device; adb install "$APK"; adb shell am force-stop com.savan.drishyam; adb shell monkey -p com.savan.drishyam 1; sleep 5; adb shell dumpsys activity activities | grep -F 'com.savan.drishyam'; adb uninstall com.savan.drishyam
+            set -eu; APK="$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/release/app-release.apk"; BASELINE="$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk"; test -s "$APK"; test -s "$BASELINE"; adb wait-for-device; adb install "$BASELINE"; adb shell pm path com.savan.drishyam; adb install -r "$APK"; adb shell am force-stop com.savan.drishyam; adb shell monkey -p com.savan.drishyam 1; sleep 5; adb shell dumpsys activity activities | grep -F 'com.savan.drishyam'; adb uninstall com.savan.drishyam
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
