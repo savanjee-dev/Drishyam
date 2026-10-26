@@ -239,6 +239,55 @@ class UpdatesActivity : AppCompatActivity() {
         notesCard.addView(notes)
         root.addView(notesCard)
 
+        val updatePrefs = getSharedPreferences("drishyam_update_state", MODE_PRIVATE)
+        val preferencesCard = MaterialCardView(this).apply {
+            radius = 24.dp().toFloat()
+            cardElevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = themeColor(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
+            setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainer, R.color.glassFill))
+            setContentPadding(18.dp(), 12.dp(), 18.dp(), 12.dp())
+        }
+        val preferencesBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        preferencesBody.addView(TextView(this).apply {
+            text = "Update preferences"
+            textSize = 18f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            setTextColor(onSurface)
+            setPadding(0, 4.dp(), 0, 8.dp())
+        })
+        fun addUpdateToggle(title: String, description: String, key: String, defaultValue: Boolean) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, 8.dp(), 0, 8.dp())
+            }
+            val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            copy.addView(TextView(this).apply {
+                text = title
+                textSize = 14f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+                setTextColor(onSurface)
+            })
+            copy.addView(TextView(this).apply {
+                text = description
+                textSize = 12f
+                setPadding(0, 3.dp(), 8.dp(), 0)
+                setTextColor(onSurfaceVariant)
+            })
+            row.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(com.google.android.material.materialswitch.MaterialSwitch(this).apply {
+                isChecked = updatePrefs.getBoolean(key, defaultValue)
+                contentDescription = title
+                setOnCheckedChangeListener { _, enabled -> updatePrefs.edit().putBoolean(key, enabled).apply() }
+            })
+            preferencesBody.addView(row)
+        }
+        addUpdateToggle("Check automatically", "Check on launch at most once every 24 hours.", "auto_check_updates", true)
+        addUpdateToggle("Wi-Fi only", "Require Wi-Fi before downloading an APK.", "wifi_only_downloads", false)
+        preferencesCard.addView(preferencesBody)
+        root.addView(preferencesCard, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 14.dp() })
+
         downloadProgress = WavyProgressView(this).apply {
             progress = 0
             visibility = View.GONE
@@ -398,6 +447,15 @@ class UpdatesActivity : AppCompatActivity() {
         val release = verifiedApk ?: run {
             Toast.makeText(this, "No verified APK download is available yet. Check for updates again.", Toast.LENGTH_LONG).show()
             return
+        }
+        if (getSharedPreferences("drishyam_update_state", MODE_PRIVATE).getBoolean("wifi_only_downloads", false)) {
+            val connectivity = getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val network = connectivity.activeNetwork
+            val capabilities = network?.let { connectivity.getNetworkCapabilities(it) }
+            if (capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) != true) {
+                Toast.makeText(this, "Wi-Fi only is enabled. Connect to Wi-Fi to download this update.", Toast.LENGTH_LONG).show()
+                return
+            }
         }
         downloadButton.isEnabled = false
         downloadButton.text = "Verifying download…"
