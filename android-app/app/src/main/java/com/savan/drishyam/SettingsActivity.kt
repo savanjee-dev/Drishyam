@@ -110,7 +110,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // Prototype v9 theme cards replace the older text-only segmented row.
         val themeContainer = findViewById<LinearLayout>(R.id.cardTheme)
-        themeContainer.getChildAt(3)?.visibility = View.GONE
+        themeContainer.getChildAt(2)?.visibility = View.GONE
         val themeCards = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
