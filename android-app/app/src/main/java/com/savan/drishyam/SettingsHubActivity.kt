@@ -95,7 +95,7 @@ class SettingsHubActivity : AppCompatActivity() {
         eyebrow.letterSpacing = 0.16f
         val heading = addText(root, "Settings", 38f, R.color.fg, 6, 4)
         heading.letterSpacing = -0.02f
-        heading.typeface = ResourcesCompat.getFont(this, R.font.poppins_bold)
+        heading.typeface = ResourcesCompat.getFont(this, R.font.poppins_extrabold)
         heading.setLineSpacing(0f, 1.1f)
         addText(root, "Make Drishyam feel like yours.", 14f, R.color.mute, 0, 6)
 
