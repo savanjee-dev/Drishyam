@@ -42,8 +42,11 @@ fun glassLevel(c: Context): String {
 fun lowFx(c: Context): Boolean = glassLevel(c) == "off"
 
 /** Single motion gate shared by page and component transitions. */
-fun motionEnabled(c: Context): Boolean =
-    !lowFx(c) && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
+fun motionEnabled(c: Context): Boolean {
+    val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+    return !lowFx(c) && !p.getBoolean("motion_reduced", false) &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
+}
 
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
