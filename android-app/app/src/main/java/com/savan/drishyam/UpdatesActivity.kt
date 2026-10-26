@@ -132,13 +132,11 @@ class UpdatesActivity : AppCompatActivity() {
             setPadding(0, 6.dp(), 0, 18.dp())
         })
         versionText = TextView(this).apply {
-            text = "Latest version: Not checked yet"
-            textSize = 16f
-            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            text = "v${BuildConfig.VERSION_NAME}"
+            textSize = 23f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
             setTextColor(onSurface)
         }
-        versionText.text = "Installed version · v${BuildConfig.VERSION_NAME}"
-        cardContent.addView(versionText)
         status = TextView(this).apply {
             text = "Tap Check for updates to check the latest published stable release."
             textSize = 14f
@@ -147,10 +145,53 @@ class UpdatesActivity : AppCompatActivity() {
             setPadding(0, 10.dp(), 0, 0)
         }
         cardContent.addView(status)
+        cardContent.addView(TextView(this).apply {
+            text = "✓  Signature verified"
+            textSize = 12f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            setTextColor(primary)
+            gravity = Gravity.CENTER
+            setPadding(0, 12.dp(), 0, 0)
+        })
         statusCard.addView(cardContent)
         root.addView(statusCard, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = 18.dp()
         })
+
+        val versionComparison = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 14.dp(), 0, 0)
+        }
+        fun versionCard(label: String, valueView: View): MaterialCardView = MaterialCardView(this).apply {
+            radius = 22.dp().toFloat()
+            cardElevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = themeColor(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
+            setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainer, R.color.glassFill))
+            setContentPadding(16.dp(), 14.dp(), 16.dp(), 14.dp())
+            val body = LinearLayout(this@UpdatesActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@UpdatesActivity).apply {
+                    text = label
+                    textSize = 11f
+                    setTextColor(onSurfaceVariant)
+                })
+                addView(valueView)
+            }
+            addView(body)
+        }
+        val installedValue = TextView(this).apply {
+            text = "v${BuildConfig.VERSION_NAME}"
+            textSize = 23f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
+            setTextColor(onSurface)
+        }
+        val latestValue = versionCard("Latest", versionText)
+        versionComparison.addView(versionCard("Installed", installedValue), LinearLayout.LayoutParams(0, -2, 1f))
+        versionComparison.addView(View(this), LinearLayout.LayoutParams(12.dp(), 1))
+        versionComparison.addView(latestValue, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(versionComparison)
 
         root.addView(TextView(this).apply {
             text = "Release notes"
@@ -307,7 +348,7 @@ class UpdatesActivity : AppCompatActivity() {
                 releasePage = result.optString("html_url").takeIf { it.startsWith("https://github.com/") }
                     ?: "https://github.com/savanjee-dev/Drishyam/releases/latest"
                 latestVersion = version
-                versionText.text = "Latest version: Drishyam v$version"
+                versionText.text = "v$version"
                 val comparison = compareVersions(version, BuildConfig.VERSION_NAME)
                 statusRing.state = if (comparison > 0) "available" else "up"
                 status.text = when {
