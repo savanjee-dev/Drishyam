@@ -256,20 +256,37 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun addOurStory(root: LinearLayout) {
+        val storyGradientStart = intArrayOf(
+            android.graphics.Color.rgb(31, 42, 22),
+            android.graphics.Color.rgb(65, 77, 45),
+            android.graphics.Color.rgb(137, 148, 90),
+            android.graphics.Color.rgb(208, 199, 154)
+        )
+        val storyGradientEnd = intArrayOf(
+            android.graphics.Color.rgb(38, 49, 27),
+            android.graphics.Color.rgb(76, 88, 51),
+            android.graphics.Color.rgb(151, 159, 101),
+            android.graphics.Color.rgb(218, 208, 166)
+        )
+        fun blendColor(from: Int, to: Int, fraction: Float): Int {
+            val inverse = 1f - fraction
+            return android.graphics.Color.argb(
+                (android.graphics.Color.alpha(from) * inverse + android.graphics.Color.alpha(to) * fraction).toInt(),
+                (android.graphics.Color.red(from) * inverse + android.graphics.Color.red(to) * fraction).toInt(),
+                (android.graphics.Color.green(from) * inverse + android.graphics.Color.green(to) * fraction).toInt(),
+                (android.graphics.Color.blue(from) * inverse + android.graphics.Color.blue(to) * fraction).toInt()
+            )
+        }
+        val storyBackground = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            storyGradientStart
+        ).apply { cornerRadius = 34.dp().toFloat() }
         val card = MaterialCardView(this).apply {
             radius = 34.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 0
             minimumHeight = 214.dp()
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    android.graphics.Color.rgb(31, 42, 22),
-                    android.graphics.Color.rgb(65, 77, 45),
-                    android.graphics.Color.rgb(137, 148, 90),
-                    android.graphics.Color.rgb(208, 199, 154)
-                )
-            ).apply { cornerRadius = 34.dp().toFloat() }
+            background = storyBackground
             setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
             isClickable = true
             isFocusable = true
@@ -278,6 +295,28 @@ class SettingsHubActivity : AppCompatActivity() {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
         }
+        // Smoothly shift all four gradient stops on a 9-second ping-pong loop.
+        // This animates the actual card gradient, not just a separate overlay.
+        val gradientAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 9000L
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.REVERSE
+            addUpdateListener { animator ->
+                val fraction = animator.animatedValue as Float
+                storyBackground.colors = IntArray(storyGradientStart.size) { index ->
+                    blendColor(storyGradientStart[index], storyGradientEnd[index], fraction)
+                }
+                card.invalidate()
+            }
+        }
+        card.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                if (!gradientAnimator.isStarted) gradientAnimator.start()
+            }
+            override fun onViewDetachedFromWindow(v: View) {
+                gradientAnimator.cancel()
+            }
+        })
         val body = android.widget.FrameLayout(this).apply {
             setPadding(24.dp(), 24.dp(), 24.dp(), 24.dp())
         }
@@ -403,10 +442,25 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         body.addView(sheen, android.widget.FrameLayout.LayoutParams(42.dp(), 360.dp(),
             Gravity.TOP or Gravity.START).apply { leftMargin = (-70).dp() })
-        sheen.animate().translationX(420.dp().toFloat()).setDuration(3800).withEndAction {
-            sheen.translationX = 0f
-            sheen.animate().translationX(420.dp().toFloat()).setDuration(3800).start()
-        }.start()
+        sheen.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                sheen.translationX = (-70).dp().toFloat()
+                sheen.animate().translationX(420.dp().toFloat())
+                    .setDuration(3800)
+                    .withEndAction {
+                        if (sheen.isAttachedToWindow) {
+                            sheen.translationX = (-70).dp().toFloat()
+                            sheen.animate().translationX(420.dp().toFloat())
+                                .setDuration(3800)
+                                .withEndAction { if (sheen.isAttachedToWindow) sheen.animate().start() }
+                                .start()
+                        }
+                    }.start()
+            }
+            override fun onViewDetachedFromWindow(v: View) {
+                sheen.animate().cancel()
+            }
+        })
         val sparkles = TextView(this).apply {
             text = "✦  ·"
             textSize = 16f
