@@ -79,24 +79,20 @@ class SettingsHubActivity : AppCompatActivity() {
         setContentView(page)
         installScrollBounce(scroll)
 
-        val back = TextView(this).apply {
-            text = "‹"
-            textSize = 30f
-            gravity = Gravity.CENTER
-            setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.fg))
+        val back = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.OVAL
                 setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.glassFill))
                 setStroke(1.dp(), ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke))
             }
-            setPadding(0, 0, 0, 4.dp())
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
             layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isClickable = true
             isFocusable = true
+            contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true, lowFx = lowFxEnabled, reduced = reducedMotionEnabled)
             setOnClickListener { finish() }
-            contentDescription = getString(R.string.back_desc)
+            addView(BackArrowView(this@SettingsHubActivity, ContextCompat.getColor(this@SettingsHubActivity, R.color.fg)),
+                android.widget.FrameLayout.LayoutParams(22.dp(), 22.dp(), Gravity.CENTER))
         }
         root.addView(back)
 
@@ -515,6 +511,28 @@ class SettingsHubActivity : AppCompatActivity() {
 
         card.addView(body, android.widget.FrameLayout.LayoutParams(-1, -2))
         root.addView(card, LinearLayout.LayoutParams(-1, -2))
+    }
+
+    private class BackArrowView(context: android.content.Context, private val tint: Int) : View(context) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = tint
+            style = Paint.Style.STROKE
+            strokeWidth = 2.2f * resources.displayMetrics.density
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val path = Path().apply {
+                moveTo(width * 0.78f, height * 0.5f)
+                lineTo(width * 0.22f, height * 0.5f)
+                moveTo(width * 0.22f, height * 0.5f)
+                lineTo(width * 0.48f, height * 0.24f)
+                moveTo(width * 0.22f, height * 0.5f)
+                lineTo(width * 0.48f, height * 0.76f)
+            }
+            canvas.drawPath(path, paint)
+        }
     }
 
     private class PrototypeIconView(context: android.content.Context, private val kind: String, private val tint: Int) : ImageView(context) {
