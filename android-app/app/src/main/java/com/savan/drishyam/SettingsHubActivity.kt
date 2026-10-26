@@ -29,7 +29,7 @@ import com.google.android.material.card.MaterialCardView
 class SettingsHubActivity : AppCompatActivity() {
     private var storageValueView: TextView? = null
     private var lowFxEnabled: Boolean = false
-    private var reducedMotionEnabledEnabled: Boolean = false
+    private var reducedMotionEnabled: Boolean = false
 
     override fun onResume() {
         super.onResume()
@@ -68,7 +68,7 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
         }
         val ambient = android.widget.FrameLayout(this)
-        reducedMotionEnabledEnabled = !motionEnabled(this)
+        reducedMotionEnabled = !motionEnabled(this)
         lowFxEnabled = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
         addAmbientGlows(ambient, this, animate = !reducedMotionEnabled, lowFx = lowFxEnabled)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
