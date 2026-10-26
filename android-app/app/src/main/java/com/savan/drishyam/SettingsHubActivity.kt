@@ -434,10 +434,11 @@ class SettingsHubActivity : AppCompatActivity() {
             duration = 3800L
             repeatCount = android.animation.ValueAnimator.INFINITE
             repeatMode = android.animation.ValueAnimator.RESTART
+            interpolator = S1Fx.easeInOut
         }
         sheen.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                if (!sheenAnimator.isStarted) sheenAnimator.start()
+                if (motionEnabled(this@SettingsHubActivity) && !lowFxEnabled && !sheenAnimator.isStarted) sheenAnimator.start()
             }
             override fun onViewDetachedFromWindow(v: View) {
                 sheenAnimator.cancel()
@@ -455,27 +456,17 @@ class SettingsHubActivity : AppCompatActivity() {
         body.bringChildToFront(copy)
         body.bringChildToFront(portrait)
         body.bringChildToFront(sparkles)
-        fun twinkleSparkles() {
-            sparkles.animate().alpha(0.35f).setDuration(1300).withEndAction {
-                sparkles.animate().alpha(1f).setDuration(1300).withEndAction {
-                    if (sparkles.isAttachedToWindow) twinkleSparkles()
-                }.start()
-            }.start()
+        if (motionEnabled(this) && !lowFxEnabled) {
+            sparkles.post { startTwinkle(sparkles, 0L) }
+            spark2.post { startTwinkle(spark2, 1200L) }
+            storyButton.post { startNudge(storyButton, resources.displayMetrics.density) }
         }
-        sparkles.post { twinkleSparkles() }
 
         // Subtle entrance and portrait motion; animations remain lightweight and stop with the view.
         body.alpha = 0f
         body.translationY = 8.dp().toFloat()
         body.animate().alpha(1f).translationY(0f).setDuration(240).start()
-        fun floatPortrait() {
-            portrait.animate().translationY(-4.dp().toFloat()).setDuration(1700).withEndAction {
-                portrait.animate().translationY(0f).setDuration(1700).withEndAction {
-                    if (portrait.isAttachedToWindow) floatPortrait()
-                }.start()
-            }.start()
-        }
-        portrait.post { floatPortrait() }
+        if (motionEnabled(this) && !lowFxEnabled) startBob(portrait, resources.displayMetrics.density)
 
         card.addView(body)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
