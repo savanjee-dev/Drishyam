@@ -197,3 +197,5 @@ jobs:
           path: ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk.sha256
           if-no-files-found: error
           retention-days: 30
+
+# Candidate build re-triggered for S1 verification.
