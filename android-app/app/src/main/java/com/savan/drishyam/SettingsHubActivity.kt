@@ -291,7 +291,7 @@ class SettingsHubActivity : AppCompatActivity() {
             radius = 34.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 0
-            minimumHeight = 250.dp()
+            minimumHeight = 214.dp()
             setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
             background = storyBackground
             isClickable = true
@@ -324,14 +324,14 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         })
         val body = android.widget.FrameLayout(this).apply {
-            setPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
+            setPadding(24.dp(), 24.dp(), 24.dp(), 24.dp())
             clipChildren = false
             clipToPadding = false
         }
         val cardWidthPx = (resources.displayMetrics.widthPixels - 40.dp()).coerceAtLeast(280.dp())
         val innerWidthPx = cardWidthPx - 44.dp()
         // Reserve a compact portrait column while giving the headline enough width to avoid excessive wrapping.
-        val copyWidthPx = minOf((innerWidthPx * 0.60f).toInt(), innerWidthPx - 126.dp()).coerceAtLeast(150.dp())
+        val copyWidthPx = (innerWidthPx * 0.58f).toInt().coerceAtLeast(150.dp())
         val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         copy.addView(TextView(this).apply {
             text = "OUR STORY"
@@ -347,18 +347,18 @@ class SettingsHubActivity : AppCompatActivity() {
         })
         copy.addView(TextView(this).apply {
             text = "The people & ideas behind Drishyam"
-            textSize = 20f
+            textSize = 24f
             maxLines = 3
             includeFontPadding = false
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_extrabold)
             setTextColor(android.graphics.Color.WHITE)
-            setPadding(0, 10.dp(), 0, 6.dp())
+            setPadding(0, 14.dp(), 0, 8.dp())
             setLineSpacing(0f, 1.15f)
             maxWidth = copyWidthPx
         })
         copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
-            textSize = 12f
+            textSize = 13f
             maxLines = 3
             setTextColor(0xE6FFFFFF.toInt())
             maxWidth = copyWidthPx
@@ -373,7 +373,7 @@ class SettingsHubActivity : AppCompatActivity() {
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(0xFF26301C.toInt())
             gravity = Gravity.CENTER
-            setPadding(14.dp(), 10.dp(), 14.dp(), 10.dp())
+            setPadding(18.dp(), 12.dp(), 18.dp(), 12.dp())
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                 cornerRadius = 999.dp().toFloat()
@@ -406,8 +406,8 @@ class SettingsHubActivity : AppCompatActivity() {
                 }
             }
         }
-        body.addView(halo, android.widget.FrameLayout.LayoutParams(136.dp(), 136.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-46).dp(); bottomMargin = 2.dp() })
+        body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-22).dp(); bottomMargin = (-30).dp() })
 
         val portrait = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -427,7 +427,7 @@ class SettingsHubActivity : AppCompatActivity() {
             }
             clipToOutline = true
         }
-        portrait.addView(photo, android.widget.FrameLayout.LayoutParams(108.dp(), 108.dp(), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        portrait.addView(photo, android.widget.FrameLayout.LayoutParams(132.dp(), 132.dp(), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
         val photoTag = TextView(this).apply {
             text = "LEAD DEVELOPER"
             textSize = 8.5f
@@ -442,9 +442,9 @@ class SettingsHubActivity : AppCompatActivity() {
             elevation = 4.dp().toFloat()
         }
         portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (-4).dp() })
-        body.addView(portrait, android.widget.FrameLayout.LayoutParams(116.dp(), 128.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = 0; bottomMargin = 0 })
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = 14.dp() })
+        body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 148.dp(),
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-16).dp() })
         // A diagonal sheen and two restrained sparkle marks complete the story-card treatment.
         val sheen = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
@@ -458,7 +458,7 @@ class SettingsHubActivity : AppCompatActivity() {
         body.addView(sheen, android.widget.FrameLayout.LayoutParams(1, 1,
             Gravity.TOP or Gravity.START).apply { leftMargin = (-24).dp(); topMargin = (-24).dp() })
         val sheenAnimator = android.animation.ObjectAnimator.ofFloat(sheen, View.TRANSLATION_X, 0f, 1f).apply {
-            duration = 3800L
+            duration = 4200L
             repeatCount = android.animation.ValueAnimator.INFINITE
             repeatMode = android.animation.ValueAnimator.RESTART
             interpolator = S1Fx.easeInOut
