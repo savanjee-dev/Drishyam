@@ -157,7 +157,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val more = addText(root, "MORE", 11f, R.color.accent, 28, 12)
         more.letterSpacing = 0.14f
         addOurStory(root)
-        addText(root, "Made with curiosity.\\nBuilt for photography.", 18f, R.color.fg, 26, 0).apply {
+        addText(root, "Made with curiosity.\nBuilt for photography.", 18f, R.color.fg, 26, 0).apply {
             gravity = Gravity.CENTER
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.pacifico_regular)
             setLineSpacing(2.dp().toFloat(), 1f)
