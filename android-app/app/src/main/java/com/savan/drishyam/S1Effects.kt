@@ -98,11 +98,21 @@ fun View.attachPress(glowable: Boolean, lowFx: Boolean, reduced: Boolean) {
 }
 
 fun springBack(v: View) {
-    // Controlled, decelerating release: no spring overshoot in the S1 prototype.
-    ObjectAnimator.ofPropertyValuesHolder(v,
-        PropertyValuesHolder.ofFloat(View.SCALE_X, v.scaleX, 1f),
-        PropertyValuesHolder.ofFloat(View.SCALE_Y, v.scaleY, 1f)
-    ).apply { duration=200L; interpolator=S1Fx.outCurve; start() }
+    val x = PropertyValuesHolder.ofKeyframe(View.SCALE_X,
+        Keyframe.ofFloat(0f, v.scaleX.coerceAtLeast(0.92f)),
+        Keyframe.ofFloat(0.45f, 1.06f),
+        Keyframe.ofFloat(0.70f, 0.985f),
+        Keyframe.ofFloat(1f, 1f))
+    val y = PropertyValuesHolder.ofKeyframe(View.SCALE_Y,
+        Keyframe.ofFloat(0f, v.scaleY.coerceAtLeast(0.92f)),
+        Keyframe.ofFloat(0.45f, 1.06f),
+        Keyframe.ofFloat(0.70f, 0.985f),
+        Keyframe.ofFloat(1f, 1f))
+    ObjectAnimator.ofPropertyValuesHolder(v, x, y).apply {
+        duration = 600L
+        interpolator = android.view.animation.LinearInterpolator()
+        start()
+    }
 }
 
 class StoryFlowDrawable(private val density: Float) : android.graphics.drawable.Drawable() {
