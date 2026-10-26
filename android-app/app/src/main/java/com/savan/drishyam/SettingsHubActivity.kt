@@ -134,8 +134,8 @@ class SettingsHubActivity : AppCompatActivity() {
         val section = addText(root, "PERSONALISE", 11f, R.color.accent, 28, 12)
         section.typeface = ResourcesCompat.getFont(this, R.font.montserrat_semibold)
         section.letterSpacing = 0.14f
-        val tiles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        val tiles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false; clipToPadding = false }
+        val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; clipChildren = false; clipToPadding = false }
         row1.addView(tile("appearance", "Appearance", currentThemeLabel()) {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
@@ -143,7 +143,7 @@ class SettingsHubActivity : AppCompatActivity() {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "preferences"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row1, LinearLayout.LayoutParams(-1, -2))
-        val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER; clipChildren = false; clipToPadding = false }
         row2.addView(tile("storage", "Storage", "0.0 MB cached") {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "storage"))
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
@@ -177,7 +177,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private fun tile(iconName: String, title: String, value: String, action: () -> Unit): View {
         val card = MaterialCardView(this).apply {
-            radius = 30.dp().toFloat()
+            radius = 32.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
@@ -191,12 +191,12 @@ class SettingsHubActivity : AppCompatActivity() {
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.START
-            setPadding(18.dp(), 18.dp(), 18.dp(), 18.dp())
-            minimumHeight = 176.dp()
+            setPadding(30.dp(), 30.dp(), 30.dp(), 26.dp())
+            minimumHeight = 274.dp()
         }
         val iconTile = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 16.dp().toFloat()
+                cornerRadius = 24.dp().toFloat()
                 setColor(0x3889945A)
             }
             addView(PrototypeIconView(this@SettingsHubActivity, iconName, 0xFF89945A.toInt()),
@@ -208,31 +208,31 @@ class SettingsHubActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             when (title) {
                 "Appearance" -> {
-                    addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFF3F1E7.toInt(), 0xFF0A0D08.toInt())).apply { cornerRadius = 9.dp().toFloat(); setStroke(1.dp(), 0x6689945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
+                    addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFF3F1E7.toInt(), 0xFF0A0D08.toInt())).apply { cornerRadius = 9.dp().toFloat(); setStroke(1.dp(), 0x6689945A) } }, LinearLayout.LayoutParams(40.dp(), 40.dp()))
                 }
-                "Browsing" -> repeat(3) { i -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(if (i == 0) 0xFF89945A.toInt() else 0x3889945A) } }, LinearLayout.LayoutParams(34.dp(), 14.dp()).apply { rightMargin = if (i < 2) 6.dp() else 0 }) }
+                "Browsing" -> repeat(3) { i -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(if (i == 0) 0xFF89945A.toInt() else 0x3889945A) } }, LinearLayout.LayoutParams(52.dp(), 22.dp()).apply { rightMargin = if (i < 2) 6.dp() else 0 }) }
                 "Storage" -> {
                     val track = android.widget.FrameLayout(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(0x3889945A) } }
                     val fill = View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(0xFF89945A.toInt()) } }
                     track.addView(fill, android.widget.FrameLayout.LayoutParams(0, -1, Gravity.START))
                     track.post { fill.layoutParams = android.widget.FrameLayout.LayoutParams((track.width * 0.08f).toInt(), -1, Gravity.START) }
-                    addView(track, LinearLayout.LayoutParams(-1, 8.dp()))
+                    addView(track, LinearLayout.LayoutParams(-1, 14.dp()))
                 }
-                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
+                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(40.dp(), 40.dp()))
             }
         }
-        body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { topMargin = 12.dp() })
+        body.addView(preview, LinearLayout.LayoutParams(-1, 40.dp()).apply { topMargin = 10.dp() })
         body.addView(View(this), LinearLayout.LayoutParams(0, 0, 1f))
         body.addView(TextView(this).apply {
             text = title
-            textSize = 16f
+            textSize = 17f
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.fg))
             setPadding(0, 0, 0, 2.dp())
         })
         body.addView(TextView(this).apply {
             text = value
-            textSize = 12f
+            textSize = 14f
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute))
             maxLines = 1
             includeFontPadding = false
