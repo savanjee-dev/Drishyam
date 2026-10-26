@@ -149,7 +149,22 @@ class SettingsActivity : AppCompatActivity() {
 
         // Prototype v9 theme cards replace the older text-only segmented row.
         val themeContainer = findViewById<LinearLayout>(R.id.cardTheme)
+        themeContainer.getChildAt(1)?.visibility = View.GONE
         themeContainer.getChildAt(2)?.visibility = View.GONE
+        if (section == "appearance") {
+            themeContainer.setPadding(10.dp(), 10.dp(), 10.dp(), 10.dp())
+            themeContainer.background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.glassFill))
+                setStroke(1.dp(), androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.glassStroke))
+                cornerRadius = 24.dp().toFloat()
+            }
+            (themeContainer.getChildAt(0) as? TextView)?.apply {
+                textSize = 11f
+                letterSpacing = 0.14f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.montserrat_semibold)
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.accent))
+            }
+        }
         val themeCards = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
@@ -247,7 +262,7 @@ class SettingsActivity : AppCompatActivity() {
                 buttons.forEach { (label, button) ->
                     val active = label == value
                     button.background = androidx.core.content.ContextCompat.getDrawable(
-                        this@SettingsActivity, if (active) R.drawable.accent_pill else R.drawable.glass_clear
+                        this@SettingsActivity, if (active) R.drawable.accent_pill else android.R.drawable.screen_background_transparent
                     )
                     button.setTextColor(androidx.core.content.ContextCompat.getColor(
                         this@SettingsActivity, if (active) R.color.bg else R.color.mute
@@ -419,7 +434,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 }
 
-private fun s2Vibrate(durationMs: Long) {
+private fun Context.s2Vibrate(durationMs: Long) {
     val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
         (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager).defaultVibrator
     } else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator)
