@@ -133,15 +133,15 @@ class SettingsHubActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
         row1.addView(tile("browsing", "Browsing", "Hot · India on") {
             Toast.makeText(this@SettingsHubActivity, "Browsing page: next prototype step", Toast.LENGTH_SHORT).show()
-        }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
+        }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row1, LinearLayout.LayoutParams(-1, -2))
         val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         row2.addView(tile("storage", "Storage", "0.0 MB cached") {
             Toast.makeText(this@SettingsHubActivity, "Storage page: next prototype step", Toast.LENGTH_SHORT).show()
-        }, LinearLayout.LayoutParams(0, -1, 1f).apply { rightMargin = 6.dp() })
+        }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
         row2.addView(tile("about", "About", "Version 2.7.16") {
             Toast.makeText(this@SettingsHubActivity, "About page: next prototype step", Toast.LENGTH_SHORT).show()
-        }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
+        }, LinearLayout.LayoutParams(0, -2, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row2, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 12.dp() })
         root.addView(tiles)
 
@@ -210,6 +210,7 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
         body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { topMargin = 12.dp() })
+        body.addView(View(this), LinearLayout.LayoutParams(0, 0, 1f))
         body.addView(TextView(this).apply {
             text = title
             textSize = 16f
@@ -323,7 +324,7 @@ class SettingsHubActivity : AppCompatActivity() {
             textSize = 24f
             maxLines = 3
             includeFontPadding = false
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_extrabold)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 14.dp(), 0, 8.dp())
             maxWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density - 40f) * 0.58f * resources.displayMetrics.density).toInt()
