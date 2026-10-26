@@ -65,7 +65,15 @@ class SettingsActivity : AppCompatActivity() {
                 } ?: ViewGroup.MarginLayoutParams(-1, -2))
         }
 
-        findViewById<View>(R.id.settingsBack).apply { pressFx(); setOnClickListener { finish() } }
+        findViewById<View>(R.id.settingsBack).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.surface))
+                setStroke(1.dp(), 0xFFC9C9B4.toInt())
+            }
+            pressFx()
+            setOnClickListener { finish() }
+        }
 
         // The Settings hub opens focused subpages. Keep the existing controls and
         // their preference keys, but show only the requested category on each page.
@@ -75,11 +83,18 @@ class SettingsActivity : AppCompatActivity() {
         show(R.id.settingsHero, section == "all")
         if (section == "appearance") findViewById<View>(R.id.settingsHero).visibility = View.GONE
         if (section != "all") {
-            findViewById<TextView>(R.id.settingsHeading).text = when (section) {
-                "appearance" -> "Appearance"
-                "preferences" -> "Preferences"
-                "storage" -> "Storage & cache"
-                else -> "About Drishyam"
+            findViewById<TextView>(R.id.settingsHeading).apply {
+                text = when (section) {
+                    "appearance" -> "Appearance"
+                    "preferences" -> "Preferences"
+                    "storage" -> "Storage & cache"
+                    else -> "About Drishyam"
+                }
+                if (section == "appearance") {
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.ericaone)
+                    textSize = 34f
+                    setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.accent))
+                }
             }
             val appearance = section == "appearance"
             val preferences = section == "preferences"
