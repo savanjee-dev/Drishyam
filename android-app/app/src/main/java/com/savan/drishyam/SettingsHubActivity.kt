@@ -216,55 +216,118 @@ class SettingsHubActivity : AppCompatActivity() {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
         }
-        val body = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(24.dp(), 22.dp(), 20.dp(), 22.dp())
+        val body = android.widget.FrameLayout(this).apply {
+            setPadding(24.dp(), 22.dp(), 24.dp(), 22.dp())
         }
-        val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val copy = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            // Keep the copy clear of the portrait, matching the prototype's 58% text column.
+        }
         copy.addView(TextView(this).apply {
-            text = "OUR STORY"; textSize = 10f; letterSpacing = 0.14f
+            text = "OUR STORY"
+            textSize = 10f
+            letterSpacing = 0.16f
             setTextColor(0xCCFFFFFF.toInt())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 999.dp().toFloat()
+                setColor(0x33FFFFFF)
+            }
+            setPadding(11.dp(), 6.dp(), 11.dp(), 6.dp())
         })
         copy.addView(TextView(this).apply {
-            text = "The people & ideas behind Drishyam"; textSize = 24f
+            text = "The people & ideas\\nbehind Drishyam"
+            textSize = 22f
+            maxLines = 2
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
-            setPadding(0, 7.dp(), 0, 6.dp())
+            setPadding(0, 14.dp(), 0, 8.dp())
+            maxWidth = (resources.displayMetrics.widthPixels * 0.58f).toInt()
         })
         copy.addView(TextView(this).apply {
-            text = "Started by one curious photographer, one frame at a time."; textSize = 13f
+            text = "Started by one curious photographer, one frame at a time."
+            textSize = 13f
             setTextColor(0xE6FFFFFF.toInt())
+            maxWidth = (resources.displayMetrics.widthPixels * 0.55f).toInt()
         })
         val storyButton = TextView(this).apply {
             text = "Read the story  →"
             textSize = 12f
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(0xFF26301C.toInt())
             gravity = Gravity.CENTER
-            setPadding(14.dp(), 10.dp(), 14.dp(), 10.dp())
+            setPadding(18.dp(), 12.dp(), 18.dp(), 12.dp())
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = 22.dp().toFloat()
-                setColor(0x263FFFFF)
-                setStroke(1.dp(), 0x80FFFFFF.toInt())
+                cornerRadius = 999.dp().toFloat()
+                setColor(android.graphics.Color.WHITE)
             }
+            elevation = 8.dp().toFloat()
             layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 14.dp() }
         }
         copy.addView(storyButton)
-        body.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
+        body.addView(copy, android.widget.FrameLayout.LayoutParams(
+            (resources.displayMetrics.widthPixels * 0.58f).toInt(), -2, Gravity.TOP or Gravity.START
+        ))
+
+        // Soft radial-style halo behind the portrait; the supplied prototype photo will replace
+        // the existing portrait resource once the exact asset is available.
+        val halo = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0x80D0C79A.toInt(), 0x00D0C79A)
+            ).apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+            }
+            alpha = 0.8f
+        }
+        body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-12).dp() })
+
+        val portrait = android.widget.FrameLayout(this).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(0x33D0C79A)
+            }
+            clipChildren = false
+            clipToPadding = false
+        }
         val photo = ImageView(this).apply {
             setImageResource(R.drawable.savan)
             contentDescription = "Savan, lead developer"
             scaleType = ImageView.ScaleType.CENTER_CROP
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.surface))
-                setStroke(3.dp(), 0xA6FFFFFF.toInt())
+                setStroke(3.dp(), 0xB3FFFFFF.toInt())
             }
             clipToOutline = true
         }
-        body.addView(photo, LinearLayout.LayoutParams(132.dp(), 132.dp()).apply { leftMargin = 8.dp() })
+        portrait.addView(photo, android.widget.FrameLayout.LayoutParams(132.dp(), 132.dp(), Gravity.CENTER))
+        val photoTag = TextView(this).apply {
+            text = "LEAD DEVELOPER"
+            textSize = 8.5f
+            letterSpacing = 0.08f
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
+            setTextColor(0xFF1B2117.toInt())
+            setPadding(9.dp(), 4.dp(), 9.dp(), 4.dp())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = 999.dp().toFloat()
+                setColor(android.graphics.Color.WHITE)
+            }
+            elevation = 4.dp().toFloat()
+        }
+        portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = 8.dp() })
+        body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 140.dp(),
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-12).dp() })
+
+        // Subtle entrance and portrait motion; animations remain lightweight and stop with the view.
+        body.alpha = 0f
+        body.translationY = 8.dp().toFloat()
+        body.animate().alpha(1f).translationY(0f).setDuration(240).start()
+        portrait.animate().translationY(-4.dp().toFloat()).setDuration(1700).withEndAction {
+            portrait.animate().translationY(0f).setDuration(1700).start()
+        }.start()
+
         card.addView(body)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
     }
