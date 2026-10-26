@@ -146,7 +146,7 @@ class UpdatesActivity : AppCompatActivity() {
         }
         cardContent.addView(status)
         cardContent.addView(TextView(this).apply {
-            text = "✓  Signature verified"
+            text = "APK signature checked before install"
             textSize = 12f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
             setTextColor(primary)
