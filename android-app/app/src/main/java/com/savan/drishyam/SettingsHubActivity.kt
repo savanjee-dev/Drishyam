@@ -121,7 +121,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private fun tile(glyph: String, title: String, value: String, emphasize: Boolean, action: () -> Unit): View {
         val card = MaterialCardView(this).apply {
-            radius = 26.dp().toFloat()
+            radius = 30.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
@@ -217,7 +217,7 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
         val body = android.widget.FrameLayout(this).apply {
-            setPadding(24.dp(), 22.dp(), 24.dp(), 22.dp())
+            setPadding(24.dp(), 24.dp(), 24.dp(), 24.dp())
         }
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -235,8 +235,8 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(11.dp(), 6.dp(), 11.dp(), 6.dp())
         })
         copy.addView(TextView(this).apply {
-            text = "The people & ideas\\nbehind Drishyam"
-            textSize = 22f
+            text = "The people & ideas\nbehind Drishyam"
+            textSize = 24f
             maxLines = 2
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
@@ -250,8 +250,8 @@ class SettingsHubActivity : AppCompatActivity() {
             maxWidth = (resources.displayMetrics.widthPixels * 0.55f).toInt()
         })
         val storyButton = TextView(this).apply {
-            text = "Read the story  →"
-            textSize = 12f
+            text = "Read the story →"
+            textSize = 13f
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
             setTextColor(0xFF26301C.toInt())
             gravity = Gravity.CENTER
