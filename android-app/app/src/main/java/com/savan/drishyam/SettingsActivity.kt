@@ -19,8 +19,10 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         installScrollBounce(findViewById(R.id.settingsScroll))
-        if (!getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(findViewById(android.R.id.content))
-        if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) {
+        val startupPrefs = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+        val reducedMotionAtOpen = startupPrefs.getBoolean("motion_reduced", false) || startupPrefs.getString("motion", "standard") == "reduced"
+        if (!reducedMotionAtOpen) animatePageEntrance(findViewById(android.R.id.content))
+        if (motionEnabled(this) && !reducedMotionAtOpen) {
             val motionTargets = listOf(
                 R.id.sectionAppearance, R.id.cardTheme, R.id.sectionEffects, R.id.cardHaptics,
                 R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.sectionAbout,
@@ -72,22 +74,59 @@ class SettingsActivity : AppCompatActivity() {
         val section = intent.getStringExtra("section") ?: "all"
         fun show(viewId: Int, visible: Boolean) { findViewById<View>(viewId).visibility = if (visible) View.VISIBLE else View.GONE }
         if (section != "all") {
-            findViewById<TextView>(R.id.settingsHeading).text = when (section) {
+            val appearance = section == "appearance"
+            val preferences = section == "preferences"
+            val storage = section == "storage"
+            val about = section == "about"
+            val heading = findViewById<TextView>(R.id.settingsHeading)
+            heading.text = when (section) {
                 "appearance" -> "Appearance"
                 "preferences" -> "Preferences"
                 "storage" -> "Storage & cache"
                 else -> "About Drishyam"
             }
-            val appearance = section == "appearance"
-            val preferences = section == "preferences"
-            val storage = section == "storage"
-            val about = section == "about"
+            show(R.id.settingsHero, !appearance)
             show(R.id.sectionAppearance, appearance); show(R.id.cardTheme, appearance)
             show(R.id.sectionEffects, appearance); show(R.id.cardHaptics, appearance); show(R.id.cardLowFx, appearance)
             show(R.id.sectionFeed, preferences); show(R.id.cardSort, preferences)
             show(R.id.sectionAbout, storage || about)
             show(R.id.rowClear, storage); show(R.id.rowWhatsNew, about); show(R.id.rowCredits, about); updateRow.visibility = if (about) View.VISIBLE else View.GONE
             show(R.id.settingsVersion, about)
+            if (appearance) {
+                val pageRoot = findViewById<android.widget.ScrollView>(R.id.settingsScroll).getChildAt(0) as LinearLayout
+                pageRoot.setPadding(20.dp(), 18.dp(), 20.dp(), 150.dp())
+                val topbar = findViewById<View>(R.id.settingsBack).parent as ViewGroup
+                heading.visibility = View.GONE
+                val intro = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(4.dp(), 22.dp(), 4.dp(), 6.dp())
+                }
+                intro.addView(TextView(this).apply {
+                    text = "SETTINGS"; textSize = 11f; letterSpacing = 0.16f
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.montserrat_semibold)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.accent))
+                })
+                intro.addView(TextView(this).apply {
+                    text = "Appearance"; textSize = 38f; letterSpacing = -0.02f
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.poppins_extrabold)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.fg))
+                    setPadding(0, 6.dp(), 0, 4.dp())
+                    includeFontPadding = false
+                })
+                intro.addView(TextView(this).apply {
+                    text = "Theme, haptics and visual effects."; textSize = 14f
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.poppins_regular)
+                    setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.mute))
+                    setPadding(0, 0, 0, 6.dp())
+                })
+                pageRoot.addView(intro, pageRoot.indexOfChild(findViewById(R.id.settingsHero)))
+                // The prototype uses a standalone header stack under the circular back control.
+                (findViewById<View>(R.id.settingsBack) as? android.widget.ImageView)?.apply {
+                    background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.glass_pill)
+                    scaleType = android.widget.ImageView.ScaleType.CENTER
+                }
+                topbar.setPadding(0, 0, 0, 0)
+            }
         }
 
         // Theme pills
@@ -161,80 +200,150 @@ class SettingsActivity : AppCompatActivity() {
         themeContainer.addView(themeCards)
         refreshThemeCards()
 
-        // Prototype v9 effects controls: glass level, haptics test, and motion mode.
+        // Phase S2: build the prototype's single Effects card with Glass effects, Haptics and Motion.
         val effectsParent = findViewById<View>(R.id.cardLowFx).parent as ViewGroup
+        val oldHapticsCard = findViewById<LinearLayout>(R.id.cardHaptics)
+        val oldLowFxCard = findViewById<View>(R.id.cardLowFx)
+        val hapticsSwitch = findViewById<MaterialSwitch>(R.id.swHaptics)
+        (hapticsSwitch.parent as? ViewGroup)?.removeView(hapticsSwitch)
+        oldHapticsCard.visibility = View.GONE
+        oldLowFxCard.visibility = View.GONE
+
+        fun s2Text(value: String, size: Float, muted: Boolean = false, font: Int? = null) = TextView(this).apply {
+            text = value
+            textSize = size
+            includeFontPadding = false
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(
+                this@SettingsActivity,
+                font ?: if (size >= 14f) R.font.poppins_semibold else R.font.poppins_regular
+            )
+            setTextColor(androidx.core.content.ContextCompat.getColor(
+                this@SettingsActivity, if (muted) R.color.mute else R.color.fg
+            ))
+        }
+        fun addS2Divider(parent: LinearLayout) {
+            parent.addView(View(this).apply {
+                setBackgroundColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.glassStroke))
+            }, LinearLayout.LayoutParams(-1, 1.dp()))
+        }
+        fun s2Segment(title: String, description: String, options: List<String>, selected: String, onPick: (String) -> Unit): LinearLayout {
+            val block = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, 12.dp(), 0, 12.dp())
+            }
+            block.addView(s2Text(title, 14f))
+            block.addView(s2Text(description, 12f, true).apply {
+                setPadding(0, 2.dp(), 0, 0)
+                setLineSpacing(0f, 1.4f)
+            })
+            val shell = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(4.dp(), 4.dp(), 4.dp(), 4.dp())
+                background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.glass_pill)
+            }
+            val buttons = linkedMapOf<String, TextView>()
+            fun paint(value: String) {
+                buttons.forEach { (label, button) ->
+                    val active = label == value
+                    button.background = androidx.core.content.ContextCompat.getDrawable(
+                        this@SettingsActivity, if (active) R.drawable.accent_pill else R.drawable.glass_clear
+                    )
+                    button.setTextColor(androidx.core.content.ContextCompat.getColor(
+                        this@SettingsActivity, if (active) R.color.bg else R.color.mute
+                    ))
+                }
+            }
+            options.forEachIndexed { i, option ->
+                val button = s2Text(option, 13f, false, R.font.montserrat_semibold).apply {
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(8.dp(), 11.dp(), 8.dp(), 11.dp())
+                    isClickable = true; isFocusable = true; pressFx()
+                    setOnClickListener {
+                        if (hapticsOn(this@SettingsActivity)) s2Vibrate(8)
+                        paint(option)
+                        onPick(option)
+                    }
+                }
+                buttons[option] = button
+                shell.addView(button, LinearLayout.LayoutParams(0, -2, 1f))
+            }
+            block.addView(shell, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 12.dp() })
+            paint(selected)
+            return block
+        }
         val effectsCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(16.dp(), 6.dp(), 16.dp(), 6.dp())
             background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.glass_row)
         }
-        fun sectionText(value: String, size: Float, muted: Boolean = false) = TextView(this).apply {
-            text = value; textSize = size
-            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, if (size >= 14f) R.font.poppins_semibold else R.font.poppins_regular)
-            setTextColor(com.google.android.material.color.MaterialColors.getColor(this,
-                if (muted) com.google.android.material.R.attr.colorOnSurfaceVariant else com.google.android.material.R.attr.colorOnSurface, 0xFF1B2117.toInt()))
-        }
-        fun segmentRow(title: String, description: String, options: List<String>, initial: String, onPick: (String) -> Unit): LinearLayout {
-            val block = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, 12.dp(), 0, 12.dp()) }
-            block.addView(sectionText(title, 14f))
-            block.addView(sectionText(description, 12f, true).apply { setPadding(0, 2.dp(), 0, 8.dp()) })
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
-            val buttons = mutableMapOf<String, TextView>()
-            fun paint(value: String) = buttons.forEach { (key, button) -> button.styleSeg(key.equals(value, true)) }
-            options.forEachIndexed { i, option ->
-                val b = TextView(this).apply {
-                    text = option; textSize = 12f; gravity = android.view.Gravity.CENTER
-                    setPadding(10.dp(), 10.dp(), 10.dp(), 10.dp())
-                    background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.glass_pill)
-                    isClickable = true; isFocusable = true; pressFx()
-                    setOnClickListener { paint(option); onPick(option) }
-                }
-                buttons[option] = b
-                row.addView(b, LinearLayout.LayoutParams(0, -2, 1f).apply { if (i > 0) leftMargin = 6.dp() })
-            }
-            block.addView(row); paint(initial)
-            return block
-        }
-        val glassLevel = prefs.getString("glass_level", if (lowFx(this)) "Off" else "Full")!!.replaceFirstChar { it.uppercase() }
-        effectsCard.addView(segmentRow("Glass effects", "Turn glass off to save battery on older phones.", listOf("Off", "Subtle", "Full"), glassLevel) { choice ->
+        val glassDefault = prefs.getString("glass_level", "full") ?: "full"
+        effectsCard.addView(s2Segment(
+            "Glass effects",
+            "Turn glass off to save battery on older phones.",
+            listOf("Off", "Subtle", "Full"),
+            glassDefault.replaceFirstChar { it.uppercase() }
+        ) { choice ->
             prefs.edit().putString("glass_level", choice.lowercase()).putBoolean("low_fx", choice == "Off").apply()
             recreate()
         })
-        val motionChoice = if (prefs.getBoolean("motion_reduced", false)) "Reduced" else "Standard"
-        effectsCard.addView(segmentRow("Motion", "Reduced replaces bouncy motion with simple fades.", listOf("Standard", "Reduced"), motionChoice) { choice ->
-            prefs.edit().putBoolean("motion_reduced", choice == "Reduced").apply()
-        })
-        effectsParent.addView(effectsCard, (effectsParent as ViewGroup).indexOfChild(findViewById(R.id.cardLowFx)) + 1,
-            ViewGroup.MarginLayoutParams(-1, -2).apply { topMargin = 10.dp() })
-        effectsCard.visibility = if (section == "all" || section == "appearance") View.VISIBLE else View.GONE
-        findViewById<View>(R.id.cardLowFx).visibility = View.GONE
+        addS2Divider(effectsCard)
 
-        // Haptics test uses the existing app preference and the device vibrator.
-        val hapticsRow = findViewById<LinearLayout>(R.id.cardHaptics)
+        val hapticsBlock = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 12.dp(), 0, 12.dp())
+        }
+        hapticsBlock.addView(s2Text("Haptics", 14f))
+        hapticsBlock.addView(s2Text("Light vibration on taps and switches.", 12f, true).apply { setPadding(0, 2.dp(), 0, 0) })
+        val hapticsControls = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(0, 12.dp(), 0, 0)
+        }
         val testHaptics = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Test"; textSize = 12f; isAllCaps = false; insetTop = 0; insetBottom = 0
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.montserrat_semibold)
+            setPadding(14.dp(), 8.dp(), 14.dp(), 8.dp())
+            cornerRadius = 999.dp()
+            strokeWidth = 1.dp()
             setOnClickListener {
                 if (hapticsOn(this@SettingsActivity)) {
-                    val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
-                        (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager).defaultVibrator
-                    } else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator)
-                    if (android.os.Build.VERSION.SDK_INT >= 26) {
-                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(18, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-                    } else {
-                        @Suppress("DEPRECATION")
-                        vibrator.vibrate(18)
-                    }
-                    Toast.makeText(this@SettingsActivity, "Buzz!", Toast.LENGTH_SHORT).show()
+                    s2Vibrate(8)
+                    Toast.makeText(this@SettingsActivity, "Haptics tested", Toast.LENGTH_SHORT).show()
                 } else Toast.makeText(this@SettingsActivity, "Haptics are off", Toast.LENGTH_SHORT).show()
             }
         }
-        hapticsRow.addView(testHaptics, hapticsRow.childCount - 1)
+        hapticsControls.addView(testHaptics, LinearLayout.LayoutParams(-2, -2))
+        hapticsControls.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+        hapticsSwitch.isChecked = hapticsOn(this)
+        hapticsSwitch.layoutParams = LinearLayout.LayoutParams(52.dp(), 30.dp())
+        hapticsSwitch.setOnCheckedChangeListener { _, on ->
+            prefs.edit().putBoolean("haptics", on).apply()
+        }
+        hapticsControls.addView(hapticsSwitch)
+        hapticsBlock.addView(hapticsControls)
+        effectsCard.addView(hapticsBlock)
+        addS2Divider(effectsCard)
 
-        // Toggles
-        val haptic = findViewById<MaterialSwitch>(R.id.swHaptics)
-        haptic.isChecked = hapticsOn(this)
-        haptic.setOnCheckedChangeListener { _, on -> prefs.edit().putBoolean("haptics", on).apply() }
+        val motionDefault = if (android.provider.Settings.Global.getInt(contentResolver, "animator_duration_scale", 1) == 0) "Reduced" else "Standard"
+        val savedMotion = prefs.getString("motion", motionDefault.lowercase()) ?: motionDefault.lowercase()
+        effectsCard.addView(s2Segment(
+            "Motion",
+            "Reduced replaces bouncy motion with simple fades.",
+            listOf("Standard", "Reduced"),
+            savedMotion.replaceFirstChar { it.uppercase() }
+        ) { choice ->
+            prefs.edit().putString("motion", choice.lowercase()).putBoolean("motion_reduced", choice == "Reduced").apply()
+            if (choice == "Reduced") {
+                // Reduced motion immediately removes decorative motion and delays on this page.
+                findViewById<View>(R.id.settingsScroll).animate().cancel()
+            }
+        })
+        effectsParent.addView(effectsCard, (effectsParent as ViewGroup).indexOfChild(oldLowFxCard) + 1,
+            ViewGroup.MarginLayoutParams(-1, -2).apply { topMargin = 0 })
+        effectsCard.visibility = if (section == "all" || section == "appearance") View.VISIBLE else View.GONE
 
+        // Keep the legacy switch wired for existing non-S2 settings flows.
         val lowFxSwitch = findViewById<MaterialSwitch>(R.id.swLowFx)
         lowFxSwitch.isChecked = lowFx(this)
         lowFxSwitch.setOnCheckedChangeListener { _, on ->
@@ -307,6 +416,18 @@ class SettingsActivity : AppCompatActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         if (!PopupStack.dismiss()) super.onBackPressed()
+    }
+}
+
+private fun s2Vibrate(durationMs: Long) {
+    val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
+        (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager).defaultVibrator
+    } else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator)
+    if (android.os.Build.VERSION.SDK_INT >= 26) {
+        vibrator.vibrate(android.os.VibrationEffect.createOneShot(durationMs, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+    } else {
+        @Suppress("DEPRECATION")
+        vibrator.vibrate(durationMs)
     }
 }
 
