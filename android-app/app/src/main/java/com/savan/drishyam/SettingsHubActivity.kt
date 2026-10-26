@@ -200,16 +200,26 @@ class SettingsHubActivity : AppCompatActivity() {
             cardElevation = 0f
             strokeWidth = 0
             minimumHeight = 214.dp()
-            setCardBackgroundColor(android.graphics.Color.rgb(31, 42, 22))
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(
+                    android.graphics.Color.rgb(31, 42, 22),
+                    android.graphics.Color.rgb(65, 77, 45),
+                    android.graphics.Color.rgb(137, 148, 90)
+                )
+            ).apply { cornerRadius = 34.dp().toFloat() }
+            setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
             isClickable = true
             isFocusable = true
             pressFx()
-            setOnClickListener { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true)) }
+            setOnClickListener {
+                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
+            }
         }
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(20.dp(), 22.dp(), 20.dp(), 22.dp())
+            setPadding(24.dp(), 22.dp(), 20.dp(), 22.dp())
         }
         val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         copy.addView(TextView(this).apply {
@@ -226,12 +236,32 @@ class SettingsHubActivity : AppCompatActivity() {
             text = "Started by one curious photographer, one frame at a time."; textSize = 13f
             setTextColor(0xE6FFFFFF.toInt())
         })
+        val storyButton = TextView(this).apply {
+            text = "Read the story  →"
+            textSize = 12f
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
+            setTextColor(android.graphics.Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(14.dp(), 10.dp(), 14.dp(), 10.dp())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                cornerRadius = 22.dp().toFloat()
+                setColor(0x263FFFFFF)
+                setStroke(1.dp(), 0x80FFFFFF.toInt())
+            }
+            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 14.dp() }
+        }
+        copy.addView(storyButton)
         body.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
         val photo = ImageView(this).apply {
             setImageResource(R.drawable.savan)
             contentDescription = "Savan, lead developer"
             scaleType = ImageView.ScaleType.CENTER_CROP
-            background = android.graphics.drawable.GradientDrawable().apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.surface)) }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.surface))
+                setStroke(3.dp(), 0xA6FFFFFF.toInt())
+            }
             clipToOutline = true
         }
         body.addView(photo, LinearLayout.LayoutParams(132.dp(), 132.dp()).apply { leftMargin = 8.dp() })
