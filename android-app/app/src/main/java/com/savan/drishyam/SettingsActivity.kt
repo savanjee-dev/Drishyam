@@ -207,6 +207,7 @@ class SettingsActivity : AppCompatActivity() {
         effectsParent.addView(effectsCard, (effectsParent as ViewGroup).indexOfChild(findViewById(R.id.cardLowFx)) + 1,
             ViewGroup.MarginLayoutParams(-1, -2).apply { topMargin = 10.dp() })
         effectsCard.visibility = if (section == "all" || section == "appearance") View.VISIBLE else View.GONE
+        findViewById<View>(R.id.cardLowFx).visibility = View.GONE
 
         // Haptics test uses the existing app preference and the device vibrator.
         val hapticsRow = findViewById<LinearLayout>(R.id.cardHaptics)
@@ -217,8 +218,12 @@ class SettingsActivity : AppCompatActivity() {
                     val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
                         (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as android.os.VibratorManager).defaultVibrator
                     } else @Suppress("DEPRECATION") (getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator)
-                    if (android.os.Build.VERSION.SDK_INT >= 26) vibrator.vibrate(android.os.VibrationEffect.createOneShot(18, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
-                    else @Suppress("DEPRECATION") vibrator.vibrate(18)
+                    if (android.os.Build.VERSION.SDK_INT >= 26) {
+                        vibrator.vibrate(android.os.VibrationEffect.createOneShot(18, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(18)
+                    }
                     Toast.makeText(this@SettingsActivity, "Buzz!", Toast.LENGTH_SHORT).show()
                 } else Toast.makeText(this@SettingsActivity, "Haptics are off", Toast.LENGTH_SHORT).show()
             }
