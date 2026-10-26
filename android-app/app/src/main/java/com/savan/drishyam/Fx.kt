@@ -31,9 +31,15 @@ fun Int.dp(): Int = (this * Resources.getSystem().displayMetrics.density).toInt(
 fun hapticsOn(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("haptics", true)
 
-/** Low-effects mode switches off live blur and the animated backdrop. */
-fun lowFx(c: Context): Boolean =
-    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
+/** Persisted glass level; supports the legacy low_fx preference for existing installs. */
+fun glassLevel(c: Context): String {
+    val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+    return p.getString("glass_level", null)?.lowercase()
+        ?: if (p.getBoolean("low_fx", false)) "off" else "full"
+}
+
+/** Off disables live blur; Subtle and Full retain live glass at different strengths. */
+fun lowFx(c: Context): Boolean = glassLevel(c) == "off"
 
 /** Single motion gate shared by page and component transitions. */
 fun motionEnabled(c: Context): Boolean =
@@ -42,12 +48,10 @@ fun motionEnabled(c: Context): Boolean =
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
     setOnTouchListener { v, e ->
-        if (lowFx(v.context)) {
-            if (e.actionMasked == MotionEvent.ACTION_DOWN && hapticsOn(v.context)) {
-                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-            }
-            return@setOnTouchListener false
+        if (e.actionMasked == MotionEvent.ACTION_DOWN && hapticsOn(v.context)) {
+            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
+        if (!motionEnabled(v.context)) return@setOnTouchListener false
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate().cancel()
