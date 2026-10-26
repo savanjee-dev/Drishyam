@@ -452,11 +452,20 @@ class SettingsHubActivity : AppCompatActivity() {
             setTextColor(0xD9FFFFFF.toInt())
             gravity = Gravity.CENTER
         }
-        body.addView(sparkles, android.widget.FrameLayout.LayoutParams(48.dp(), 24.dp(),
-            Gravity.TOP or Gravity.END).apply { topMargin = 12.dp(); rightMargin = 12.dp() })
+        body.addView(sparkles, android.widget.FrameLayout.LayoutParams(24.dp(), 24.dp(),
+            Gravity.TOP or Gravity.END).apply { topMargin = 20.dp(); rightMargin = 64.dp() })
+        val spark2 = TextView(this).apply {
+            text = "✦"
+            textSize = 11f
+            setTextColor(0xD9FFFFFF.toInt())
+            gravity = Gravity.CENTER
+        }
+        body.addView(spark2, android.widget.FrameLayout.LayoutParams(18.dp(), 18.dp(),
+            Gravity.TOP or Gravity.END).apply { topMargin = 58.dp(); rightMargin = 26.dp() })
         body.bringChildToFront(copy)
         body.bringChildToFront(portrait)
         body.bringChildToFront(sparkles)
+        body.bringChildToFront(spark2)
         if (motionEnabled(this) && !lowFxEnabled) {
             sparkles.post { startTwinkle(sparkles, 0L) }
             spark2.post { startTwinkle(spark2, 1200L) }
