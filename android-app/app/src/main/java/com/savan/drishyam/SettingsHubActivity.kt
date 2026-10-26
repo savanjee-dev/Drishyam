@@ -4,6 +4,13 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Build
 import android.graphics.RenderEffect
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RectF
+import android.graphics.Color
+import java.io.File
+import java.util.Locale
 import android.graphics.Shader
 import android.view.Gravity
 import android.view.View
@@ -22,6 +29,24 @@ import com.google.android.material.card.MaterialCardView
  * browsing/storage/about are intentionally prototype toasts until their phases.
  */
 class SettingsHubActivity : AppCompatActivity() {
+    private var storageValueView: TextView? = null
+
+    override fun onResume() {
+        super.onResume()
+        refreshCacheSize()
+    }
+
+    private fun refreshCacheSize() {
+        fun sizeOf(file: File?): Long {
+            if (file == null || !file.exists()) return 0L
+            if (file.isFile) return file.length()
+            return try { file.listFiles()?.sumOf { sizeOf(it) } ?: 0L } catch (_: SecurityException) { 0L }
+        }
+        val bytes = sizeOf(cacheDir) + (externalCacheDirs?.sumOf { sizeOf(it) } ?: 0L)
+        val mb = bytes / (1024.0 * 1024.0)
+        storageValueView?.text = String.format(Locale.US, "%.1f MB cached", if (mb < 0.05) 0.0 else mb)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
@@ -67,12 +92,11 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         addAmbientBlob(0x5589945A, -0.24f, -0.09f, 12000L, 0.42f)
         addAmbientBlob(0x55D0C79A, 0.78f, 0.26f, 14000L, 0.42f)
-        addAmbientBlob(0x55414D2D, 0.08f, 0.72f, 12000L, 0.42f)
+        addAmbientBlob(0x55414D2D, 0.08f, 0.72f, 16000L, 0.22f)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
         page.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         setContentView(page)
         installScrollBounce(scroll)
-        animatePageEntrance(scroll)
 
         val back = TextView(this).apply {
             text = "‹"
@@ -127,18 +151,18 @@ class SettingsHubActivity : AppCompatActivity() {
         section.letterSpacing = 0.14f
         val tiles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        row1.addView(tile("◐", "Appearance", "System", true) {
+        row1.addView(tile("appearance", "Appearance", "System") {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance"))
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { rightMargin = 6.dp() })
-        row1.addView(tile("↕", "Browsing", "Hot · India on", false) {
+        row1.addView(tile("browsing", "Browsing", "Hot · India on") {
             Toast.makeText(this@SettingsHubActivity, "Browsing page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row1, LinearLayout.LayoutParams(-1, 176.dp()))
         val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        row2.addView(tile("⌁", "Storage", "42 MB cached", false) {
+        row2.addView(tile("storage", "Storage", "0.0 MB cached") {
             Toast.makeText(this@SettingsHubActivity, "Storage page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { rightMargin = 6.dp() })
-        row2.addView(tile("✦", "About", "Version 2.7.16", false) {
+        row2.addView(tile("about", "About", "Version 2.7.16") {
             Toast.makeText(this@SettingsHubActivity, "About page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
         tiles.addView(row2, LinearLayout.LayoutParams(-1, 176.dp()).apply { topMargin = 12.dp() })
@@ -146,28 +170,28 @@ class SettingsHubActivity : AppCompatActivity() {
 
         val quick = addText(root, "QUICK ACTIONS", 11f, R.color.accent, 28, 12)
         quick.letterSpacing = 0.14f
-        addAction(root, "↻", "Check for updates", "Find the latest verified release") {
+        addAction(root, "updates", "Check for updates", "Find the latest verified release") {
             startActivity(Intent(this, UpdatesActivity::class.java))
         }
-        addAction(root, "✧", "What’s new", "Release notes, release by release") {
+        addAction(root, "whatsnew", "What’s new", "Release notes, release by release") {
             startActivity(Intent(this, WhatsNewActivity::class.java))
         }
 
         val more = addText(root, "MORE", 11f, R.color.accent, 28, 12)
         more.letterSpacing = 0.14f
         addOurStory(root)
-        addText(root, "Made with curiosity. Built for photography.", 12f, R.color.mute, 24, 0).apply {
+        addText(root, "Made with curiosity. Built for photography.", 12f, R.color.mute, 26, 0).apply {
             gravity = Gravity.CENTER
         }
     }
 
-    private fun tile(glyph: String, title: String, value: String, emphasize: Boolean, action: () -> Unit): View {
+    private fun tile(iconName: String, title: String, value: String, action: () -> Unit): View {
         val card = MaterialCardView(this).apply {
             radius = 30.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
-            setCardBackgroundColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.surface))
+            setCardBackgroundColor(0x99FFFCF4.toInt())
             isClickable = true
             isFocusable = true
             pressFx()
@@ -178,42 +202,45 @@ class SettingsHubActivity : AppCompatActivity() {
             gravity = Gravity.START
             setPadding(18.dp(), 18.dp(), 12.dp(), 16.dp())
         }
-        val iconTile = TextView(this).apply {
-            text = glyph
-            textSize = 18f
-            gravity = Gravity.CENTER
-            setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.accent2))
+        val iconTile = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = 12.dp().toFloat()
-                setColor(0x2689945A)
+                cornerRadius = 16.dp().toFloat()
+                setColor(0x3889945A)
+            }
+            addView(PrototypeIconView(this@SettingsHubActivity, iconName, 0xFF89945A.toInt()),
+                android.widget.FrameLayout.LayoutParams(26.dp(), 26.dp(), Gravity.CENTER))
+        }
+        body.addView(iconTile, LinearLayout.LayoutParams(46.dp(), 46.dp()).apply { bottomMargin = 12.dp() })
+        val preview = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            when (title) {
+                "Appearance" -> {
+                    addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFF3F1E7.toInt(), 0xFF0A0D08.toInt())).apply { cornerRadius = 9.dp().toFloat(); setStroke(1.dp(), 0x6689945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
+                }
+                "Browsing" -> repeat(3) { i -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(if (i == 0) 0xFF89945A.toInt() else 0x3889945A) } }, LinearLayout.LayoutParams(34.dp(), 14.dp()).apply { rightMargin = 4.dp() }) }
+                "Storage" -> {
+                    val track = android.widget.FrameLayout(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(0x3889945A) } }
+                    track.addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(0xFF89945A.toInt()) } }, android.widget.FrameLayout.LayoutParams(18.dp(), -1))
+                    addView(track, LinearLayout.LayoutParams(-1, 8.dp()))
+                }
+                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
             }
         }
-        body.addView(iconTile, LinearLayout.LayoutParams(38.dp(), 38.dp()).apply { bottomMargin = 9.dp() })
-        val preview = View(this).apply {
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
-                when (title) {
-                    "Appearance" -> intArrayOf(0xFF414D2D.toInt(), 0xFF89945A.toInt(), 0xFFD0C79A.toInt())
-                    "Browsing" -> intArrayOf(0xFF89945A.toInt(), 0xFFD0C79A.toInt())
-                    "Storage" -> intArrayOf(0xFF414D2D.toInt(), 0xFF89945A.toInt())
-                    else -> intArrayOf(0xFFD0C79A.toInt(), 0xFF89945A.toInt())
-                }
-            ).apply { cornerRadius = 3.dp().toFloat() }
-            alpha = 0.8f
-        }
-        body.addView(preview, LinearLayout.LayoutParams(42.dp(), 4.dp()).apply { bottomMargin = 5.dp() })
+        body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { bottomMargin = 12.dp() })
         body.addView(TextView(this).apply {
             text = title
-            textSize = 15f
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_semibold)
+            textSize = 16f
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.fg))
             setPadding(0, 5.dp(), 0, 4.dp())
         })
         body.addView(TextView(this).apply {
             text = value
-            textSize = 11f
+            textSize = 12f
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute))
             maxLines = 1
+            if (title == "Storage") storageValueView = this
         })
         card.addView(body)
         return card
@@ -230,12 +257,9 @@ class SettingsHubActivity : AppCompatActivity() {
             pressFx()
             setOnClickListener { action() }
         }
-        card.addView(TextView(this).apply {
-            text = glyph
-            textSize = 23f
-            gravity = Gravity.CENTER
-            setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.accent))
-            background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_pill)
+        card.addView(android.widget.FrameLayout(this).apply {
+            background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 16.dp().toFloat(); setColor(0x2689945A) }
+            addView(PrototypeIconView(this@SettingsHubActivity, glyph, ContextCompat.getColor(this@SettingsHubActivity, R.color.accent)), android.widget.FrameLayout.LayoutParams(26.dp(), 26.dp(), Gravity.CENTER))
             layoutParams = LinearLayout.LayoutParams(46.dp(), 46.dp())
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         })
@@ -252,7 +276,7 @@ class SettingsHubActivity : AppCompatActivity() {
         })
         card.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
         card.addView(TextView(this).apply { text = "›"; textSize = 28f; setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute)) })
-        root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 10.dp() })
+        root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 14.dp(); bottomMargin = 10.dp() })
     }
 
     private fun addOurStory(root: LinearLayout) {
@@ -336,20 +360,20 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(11.dp(), 6.dp(), 11.dp(), 6.dp())
         })
         copy.addView(TextView(this).apply {
-            text = "The people & ideas\nbehind Drishyam"
+            text = "The people & ideas behind Drishyam"
             textSize = 24f
             maxLines = 2
             includeFontPadding = false
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 14.dp(), 0, 8.dp())
-            maxWidth = (resources.displayMetrics.widthPixels * 0.43f).toInt()
+            maxWidth = (resources.displayMetrics.widthPixels * 0.58f).toInt()
         })
         copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
             textSize = 13f
             setTextColor(0xE6FFFFFF.toInt())
-            maxWidth = (resources.displayMetrics.widthPixels * 0.46f).toInt()
+            maxWidth = (resources.displayMetrics.widthPixels * 0.58f).toInt()
             setLineSpacing(2.dp().toFloat(), 1.35f)
         })
         val storyButton = TextView(this).apply {
@@ -365,7 +389,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 setColor(android.graphics.Color.WHITE)
             }
             elevation = 8.dp().toFloat()
-            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 14.dp() }
+            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 22.dp() }
         }
         copy.addView(storyButton)
         body.addView(copy, android.widget.FrameLayout.LayoutParams(
@@ -427,7 +451,7 @@ class SettingsHubActivity : AppCompatActivity() {
             elevation = 4.dp().toFloat()
         }
         portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = 8.dp() })
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = 18.dp() })
         body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 140.dp(),
             Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-16).dp() })
         // A diagonal sheen and two restrained sparkle marks complete the story-card treatment.
@@ -493,6 +517,25 @@ class SettingsHubActivity : AppCompatActivity() {
 
         card.addView(body)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
+    }
+
+    private class PrototypeIconView(context: android.content.Context, private val kind: String, private val tint: Int) : View(context) {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint; style = Paint.Style.STROKE; strokeWidth = 2.dp().toFloat(); strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val sx = width / 24f; val sy = height / 24f
+            canvas.save(); canvas.scale(sx, sy)
+            fun line(vararg pts: Float) { val p = Path(); p.moveTo(pts[0], pts[1]); var i=2; while(i<pts.size){ p.lineTo(pts[i],pts[i+1]); i+=2 }; canvas.drawPath(p, paint) }
+            when(kind) {
+                "appearance" -> { canvas.drawArc(RectF(4f,4f,20f,20f), -90f, 180f, false, paint); line(12f,4f,12f,20f) }
+                "browsing" -> { for(y in listOf(6f,12f,18f)){ canvas.drawCircle(5f,y,1f,paint); line(9f,y,19f,y) } }
+                "storage" -> { canvas.drawOval(RectF(4f,4f,20f,9f),paint); line(4f,6.5f,4f,17f); line(20f,6.5f,20f,17f); canvas.drawArc(RectF(4f,14.5f,20f,20f),0f,180f,false,paint); canvas.drawArc(RectF(4f,9f,20f,15f),0f,180f,false,paint) }
+                "about" -> { canvas.drawCircle(12f,12f,8f,paint); canvas.drawCircle(12f,8f,0.8f,paint); line(12f,11f,12f,16f) }
+                "updates" -> { line(12f,3f,12f,15f); line(7f,10f,12f,15f,17f,10f); line(5f,19f,19f,19f) }
+                "whatsnew" -> { line(12f,3f,13.5f,9.5f,20f,12f,13.5f,13.5f,12f,20f,10.5f,13.5f,4f,12f,10.5f,9.5f,12f,3f) }
+            }
+            canvas.restore()
+        }
     }
 
     private fun addText(parent: LinearLayout, value: String, size: Float, color: Int, top: Int, bottom: Int): TextView {
