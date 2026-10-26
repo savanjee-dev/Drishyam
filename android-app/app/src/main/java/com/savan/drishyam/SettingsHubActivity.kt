@@ -3,7 +3,6 @@ package com.savan.drishyam
 import android.content.Intent
 import android.os.Bundle
 import android.os.Build
-import android.graphics.RenderEffect
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
@@ -11,7 +10,6 @@ import android.graphics.RectF
 import android.graphics.Color
 import java.io.File
 import java.util.Locale
-import android.graphics.Shader
 import android.view.Gravity
 import android.view.View
 import android.widget.ImageView
@@ -68,31 +66,9 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
         }
         val ambient = android.widget.FrameLayout(this)
-        fun addAmbientBlob(color: Int, x: Float, y: Float, duration: Long, alphaValue: Float) {
-            val blob = View(this).apply {
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.OVAL
-                    setColor(color)
-                }
-                alpha = alphaValue
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    setRenderEffect(RenderEffect.createBlurEffect(60.dp().toFloat(), 60.dp().toFloat(), Shader.TileMode.CLAMP))
-                }
-            }
-            val size = 280.dp()
-            ambient.addView(blob, android.widget.FrameLayout.LayoutParams(size, size).apply {
-                leftMargin = (resources.displayMetrics.widthPixels * x).toInt()
-                topMargin = (resources.displayMetrics.heightPixels * y).toInt()
-            })
-            blob.translationX = 0f
-            blob.animate().translationX(40.dp().toFloat()).translationY(30.dp().toFloat())
-                .setDuration(duration).withEndAction {
-                    blob.animate().translationX(0f).translationY(0f).setDuration(duration).start()
-                }.start()
-        }
-        addAmbientBlob(0x5589945A, -0.24f, -0.09f, 12000L, 0.42f)
-        addAmbientBlob(0x55D0C79A, 0.78f, 0.26f, 14000L, 0.42f)
-        addAmbientBlob(0x55414D2D, 0.08f, 0.72f, 16000L, 0.22f)
+        val reducedMotion = !motionEnabled(this)
+        val lowFxOn = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
+        addAmbientGlows(ambient, this, animate = !reducedMotion, lowFx = lowFxOn)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
         page.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         setContentView(page)
@@ -107,7 +83,7 @@ class SettingsHubActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isClickable = true
             isFocusable = true
-            pressFx()
+            attachPress(glowable = true, lowFx = lowFxOn, reduced = reducedMotion)
             setOnClickListener { finish() }
             contentDescription = getString(R.string.back_desc)
         }
@@ -191,10 +167,11 @@ class SettingsHubActivity : AppCompatActivity() {
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
-            setCardBackgroundColor(0x99FFFCF4.toInt())
+            val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            setCardBackgroundColor(if (lowFxOn) ContextCompat.getColor(this@SettingsHubActivity, R.color.surface) else if (night) 0x991B2117.toInt() else 0x99FFFCF4.toInt())
             isClickable = true
             isFocusable = true
-            pressFx()
+            attachPress(glowable = true, lowFx = lowFxOn, reduced = reducedMotion)
             setOnClickListener { action() }
         }
         val body = LinearLayout(this).apply {
@@ -254,7 +231,7 @@ class SettingsHubActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_row)
             isClickable = true
             isFocusable = true
-            pressFx()
+            attachPress(glowable = true, lowFx = lowFxOn, reduced = reducedMotion)
             setOnClickListener { action() }
         }
         card.addView(android.widget.FrameLayout(this).apply {
@@ -275,7 +252,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(0, 4.dp(), 0, 0)
         })
         card.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
-        card.addView(TextView(this).apply { text = "›"; textSize = 28f; setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute)) })
+        card.addView(PrototypeIconView(this, "chevron", ContextCompat.getColor(this, R.color.mute)), LinearLayout.LayoutParams(20.dp(), 20.dp()))
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 14.dp(); bottomMargin = 10.dp() })
     }
 
@@ -426,7 +403,7 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
             clipToPadding = false
         }
-        val photo = ImageView(this).apply {
+        val photo = FadedCircleImage(this).apply {
             setImageResource(R.drawable.savan)
             contentDescription = "Savan, lead developer"
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -533,6 +510,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 "about" -> { canvas.drawCircle(12f,12f,8f,paint); canvas.drawCircle(12f,8f,0.8f,paint); line(12f,11f,12f,16f) }
                 "updates" -> { line(12f,3f,12f,15f); line(7f,10f,12f,15f,17f,10f); line(5f,19f,19f,19f) }
                 "whatsnew" -> { line(12f,3f,13.5f,9.5f,20f,12f,13.5f,13.5f,12f,20f,10.5f,13.5f,4f,12f,10.5f,9.5f,12f,3f) }
+                "chevron" -> { line(9f,6f,15f,12f,9f,18f) }
             }
             canvas.restore()
         }
