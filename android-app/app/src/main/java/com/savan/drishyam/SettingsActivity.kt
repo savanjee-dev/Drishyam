@@ -194,7 +194,9 @@ class SettingsActivity : AppCompatActivity() {
             val frame = android.widget.FrameLayout(this)
             frame.addView(ThemeMockView(this, mode), android.widget.FrameLayout.LayoutParams(-1, 92.dp()))
             val check = ThemeCheckView(this).apply { tag = "theme-check"; visibility = View.GONE }
-            frame.addView(check, android.widget.FrameLayout.LayoutParams(20.dp(), 20.dp(), android.view.Gravity.TOP or android.view.Gravity.END))
+            frame.addView(check, android.widget.FrameLayout.LayoutParams(20.dp(), 20.dp(), android.view.Gravity.TOP or android.view.Gravity.END).apply {
+                topMargin = 10.dp(); marginEnd = 10.dp()
+            })
             val label = TextView(this).apply {
                 text = mode; textSize = 12f; gravity = android.view.Gravity.CENTER
                 typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.poppins_semibold)
@@ -262,7 +264,7 @@ class SettingsActivity : AppCompatActivity() {
                 buttons.forEach { (label, button) ->
                     val active = label == value
                     button.background = androidx.core.content.ContextCompat.getDrawable(
-                        this@SettingsActivity, if (active) R.drawable.accent_pill else android.R.drawable.screen_background_transparent
+                        this@SettingsActivity, if (active) R.drawable.accent_pill else android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
                     )
                     button.setTextColor(androidx.core.content.ContextCompat.getColor(
                         this@SettingsActivity, if (active) R.color.bg else R.color.mute
@@ -450,17 +452,32 @@ private class ThemeMockView(context: Context, private val mode: String) : View(c
     private val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
     override fun onDraw(canvas: android.graphics.Canvas) {
         val d = resources.displayMetrics.density
+        val w = width.toFloat()
+        val h = height.toFloat()
         val bg = when (mode) { "Dark" -> 0xFF0A0D08.toInt(); "Light" -> 0xFFF3F1E7.toInt(); else -> 0xFFF3F1E7.toInt() }
-        p.color = bg; canvas.drawRoundRect(0f,0f,width.toFloat(),height.toFloat(),16f*d,16f*d,p)
-        val half = width * .5f
-        if (mode == "System") { p.color=0xFF0A0D08.toInt(); canvas.drawRect(half,0f,width.toFloat(),height.toFloat(),p) }
-        p.color = if (mode == "Dark") 0xFF89945A.toInt() else 0xFF89945A.toInt()
-        canvas.drawRoundRect(8f*d,9f*d,width*.56f,16f*d,4f*d,4f*d,p)
+        p.color = bg
+        canvas.drawRoundRect(0f, 0f, w, h, 16f*d, 16f*d, p)
+        if (mode == "System") {
+            p.color = 0xFF0A0D08.toInt()
+            canvas.drawRoundRect(w * .5f, 0f, w, h, 16f*d, 16f*d, p)
+            canvas.save()
+            canvas.clipRect(w * .5f, 0f, w, h)
+            canvas.drawRect(w * .5f, 0f, w, h, p)
+            canvas.restore()
+        }
+        p.color = 0xFF89945A.toInt()
+        canvas.drawRoundRect(8f*d, 9f*d, w * .60f, 16f*d, 999f*d, 999f*d, p)
         p.color = if (mode == "Dark") 0xFF1B2117.toInt() else 0xFFFFFCF4.toInt()
-        canvas.drawRoundRect(8f*d,24f*d,width*.40f,68f*d,10f*d,10f*d,p)
-        canvas.drawRoundRect(width*.52f,24f*d,width-8f*d,68f*d,10f*d,10f*d,p)
+        canvas.drawRoundRect(8f*d, 24f*d, w * .44f, 68f*d, 10f*d, 10f*d, p)
+        p.color = if (mode == "System" || mode == "Dark") 0xFF1B2117.toInt() else 0xFFFFFCF4.toInt()
+        canvas.drawRoundRect(w * .50f, 24f*d, w * .86f, 68f*d, 10f*d, 10f*d, p)
         p.color = if (mode == "Dark") 0xFF89945A.toInt() else 0xFF414D2D.toInt()
-        canvas.drawRoundRect(8f*d, height-20f*d, width-8f*d,height-8f*d,8f*d,8f*d,p)
+        canvas.drawRoundRect(8f*d, h - 20f*d, w - 8f*d, h - 8f*d, 999f*d, 999f*d, p)
+        p.style = android.graphics.Paint.Style.STROKE
+        p.strokeWidth = d
+        p.color = 0x4089945A
+        canvas.drawRoundRect(.5f*d, .5f*d, w-.5f*d, h-.5f*d, 16f*d, 16f*d, p)
+        p.style = android.graphics.Paint.Style.FILL
     }
 }
 private class ThemeCheckView(context: Context) : View(context) {
