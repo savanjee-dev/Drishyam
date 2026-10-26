@@ -22,7 +22,7 @@ class WhatsNewActivity : AppCompatActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var loading: TextView
     private var restoreScrollY = 0
-    private var selectedVersion = "3.1.1"
+    private var selectedVersion = BuildConfig.VERSION_NAME
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -135,7 +135,7 @@ class WhatsNewActivity : AppCompatActivity() {
         val outline = color(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
         val onSurface = color(com.google.android.material.R.attr.colorOnSurface, R.color.fg)
         val variant = color(com.google.android.material.R.attr.colorOnSurfaceVariant, R.color.mute)
-        val versions = (listOf("3.1.1") + releases.map { it.version }).distinct().take(4)
+        val versions = (listOf(BuildConfig.VERSION_NAME) + releases.map { it.version }).distinct().take(3)
         val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         versions.forEachIndexed { index, version ->
             val tab = TextView(this).apply {
@@ -150,39 +150,18 @@ class WhatsNewActivity : AppCompatActivity() {
             tabs.addView(tab, LinearLayout.LayoutParams(0, -2, 1f).apply { if (index > 0) leftMargin = 6.dp() })
         }
         content.addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 16.dp() })
-        if (selectedVersion == "3.1.1") {
-            val upcoming = MaterialCardView(this).apply {
-                radius = 32.dp().toFloat()
-                cardElevation = 0f
-                strokeWidth = 1.dp()
-                strokeColor = outline
-                setCardBackgroundColor(primaryContainer)
-                setContentPadding(24.dp(), 24.dp(), 24.dp(), 24.dp())
-            }
-            val preview = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-            preview.addView(TextView(this).apply {
-                text = "UPCOMING RELEASE"
-                textSize = 10f; letterSpacing = .14f
-                setTextColor(onPrimaryContainer)
-            })
-            preview.addView(TextView(this).apply {
-                text = "3.1.1"
-                textSize = 46f
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_bold)
-                setTextColor(onPrimaryContainer)
-                setPadding(0, 10.dp(), 0, 8.dp())
-            })
-            preview.addView(TextView(this).apply {
-                text = "Release notes will appear here when Drishyam v3.1.1 is published. No unreleased changes are being presented as completed."
+        val visibleReleases = releases.filter { it.version == selectedVersion }
+        if (visibleReleases.isEmpty()) {
+            content.addView(TextView(this).apply {
+                text = "Release notes for v$selectedVersion aren't available in the saved release history yet. Check for updates when you're online to refresh the notes."
                 textSize = 14f
                 setLineSpacing(4.dp().toFloat(), 1f)
-                setTextColor(onPrimaryContainer)
+                setTextColor(onSurface)
+                setPadding(16.dp(), 18.dp(), 16.dp(), 18.dp())
             })
-            upcoming.addView(preview)
-            content.addView(upcoming)
             return
         }
-        val visibleReleases = releases.filter { it.version == selectedVersion }
+
         val latest = visibleReleases.firstOrNull()
         if (latest != null) {
             val hero = MaterialCardView(this).apply {
