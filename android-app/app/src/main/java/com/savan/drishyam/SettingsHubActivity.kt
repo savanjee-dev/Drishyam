@@ -68,7 +68,7 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
         }
         val ambient = android.widget.FrameLayout(this)
-        reducedMotionEnabled = !motionEnabled(this)
+        reducedMotionEnabled = !motionEnabled(this) || getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)
         lowFxEnabled = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
         addAmbientGlows(ambient, this, animate = !reducedMotionEnabled, lowFx = lowFxEnabled)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
@@ -162,7 +162,7 @@ class SettingsHubActivity : AppCompatActivity() {
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.pacifico_regular)
             setLineSpacing(2.dp().toFloat(), 1f)
         }
-        staggerIn((0 until root.childCount).map { root.getChildAt(it) }, resources.displayMetrics.density, enabled = motionEnabled(this))
+        staggerIn((0 until root.childCount).map { root.getChildAt(it) }, resources.displayMetrics.density, enabled = motionEnabled(this) && !reducedMotionEnabled)
     }
 
     private fun tile(iconName: String, title: String, value: String, action: () -> Unit): View {
@@ -297,7 +297,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         card.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                if (motionEnabled(this@SettingsHubActivity) && !lowFxEnabled && !gradientAnimator.isStarted) gradientAnimator.start()
+                if (motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled && !gradientAnimator.isStarted) gradientAnimator.start()
             }
             override fun onViewDetachedFromWindow(v: View) {
                 gradientAnimator.cancel()
@@ -367,12 +367,12 @@ class SettingsHubActivity : AppCompatActivity() {
             ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
             alpha = 0.75f
             // Respect both reduced-motion and Glass Effects Off preferences.
-            if (motionEnabled(this@SettingsHubActivity) && !lowFxEnabled) {
+            if (motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled) {
                 post {
                     fun pulseHalo() {
                         animate().alpha(1f).scaleX(1.08f).scaleY(1.08f).setDuration(1400).withEndAction {
                             animate().alpha(0.35f).scaleX(0.94f).scaleY(0.94f).setDuration(1400).withEndAction {
-                                if (isAttachedToWindow && motionEnabled(this@SettingsHubActivity) && !lowFxEnabled) pulseHalo()
+                                if (isAttachedToWindow && motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled) pulseHalo()
                             }.start()
                         }.start()
                     }
@@ -441,7 +441,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         sheen.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                if (motionEnabled(this@SettingsHubActivity) && !lowFxEnabled && !sheenAnimator.isStarted) sheenAnimator.start()
+                if (motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled && !sheenAnimator.isStarted) sheenAnimator.start()
             }
             override fun onViewDetachedFromWindow(v: View) {
                 sheenAnimator.cancel()
@@ -468,14 +468,14 @@ class SettingsHubActivity : AppCompatActivity() {
         body.bringChildToFront(portrait)
         body.bringChildToFront(sparkles)
         body.bringChildToFront(spark2)
-        if (motionEnabled(this) && !lowFxEnabled) {
+        if (motionEnabled(this) && !reducedMotionEnabled && !lowFxEnabled) {
             sparkles.post { startTwinkle(sparkles, 0L) }
             spark2.post { startTwinkle(spark2, 1200L) }
             storyButton.post { startNudge(storyButton, resources.displayMetrics.density) }
         }
 
         // Keep the card immediately visible when reduced motion or Glass Effects Off is enabled.
-        if (motionEnabled(this) && !lowFxEnabled) {
+        if (motionEnabled(this) && !reducedMotionEnabled && !lowFxEnabled) {
             body.alpha = 0f
             body.translationY = 16.dp().toFloat()
             body.animate().alpha(1f).translationY(0f)
