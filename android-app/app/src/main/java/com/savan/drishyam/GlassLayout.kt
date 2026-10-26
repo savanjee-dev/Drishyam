@@ -56,7 +56,8 @@ class GlassLayout @JvmOverloads constructor(
     private val rimStart = ContextCompat.getColor(context, R.color.glassRimStart)
     private val rimEnd = ContextCompat.getColor(context, R.color.glassRimEnd)
     private val bgColor = ContextCompat.getColor(context, R.color.bg)
-    private val lowEffects = lowFx(context)
+    private val lowEffects get() = lowFx(context)
+    private val glassLevel get() = glassLevel(context)
 
     private val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tintPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -127,7 +128,7 @@ class GlassLayout @JvmOverloads constructor(
         val r = min(radiusPx, min(w, h) / 2f)
         rect.set(0f, 0f, w, h)
 
-        val live = !solid && !disabled && !lowEffects && source != null
+        val live = !solid && !disabled && glassLevel != "off" && !lowEffects && source != null
         if (live) {
             val now = SystemClock.uptimeMillis()
             if (dirty || now - lastCapture >= max(30L, tickMs - 10)) {
@@ -150,7 +151,7 @@ if (solid) {
     canvas.drawRoundRect(rect, r, r, bodyPaint)
     tintPaint.color = if (dark) 0x66000000 else tintColor
 } else {
-    tintPaint.color = if (dark) 0x80101018.toInt() else fillColor
+    tintPaint.color = if (dark) 0x80101018.toInt() else if (glassLevel == "subtle") androidx.core.graphics.ColorUtils.setAlphaComponent(fillColor, 0xF0) else fillColor
 }
 
         canvas.drawRoundRect(rect, r, r, tintPaint)
