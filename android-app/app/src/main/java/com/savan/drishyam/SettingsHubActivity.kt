@@ -200,7 +200,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 setColor(0x3889945A)
             }
             addView(PrototypeIconView(this@SettingsHubActivity, iconName, 0xFF89945A.toInt()),
-                android.widget.FrameLayout.LayoutParams(26.dp(), 26.dp(), Gravity.CENTER))
+                android.widget.FrameLayout.LayoutParams(22.dp(), 22.dp(), Gravity.CENTER))
         }
         body.addView(iconTile, LinearLayout.LayoutParams(46.dp(), 46.dp()).apply { bottomMargin = 12.dp() })
         val preview = LinearLayout(this).apply {
@@ -218,7 +218,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     track.post { fill.layoutParams = android.widget.FrameLayout.LayoutParams((track.width * 0.08f).toInt(), -1, Gravity.START) }
                     addView(track, LinearLayout.LayoutParams(-1, 8.dp()))
                 }
-                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(40.dp(), 40.dp()))
+                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
             }
         }
         body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { topMargin = 12.dp() })
