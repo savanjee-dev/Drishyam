@@ -161,6 +161,7 @@ class SettingsHubActivity : AppCompatActivity() {
         addText(root, "Made with curiosity. Built for photography.", 12f, R.color.mute, 26, 0).apply {
             gravity = Gravity.CENTER
         }
+        staggerIn((0 until root.childCount).map { root.getChildAt(it) }, resources.displayMetrics.density, enabled = motionEnabled(this))
     }
 
     private fun tile(iconName: String, title: String, value: String, action: () -> Unit): View {
