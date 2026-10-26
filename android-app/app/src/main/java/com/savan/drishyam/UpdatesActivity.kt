@@ -64,11 +64,6 @@ class UpdatesActivity : AppCompatActivity() {
             addView(root)
         }
 
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, 4.dp())
-        }
         val back = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "‹"
             textSize = 30f
@@ -80,25 +75,29 @@ class UpdatesActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 3.dp())
             setOnClickListener { finish() }
         }
-        header.addView(back, LinearLayout.LayoutParams(52.dp(), 52.dp()))
-        val heading = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(8.dp(), 0, 0, 0)
-        }
-        heading.addView(TextView(this).apply {
-            text = "Drishyam updates"
-            textSize = 25f
-            maxLines = 1
-            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
-            setTextColor(onSurface)
+        root.addView(back, LinearLayout.LayoutParams(52.dp(), 52.dp()))
+        root.addView(TextView(this).apply {
+            text = "Software"
+            textSize = 11f
+            letterSpacing = .14f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            setTextColor(primary)
+            setPadding(2.dp(), 20.dp(), 0, 4.dp())
         })
-        heading.addView(TextView(this).apply {
-            text = "Every release, a better perspective"
+        root.addView(TextView(this).apply {
+            text = "Updates"
+            textSize = 38f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.poppins_extrabold)
+            setTextColor(onSurface)
+            letterSpacing = -.02f
+            setPadding(0, 0, 0, 4.dp())
+        })
+        root.addView(TextView(this).apply {
+            text = "Stay on the latest verified Drishyam."
             textSize = 14f
             setTextColor(onSurfaceVariant)
+            setPadding(0, 0, 0, 6.dp())
         })
-        header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
-        root.addView(header)
 
         val statusCard = MaterialCardView(this).apply {
             radius = 34.dp().toFloat()
