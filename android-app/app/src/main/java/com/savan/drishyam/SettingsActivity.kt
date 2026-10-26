@@ -93,6 +93,61 @@ class SettingsActivity : AppCompatActivity() {
             show(R.id.settingsVersion, about)
         }
 
+        // Theme changes use a circular colour reveal before applying the new AppCompat mode.
+        fun chooseTheme(mode: String, source: View) {
+            val current = prefs.getString("theme", "System") ?: "System"
+            if (current == mode) { paintTheme(); refreshThemeCardsIfReady(); return }
+            val content = findViewById<android.view.ViewGroup>(android.R.id.content)
+            val revealColor = when (mode) {
+                "Dark" -> android.graphics.Color.rgb(10, 13, 8)
+                "Light" -> android.graphics.Color.rgb(243, 241, 231)
+                else -> {
+                    val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    if (night) android.graphics.Color.rgb(10, 13, 8) else android.graphics.Color.rgb(243, 241, 231)
+                }
+            }
+            val overlay = View(this).apply { setBackgroundColor(revealColor); alpha = 1f }
+            content.addView(overlay, android.view.ViewGroup.LayoutParams(-1, -1))
+            val loc = IntArray(2); source.getLocationOnScreen(loc)
+            val rootLoc = IntArray(2); content.getLocationOnScreen(rootLoc)
+            val cx = (loc[0] + source.width / 2 - rootLoc[0]).coerceIn(0, content.width)
+            val cy = (loc[1] + source.height / 2 - rootLoc[1]).coerceIn(0, content.height)
+            if (android.os.Build.VERSION.SDK_INT >= 21 && content.width > 0 && content.height > 0) {
+                val end = kotlin.math.hypot(content.width.toDouble(), content.height.toDouble()).toFloat()
+                val reveal = android.view.ViewAnimationUtils.createCircularReveal(overlay, cx, cy, 0f, end)
+                reveal.duration = if (prefs.getBoolean("motion_reduced", false)) 160L else 360L
+                reveal.addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        prefs.edit().putString("theme", mode).apply()
+                        MainActivity.applyTheme(this@SettingsActivity)
+                        if (!isFinishing && !isDestroyed) {
+                            content.postDelayed({
+                                if (overlay.parent != null) content.removeView(overlay)
+                            }, 80L)
+                        }
+                    }
+                })
+                reveal.start()
+            } else {
+                content.removeView(overlay)
+                prefs.edit().putString("theme", mode).apply()
+                MainActivity.applyTheme(this)
+            }
+        }
+        // This is declared before theme cards are built; the cards refresh themselves after selection.
+        var themeCardsForReveal: LinearLayout? = null
+        fun refreshThemeCardsIfReady() {
+            themeCardsForReveal?.let { cards ->
+                val current = prefs.getString("theme", "System")
+                for (i in 0 until cards.childCount) {
+                    val card = cards.getChildAt(i) as? com.google.android.material.card.MaterialCardView ?: continue
+                    val selected = listOf("System", "Dark", "Light")[i] == current
+                    card.strokeWidth = if (selected) 2.dp() else 1.dp()
+                    card.findViewWithTag<View>("theme-check")?.visibility = if (selected) View.VISIBLE else View.GONE
+                }
+            }
+        }
+
         // Theme pills
         val themes = listOf(R.id.themeSystem to "System", R.id.themeDark to "Dark", R.id.themeLight to "Light")
         fun paintTheme() {
@@ -103,8 +158,7 @@ class SettingsActivity : AppCompatActivity() {
             findViewById<TextView>(id).apply {
                 pressFx()
                 setOnClickListener {
-                    prefs.edit().putString("theme", v).apply()
-                    MainActivity.applyTheme(this@SettingsActivity)
+                    chooseTheme(v, this)
                     paintTheme()
                 }
             }
@@ -119,6 +173,7 @@ class SettingsActivity : AppCompatActivity() {
             gravity = android.view.Gravity.CENTER_VERTICAL
             setPadding(0, 14.dp(), 0, 0)
         }
+        themeCardsForReveal = themeCards
         fun refreshThemeCards() {
             val current = prefs.getString("theme", "System")
             for (i in 0 until themeCards.childCount) {
@@ -153,8 +208,7 @@ class SettingsActivity : AppCompatActivity() {
             val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; addView(frame); addView(label) }
             card.addView(content)
             card.setOnClickListener {
-                prefs.edit().putString("theme", mode).apply()
-                MainActivity.applyTheme(this@SettingsActivity)
+                chooseTheme(mode, card)
                 paintTheme(); refreshThemeCards()
             }
             themeCards.addView(card, LinearLayout.LayoutParams(0, -2, 1f).apply {
