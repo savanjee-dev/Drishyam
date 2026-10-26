@@ -153,6 +153,28 @@ class UpdatesActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
             setPadding(0, 12.dp(), 0, 0)
         })
+        checkButton = MaterialButton(this).apply {
+            text = "Check now"
+            textSize = 13f
+            isAllCaps = false
+            cornerRadius = 22.dp()
+            setOnClickListener { checkForUpdates() }
+        }
+        downloadButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Download"
+            textSize = 13f
+            isAllCaps = false
+            cornerRadius = 22.dp()
+            visibility = View.GONE
+            setOnClickListener { downloadUpdate() }
+        }
+        val actionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        actionRow.addView(checkButton, LinearLayout.LayoutParams(0, 52.dp(), 1f))
+        actionRow.addView(downloadButton, LinearLayout.LayoutParams(0, 52.dp(), 1f).apply { leftMargin = 8.dp() })
+        cardContent.addView(actionRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 16.dp() })
         statusCard.addView(cardContent)
         root.addView(statusCard, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = 18.dp()
@@ -217,27 +239,6 @@ class UpdatesActivity : AppCompatActivity() {
         notesCard.addView(notes)
         root.addView(notesCard)
 
-        checkButton = MaterialButton(this).apply {
-            text = "Check for updates"
-            textSize = 15f
-            isAllCaps = false
-            cornerRadius = 22.dp()
-            setOnClickListener { checkForUpdates() }
-        }
-        root.addView(checkButton, LinearLayout.LayoutParams(-1, 56.dp()).apply {
-            topMargin = 20.dp()
-        })
-        downloadButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Download update"
-            textSize = 15f
-            isAllCaps = false
-            cornerRadius = 22.dp()
-            visibility = View.GONE
-            setOnClickListener { downloadUpdate() }
-        }
-        root.addView(downloadButton, LinearLayout.LayoutParams(-1, 54.dp()).apply {
-            topMargin = 10.dp()
-        })
         downloadProgress = WavyProgressView(this).apply {
             progress = 0
             visibility = View.GONE
