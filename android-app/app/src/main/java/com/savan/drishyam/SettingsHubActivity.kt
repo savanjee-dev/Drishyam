@@ -512,9 +512,9 @@ class SettingsHubActivity : AppCompatActivity() {
             text = value
             textSize = size
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, when {
-                value == "Settings" -> R.font.poppins_bold
+                value == "Settings" -> R.font.poppins_extrabold
                 size >= 17f -> R.font.montserrat_bold
-                size == 11f -> R.font.poppins_medium
+                size == 11f -> R.font.poppins_semibold
                 else -> R.font.poppins_regular
             })
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, color))
