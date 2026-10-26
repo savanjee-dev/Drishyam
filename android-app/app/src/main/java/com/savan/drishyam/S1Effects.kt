@@ -156,6 +156,6 @@ fun staggerIn(views:List<View>,density:Float,enabled:Boolean) {
     if(!enabled)return
     views.forEachIndexed { i,v ->
         v.alpha=0f; v.translationY=16f*density
-        v.animate().alpha(1f).translationY(0f).setStartDelay(i*40L).setDuration(420L).setInterpolator(S1Fx.spring).start()
+        v.animate().alpha(1f).translationY(0f).setStartDelay(i*40L).setDuration(420L).setInterpolator(S1Fx.outCurve).start()
     }
 }
