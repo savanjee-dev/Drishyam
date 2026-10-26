@@ -442,23 +442,19 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         body.addView(sheen, android.widget.FrameLayout.LayoutParams(42.dp(), 360.dp(),
             Gravity.TOP or Gravity.START).apply { leftMargin = (-70).dp() })
+        val sheenAnimator = android.animation.ObjectAnimator.ofFloat(
+            sheen, View.TRANSLATION_X, (-70).dp().toFloat(), 420.dp().toFloat()
+        ).apply {
+            duration = 3800L
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            repeatMode = android.animation.ValueAnimator.RESTART
+        }
         sheen.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                sheen.translationX = (-70).dp().toFloat()
-                sheen.animate().translationX(420.dp().toFloat())
-                    .setDuration(3800)
-                    .withEndAction {
-                        if (sheen.isAttachedToWindow) {
-                            sheen.translationX = (-70).dp().toFloat()
-                            sheen.animate().translationX(420.dp().toFloat())
-                                .setDuration(3800)
-                                .withEndAction { if (sheen.isAttachedToWindow) sheen.animate().start() }
-                                .start()
-                        }
-                    }.start()
+                if (!sheenAnimator.isStarted) sheenAnimator.start()
             }
             override fun onViewDetachedFromWindow(v: View) {
-                sheen.animate().cancel()
+                sheenAnimator.cancel()
             }
         })
         val sparkles = TextView(this).apply {
