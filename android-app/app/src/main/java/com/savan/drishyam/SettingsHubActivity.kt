@@ -84,10 +84,10 @@ class SettingsHubActivity : AppCompatActivity() {
         installScrollBounce(scroll)
 
         val back = android.widget.FrameLayout(this).apply {
+            // Prototype .back: a transparent 48px circular hit target with no glass fill or border.
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.glassFill))
-                setStroke(1.dp(), ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke))
+                setColor(android.graphics.Color.TRANSPARENT)
             }
             layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isClickable = true
@@ -329,9 +329,9 @@ class SettingsHubActivity : AppCompatActivity() {
             clipToPadding = false
         }
         val cardWidthPx = (resources.displayMetrics.widthPixels - 40.dp()).coerceAtLeast(280.dp())
-        val innerWidthPx = cardWidthPx - 44.dp()
-        // Reserve a compact portrait column while giving the headline enough width to avoid excessive wrapping.
-        val copyWidthPx = (innerWidthPx * 0.58f).toInt().coerceAtLeast(150.dp())
+        val innerWidthPx = cardWidthPx - 48.dp()
+        // Match the prototype's 58% headline width; the body uses its own CSS-equivalent width below.
+        val copyWidthPx = (innerWidthPx * 0.58f).toInt().coerceAtLeast(1.dp())
         val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         copy.addView(TextView(this).apply {
             text = "OUR STORY"
@@ -361,13 +361,13 @@ class SettingsHubActivity : AppCompatActivity() {
             textSize = 13f
             maxLines = 3
             setTextColor(0xE6FFFFFF.toInt())
-            maxWidth = copyWidthPx
+            maxWidth = (innerWidthPx - 150.dp()).coerceAtLeast(1.dp())
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
             setLineSpacing(2.dp().toFloat(), 1.5f)
         })
         val storyButton = TextView(this).apply {
             text = "Read the story →"
-            textSize = 12f
+            textSize = 13f
             maxLines = 1
             includeFontPadding = false
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
@@ -380,17 +380,26 @@ class SettingsHubActivity : AppCompatActivity() {
                 setColor(android.graphics.Color.WHITE)
             }
             elevation = 8.dp().toFloat()
-            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 10.dp() }
+            layoutParams = LinearLayout.LayoutParams(-2, 44.dp()).apply { topMargin = 22.dp() }
         }
         copy.addView(storyButton)
         body.addView(copy, android.widget.FrameLayout.LayoutParams(copyWidthPx, -2, Gravity.TOP or Gravity.START))
 
         // Soft radial halo behind the existing developer portrait, preserving R.drawable.savan.
-        val halo = View(this).apply {
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                intArrayOf(0x80D0C79A.toInt(), 0x40D0C79A, 0x00D0C79A)
-            ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
+        val halo = object : View(this) {
+            private val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val radius = minOf(width, height) * 0.5f
+                haloPaint.shader = android.graphics.RadialGradient(
+                    width * 0.5f, height * 0.5f, radius,
+                    intArrayOf(0x80D0C79A.toInt(), 0x40D0C79A, 0x00D0C79A),
+                    floatArrayOf(0f, 0.42f, 0.68f), Shader.TileMode.CLAMP
+                )
+                canvas.drawCircle(width * 0.5f, height * 0.5f, radius, haloPaint)
+                haloPaint.shader = null
+            }
+        }.apply {
             alpha = 0.75f
             // Respect both reduced-motion and Glass Effects Off preferences.
             if (motionEnabled(this@SettingsHubActivity) && !reducedMotionEnabled && !lowFxEnabled) {
@@ -407,7 +416,7 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
         body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-22).dp(); bottomMargin = (-30).dp() })
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-22).dp(); bottomMargin = 26.dp() })
 
         val portrait = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -442,9 +451,9 @@ class SettingsHubActivity : AppCompatActivity() {
             elevation = 4.dp().toFloat()
         }
         portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = 14.dp() })
-        body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 148.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-16).dp() })
+            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = 140.dp() })
+        body.addView(portrait, android.widget.FrameLayout.LayoutParams(132.dp(), 132.dp(),
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = 40.dp() })
         // A diagonal sheen and two restrained sparkle marks complete the story-card treatment.
         val sheen = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
@@ -458,7 +467,7 @@ class SettingsHubActivity : AppCompatActivity() {
         body.addView(sheen, android.widget.FrameLayout.LayoutParams(1, 1,
             Gravity.TOP or Gravity.START).apply { leftMargin = (-24).dp(); topMargin = (-24).dp() })
         val sheenAnimator = android.animation.ObjectAnimator.ofFloat(sheen, View.TRANSLATION_X, 0f, 1f).apply {
-            duration = 4200L
+            duration = 3800L
             repeatCount = android.animation.ValueAnimator.INFINITE
             repeatMode = android.animation.ValueAnimator.RESTART
             interpolator = S1Fx.easeInOut
