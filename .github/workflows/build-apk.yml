@@ -1,4 +1,4 @@
-name: Build Drishyam APK (Candidate Only)
+name: Build Drishyam APK (Candidate Only) # S1 candidate verification
 
 on:
   workflow_dispatch:
