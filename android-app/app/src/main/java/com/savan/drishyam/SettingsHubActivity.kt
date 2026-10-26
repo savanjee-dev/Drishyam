@@ -214,7 +214,7 @@ class SettingsHubActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             when (title) {
                 "Appearance" -> {
-                    addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFF3F1E7.toInt(), 0xFF0A0D08.toInt())).apply { cornerRadius = 9.dp().toFloat(); setStroke(1.dp(), 0x6689945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
+                    addView(PrototypeSplitSwatchView(this@SettingsHubActivity), LinearLayout.LayoutParams(26.dp(), 26.dp()))
                 }
                 "Browsing" -> repeat(3) { i -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable().apply { cornerRadius = 999.dp().toFloat(); setColor(if (i == 0) 0xFF89945A.toInt() else 0x3889945A) } }, LinearLayout.LayoutParams(34.dp(), 14.dp()).apply { rightMargin = if (i < 2) 6.dp() else 0 }) }
                 "Storage" -> {
@@ -224,7 +224,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     track.post { fill.layoutParams = android.widget.FrameLayout.LayoutParams((track.width * 0.08f).toInt(), -1, Gravity.START) }
                     addView(track, LinearLayout.LayoutParams(-1, 8.dp()))
                 }
-                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
+                else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF89945A.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
             }
         }
         body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { topMargin = 12.dp() })
@@ -239,6 +239,7 @@ class SettingsHubActivity : AppCompatActivity() {
         body.addView(TextView(this).apply {
             text = value
             textSize = 12f
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.poppins_regular)
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute))
             maxLines = 2
             includeFontPadding = true
@@ -531,6 +532,36 @@ class SettingsHubActivity : AppCompatActivity() {
             }
             if (node === window.decorView) break
             node = node.parent as? View
+        }
+    }
+
+    private class PrototypeSplitSwatchView(context: android.content.Context) : View(context) {
+        private val density = resources.displayMetrics.density
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val shape = Path()
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            val radius = 9f * density
+            canvas.save()
+            canvas.clipPath(Path().apply {
+                addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, Path.Direction.CW)
+            })
+            // Hard 50% diagonal split, matching the prototype's two-tone swatch.
+            paint.style = Paint.Style.FILL
+            paint.color = 0xFFF3F1E7.toInt()
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+            shape.reset()
+            shape.moveTo(0f, 0f)
+            shape.lineTo(width.toFloat(), 0f)
+            shape.lineTo(width.toFloat(), height.toFloat())
+            shape.close()
+            paint.color = 0xFF0A0D08.toInt()
+            canvas.drawPath(shape, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 1f * density
+            paint.color = 0xFF89945A.toInt()
+            canvas.drawRoundRect(0.5f * density, 0.5f * density, width - 0.5f * density, height - 0.5f * density, radius, radius, paint)
+            canvas.restore()
         }
     }
 
