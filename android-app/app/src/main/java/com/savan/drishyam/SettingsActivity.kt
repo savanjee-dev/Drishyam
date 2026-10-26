@@ -96,7 +96,7 @@ class SettingsActivity : AppCompatActivity() {
         // Theme changes use a circular colour reveal before applying the new AppCompat mode.
         fun chooseTheme(mode: String, source: View) {
             val current = prefs.getString("theme", "System") ?: "System"
-            if (current == mode) { paintTheme(); refreshThemeCardsIfReady(); return }
+            if (current == mode) return
             val content = findViewById<android.view.ViewGroup>(android.R.id.content)
             val revealColor = when (mode) {
                 "Dark" -> android.graphics.Color.rgb(10, 13, 8)
