@@ -45,13 +45,13 @@ fun addAmbientGlows(parent: FrameLayout, context: Context, animate: Boolean, low
             }
             override fun onDraw(canvas: Canvas) {
                 super.onDraw(canvas)
-                if (Build.VERSION.SDK_INT < 31) {
+                if (android.os.Build.VERSION.SDK_INT < 31) {
                     canvas.drawCircle(width / 2f, height / 2f, 76f*d, glowPaint)
                 }
             }
         }.apply {
             alpha = b.alphaValue
-            if (Build.VERSION.SDK_INT >= 31) {
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
                 background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(b.color) }
                 setRenderEffect(android.graphics.RenderEffect.createBlurEffect(60f*d, 60f*d, Shader.TileMode.CLAMP))
             } else {
