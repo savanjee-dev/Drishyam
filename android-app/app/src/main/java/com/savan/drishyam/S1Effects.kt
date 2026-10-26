@@ -38,10 +38,25 @@ fun addAmbientGlows(parent: FrameLayout, context: Context, animate: Boolean, low
         Blob(0xFF414D2D.toInt(), .22f, 16000L, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
     )
     blobs.forEach { b ->
-        val v = View(context).apply {
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(b.color) }
+        val v = object : View(context) {
+            private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = b.color
+                maskFilter = android.graphics.BlurMaskFilter(60f*d, android.graphics.BlurMaskFilter.Blur.NORMAL)
+            }
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                if (Build.VERSION.SDK_INT < 31) {
+                    canvas.drawCircle(width / 2f, height / 2f, 76f*d, glowPaint)
+                }
+            }
+        }.apply {
             alpha = b.alphaValue
-            if (android.os.Build.VERSION.SDK_INT >= 31) setRenderEffect(android.graphics.RenderEffect.createBlurEffect(60f*d, 60f*d, Shader.TileMode.CLAMP))
+            if (Build.VERSION.SDK_INT >= 31) {
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(b.color) }
+                setRenderEffect(android.graphics.RenderEffect.createBlurEffect(60f*d, 60f*d, Shader.TileMode.CLAMP))
+            } else {
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+            }
         }
         val lp = FrameLayout.LayoutParams((280*d).toInt(), (280*d).toInt(), b.gravity).apply {
             topMargin=(b.top*d).toInt(); bottomMargin=(b.bottom*d).toInt(); leftMargin=(b.left*d).toInt(); rightMargin=(b.right*d).toInt()
