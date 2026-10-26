@@ -71,6 +71,9 @@ class SettingsActivity : AppCompatActivity() {
         // their preference keys, but show only the requested category on each page.
         val section = intent.getStringExtra("section") ?: "all"
         fun show(viewId: Int, visible: Boolean) { findViewById<View>(viewId).visibility = if (visible) View.VISIBLE else View.GONE }
+        // The Appearance prototype is a focused page, not the generic Settings hero layout.
+        show(R.id.settingsHero, section == "all")
+        if (section == "appearance") findViewById<View>(R.id.settingsHero).visibility = View.GONE
         if (section != "all") {
             findViewById<TextView>(R.id.settingsHeading).text = when (section) {
                 "appearance" -> "Appearance"
@@ -198,19 +201,40 @@ class SettingsActivity : AppCompatActivity() {
         val glassLevel = prefs.getString("glass_level", if (lowFx(this)) "Off" else "Full")!!.replaceFirstChar { it.uppercase() }
         effectsCard.addView(segmentRow("Glass effects", "Turn glass off to save battery on older phones.", listOf("Off", "Subtle", "Full"), glassLevel) { choice ->
             prefs.edit().putString("glass_level", choice.lowercase()).putBoolean("low_fx", choice == "Off").apply()
+            // Apply the level consistently; keep the saved level as the source of truth.
             recreate()
         })
+        // The prototype places haptics inside the same Effects card, between Glass and Motion.
+        val hapticsRow = findViewById<LinearLayout>(R.id.cardHaptics)
+        (hapticsRow.parent as? ViewGroup)?.removeView(hapticsRow)
+        val hapticsDivider = View(this).apply {
+            setBackgroundColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.glassStroke))
+        }
+        effectsCard.addView(hapticsDivider, LinearLayout.LayoutParams(-1, 1).apply {
+            topMargin = 4.dp(); bottomMargin = 4.dp()
+        })
+        effectsCard.addView(hapticsRow, LinearLayout.LayoutParams(-1, -2))
         val motionChoice = if (prefs.getBoolean("motion_reduced", false)) "Reduced" else "Standard"
         effectsCard.addView(segmentRow("Motion", "Reduced replaces bouncy motion with simple fades.", listOf("Standard", "Reduced"), motionChoice) { choice ->
             prefs.edit().putBoolean("motion_reduced", choice == "Reduced").apply()
+            // Recreate to apply reduced-motion behaviour immediately across this page.
+            recreate()
         })
+        val footer = TextView(this).apply {
+            text = "Changes apply straight away."
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.poppins_regular)
+            setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFF777777.toInt()))
+            setPadding(0, 20.dp(), 0, 14.dp())
+        }
+        effectsCard.addView(footer)
         effectsParent.addView(effectsCard, (effectsParent as ViewGroup).indexOfChild(findViewById(R.id.cardLowFx)) + 1,
             ViewGroup.MarginLayoutParams(-1, -2).apply { topMargin = 10.dp() })
         effectsCard.visibility = if (section == "all" || section == "appearance") View.VISIBLE else View.GONE
         findViewById<View>(R.id.cardLowFx).visibility = View.GONE
 
         // Haptics test uses the existing app preference and the device vibrator.
-        val hapticsRow = findViewById<LinearLayout>(R.id.cardHaptics)
         val testHaptics = com.google.android.material.button.MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "Test"; textSize = 12f; isAllCaps = false; insetTop = 0; insetBottom = 0
             setOnClickListener {
