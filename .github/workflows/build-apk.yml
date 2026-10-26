@@ -162,8 +162,12 @@ jobs:
             # Use GitHub expressions here: the action's shell does not reliably inherit
             # job-level environment values such as RUNNER_TEMP and VERSION_NAME.
             set -eu
-            APK="${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk"
-            test -s "$APK" || { echo "APK not found or empty: $APK"; exit 1; }
+            APK="$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/release/app-release.apk"
+            if [ ! -s "$APK" ]; then
+              echo "APK not found or empty at expected Gradle output: $APK"
+              find "$GITHUB_WORKSPACE/android-app/app/build/outputs/apk" -type f -name '*.apk' -print
+              exit 1
+            fi
             adb wait-for-device
             adb install "$APK"
             adb shell am force-stop com.savan.drishyam
