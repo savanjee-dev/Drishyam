@@ -19,8 +19,8 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         installScrollBounce(findViewById(R.id.settingsScroll))
-        animatePageEntrance(findViewById(android.R.id.content))
-        if (motionEnabled(this)) {
+        if (!getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(findViewById(android.R.id.content))
+        if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) {
             val motionTargets = listOf(
                 R.id.sectionAppearance, R.id.cardTheme, R.id.sectionEffects, R.id.cardHaptics,
                 R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.sectionAbout,
