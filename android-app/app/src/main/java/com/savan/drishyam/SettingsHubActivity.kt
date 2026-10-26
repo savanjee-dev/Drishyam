@@ -28,6 +28,8 @@ import com.google.android.material.card.MaterialCardView
  */
 class SettingsHubActivity : AppCompatActivity() {
     private var storageValueView: TextView? = null
+    private var lowFxEnabled: Boolean = false
+    private var reducedMotionEnabledEnabled: Boolean = false
 
     override fun onResume() {
         super.onResume()
@@ -66,9 +68,9 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
         }
         val ambient = android.widget.FrameLayout(this)
-        val reducedMotion = !motionEnabled(this)
-        val lowFxOn = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
-        addAmbientGlows(ambient, this, animate = !reducedMotion, lowFx = lowFxOn)
+        reducedMotionEnabledEnabled = !motionEnabled(this)
+        lowFxEnabled = getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("low_fx", false)
+        addAmbientGlows(ambient, this, animate = !reducedMotionEnabled, lowFx = lowFxEnabled)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
         page.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         setContentView(page)
@@ -83,7 +85,7 @@ class SettingsHubActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(48.dp(), 48.dp())
             isClickable = true
             isFocusable = true
-            attachPress(glowable = true, lowFx = lowFxOn, reduced = reducedMotion)
+            attachPress(glowable = true, lowFx = lowFxEnabled, reduced = reducedMotionEnabled)
             setOnClickListener { finish() }
             contentDescription = getString(R.string.back_desc)
         }
@@ -168,10 +170,10 @@ class SettingsHubActivity : AppCompatActivity() {
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-            setCardBackgroundColor(if (lowFxOn) ContextCompat.getColor(this@SettingsHubActivity, R.color.surface) else if (night) 0x991B2117.toInt() else 0x99FFFCF4.toInt())
+            setCardBackgroundColor(if (lowFxEnabled) ContextCompat.getColor(this@SettingsHubActivity, R.color.surface) else if (night) 0x991B2117.toInt() else 0x99FFFCF4.toInt())
             isClickable = true
             isFocusable = true
-            attachPress(glowable = true, lowFx = lowFxOn, reduced = reducedMotion)
+            attachPress(glowable = true, lowFx = lowFxEnabled, reduced = reducedMotionEnabled)
             setOnClickListener { action() }
         }
         val body = LinearLayout(this).apply {
@@ -231,7 +233,7 @@ class SettingsHubActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_row)
             isClickable = true
             isFocusable = true
-            attachPress(glowable = true, lowFx = lowFxOn, reduced = reducedMotion)
+            attachPress(glowable = true, lowFx = lowFxEnabled, reduced = reducedMotionEnabled)
             setOnClickListener { action() }
         }
         card.addView(android.widget.FrameLayout(this).apply {
