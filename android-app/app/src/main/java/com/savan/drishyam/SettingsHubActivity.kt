@@ -246,7 +246,7 @@ class SettingsHubActivity : AppCompatActivity() {
             background = android.graphics.drawable.GradientDrawable().apply {
                 shape = android.graphics.drawable.GradientDrawable.RECTANGLE
                 cornerRadius = 22.dp().toFloat()
-                setColor(0x263FFFFFF)
+                setColor(0x263FFFFF)
                 setStroke(1.dp(), 0x80FFFFFF.toInt())
             }
             layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 14.dp() }
