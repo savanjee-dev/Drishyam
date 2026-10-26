@@ -2,6 +2,9 @@ package com.savan.drishyam
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Build
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.view.Gravity
 import android.view.View
 import android.widget.ImageView
@@ -13,7 +16,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.card.MaterialCardView
-import com.google.android.material.color.MaterialColors
 
 /**
  * S1 Settings hub. Appearance remains a link to the existing S2 entry point;
@@ -48,6 +50,9 @@ class SettingsHubActivity : AppCompatActivity() {
                     setColor(color)
                 }
                 alpha = alphaValue
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setRenderEffect(RenderEffect.createBlurEffect(60.dp().toFloat(), 60.dp().toFloat(), Shader.TileMode.CLAMP))
+                }
             }
             val size = 280.dp()
             ambient.addView(blob, android.widget.FrameLayout.LayoutParams(size, size).apply {
@@ -97,13 +102,12 @@ class SettingsHubActivity : AppCompatActivity() {
             cardElevation = 0f
             strokeWidth = 1.dp()
             strokeColor = ContextCompat.getColor(this@SettingsHubActivity, R.color.glassStroke)
+            val darkMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface,
-                        ContextCompat.getColor(this@SettingsHubActivity, R.color.surface)),
-                    0x99FFFFFF.toInt()
-                )
+                if (darkMode) intArrayOf(0xFF222A1A.toInt(), 0x991B2117.toInt())
+                else intArrayOf(0xFFE2E6CF.toInt(), 0x99FFFCF4.toInt())
             ).apply { cornerRadius = 30.dp().toFloat() }
             setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
             setContentPadding(22.dp(), 22.dp(), 22.dp(), 22.dp())
@@ -185,6 +189,19 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
         body.addView(iconTile, LinearLayout.LayoutParams(38.dp(), 38.dp()).apply { bottomMargin = 9.dp() })
+        val preview = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
+                when (title) {
+                    "Appearance" -> intArrayOf(0xFF414D2D.toInt(), 0xFF89945A.toInt(), 0xFFD0C79A.toInt())
+                    "Browsing" -> intArrayOf(0xFF89945A.toInt(), 0xFFD0C79A.toInt())
+                    "Storage" -> intArrayOf(0xFF414D2D.toInt(), 0xFF89945A.toInt())
+                    else -> intArrayOf(0xFFD0C79A.toInt(), 0xFF89945A.toInt())
+                }
+            ).apply { cornerRadius = 3.dp().toFloat() }
+            alpha = 0.8f
+        }
+        body.addView(preview, LinearLayout.LayoutParams(42.dp(), 4.dp()).apply { bottomMargin = 5.dp() })
         body.addView(TextView(this).apply {
             text = title
             textSize = 15f
@@ -243,7 +260,7 @@ class SettingsHubActivity : AppCompatActivity() {
             radius = 34.dp().toFloat()
             cardElevation = 0f
             strokeWidth = 0
-            minimumHeight = 280.dp()
+            minimumHeight = 214.dp()
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
                 intArrayOf(
@@ -287,7 +304,7 @@ class SettingsHubActivity : AppCompatActivity() {
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 14.dp(), 0, 8.dp())
-            maxWidth = (resources.displayMetrics.widthPixels * 0.46f).toInt()
+            maxWidth = (resources.displayMetrics.widthPixels * 0.43f).toInt()
         })
         copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
@@ -313,7 +330,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         copy.addView(storyButton)
         body.addView(copy, android.widget.FrameLayout.LayoutParams(
-            (resources.displayMetrics.widthPixels * 0.50f).toInt(), -2, Gravity.TOP or Gravity.START
+            (resources.displayMetrics.widthPixels * 0.48f).toInt(), -2, Gravity.TOP or Gravity.START
         ))
 
         // Soft radial-style halo behind the portrait; the supplied prototype photo will replace
@@ -392,6 +409,9 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         body.addView(sparkles, android.widget.FrameLayout.LayoutParams(48.dp(), 24.dp(),
             Gravity.TOP or Gravity.END).apply { topMargin = 12.dp(); rightMargin = 12.dp() })
+        body.bringChildToFront(copy)
+        body.bringChildToFront(portrait)
+        body.bringChildToFront(sparkles)
         sparkles.animate().alpha(0.35f).setDuration(1300).withEndAction {
             sparkles.animate().alpha(1f).setDuration(1300).start()
         }.start()
