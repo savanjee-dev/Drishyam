@@ -182,20 +182,20 @@ class WhatsNewActivity : AppCompatActivity() {
             }
             val heroBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             heroBody.addView(TextView(this).apply {
-                text = "THE LATEST CHAPTER"
+                text = if (releases.firstOrNull()?.version == latest.version) "LATEST" else "RELEASE"
                 textSize = 11f
                 letterSpacing = 0.16f
                 setTextColor(onPrimaryContainer)
             })
             heroBody.addView(TextView(this).apply {
-                text = "A fresh perspective."
-                textSize = 30f
+                text = latest.version
+                textSize = 46f
                 typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_bold)
                 setTextColor(onPrimaryContainer)
                 setPadding(0, 8.dp(), 0, 6.dp())
             })
             heroBody.addView(TextView(this).apply {
-                text = "Drishyam ${latest.version} · What's changed"
+                text = latest.title.ifBlank { "Drishyam ${latest.version}" }
                 textSize = 14f
                 setTextColor(onPrimaryContainer)
             })
@@ -228,7 +228,7 @@ class WhatsNewActivity : AppCompatActivity() {
             }
             val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             body.addView(TextView(this).apply {
-                text = if (index == 0) "LATEST RELEASE" else "RELEASE"
+                text = if (index == 0 && releases.firstOrNull()?.version == release.version) "LATEST RELEASE" else "RELEASE NOTES"
                 textSize = 10f
                 letterSpacing = 0.12f
                 setTextColor(if (index == 0) onPrimaryContainer else variant)
