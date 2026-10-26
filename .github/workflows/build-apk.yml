@@ -161,7 +161,8 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            set -euo pipefail
+            # android-emulator-runner executes this script through /bin/sh, not Bash.
+            set -eu
             APK="$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
             adb wait-for-device
             adb install "$APK"
