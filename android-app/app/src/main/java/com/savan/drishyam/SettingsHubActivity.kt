@@ -339,7 +339,7 @@ class SettingsHubActivity : AppCompatActivity() {
         copy.addView(TextView(this).apply {
             text = "The people & ideas behind Drishyam"
             textSize = 24f
-            maxLines = 3
+            maxLines = 4
             includeFontPadding = false
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_extrabold)
             setTextColor(android.graphics.Color.WHITE)
@@ -368,7 +368,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 setColor(android.graphics.Color.WHITE)
             }
             elevation = 8.dp().toFloat()
-            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 22.dp() }
+            layoutParams = LinearLayout.LayoutParams(-2, -2).apply { topMargin = 16.dp() }
         }
         copy.addView(storyButton)
         body.addView(copy, android.widget.FrameLayout.LayoutParams(copyWidthPx, -2, Gravity.TOP or Gravity.START))
@@ -432,7 +432,7 @@ class SettingsHubActivity : AppCompatActivity() {
         portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
             Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (-4).dp() })
         body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 152.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-36).dp(); bottomMargin = (-4).dp() })
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-4).dp() })
         // A diagonal sheen and two restrained sparkle marks complete the story-card treatment.
         val sheen = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
@@ -510,35 +510,19 @@ class SettingsHubActivity : AppCompatActivity() {
         root.addView(card, LinearLayout.LayoutParams(-1, -2))
     }
 
-    private class PrototypeIconView(context: android.content.Context, private val kind: String, private val tint: Int) : View(context) {
-        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint; style = Paint.Style.STROKE; strokeWidth = 2.dp().toFloat(); strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val sx = width / 24f; val sy = height / 24f
-            canvas.save(); canvas.scale(sx, sy)
-            fun line(vararg pts: Float) { val p = Path(); p.moveTo(pts[0], pts[1]); var i=2; while(i<pts.size){ p.lineTo(pts[i],pts[i+1]); i+=2 }; canvas.drawPath(p, paint) }
-            when(kind) {
-                "appearance" -> {
-                    val moon = Path().apply {
-                        moveTo(15.5f, 3.5f)
-                        quadTo(8f, 6f, 8f, 12f)
-                        quadTo(8f, 18f, 15.5f, 20.5f)
-                        quadTo(4f, 21f, 4f, 12f)
-                        quadTo(4f, 3f, 15.5f, 3.5f)
-                    }
-                    canvas.drawPath(moon, paint)
-                    canvas.drawCircle(18f, 5f, 1f, paint)
-                    canvas.drawCircle(20f, 10f, 1f, paint)
-                    canvas.drawCircle(17.5f, 15f, 1f, paint)
-                }
-                "browsing" -> { for(y in listOf(6f,12f,18f)){ canvas.drawCircle(5f,y,1f,paint); line(9f,y,19f,y) } }
-                "storage" -> { canvas.drawOval(RectF(4f,4f,20f,9f),paint); line(4f,6.5f,4f,17f); line(20f,6.5f,20f,17f); canvas.drawArc(RectF(4f,14.5f,20f,20f),0f,180f,false,paint); canvas.drawArc(RectF(4f,9f,20f,15f),0f,180f,false,paint) }
-                "about" -> { canvas.drawCircle(12f,12f,8f,paint); line(12f,10f,12f,16f) }
-                "updates" -> { line(12f,3f,12f,15f); line(7f,10f,12f,15f,17f,10f); line(5f,19f,19f,19f) }
-                "whatsnew" -> { line(12f,3f,13.5f,9.5f,20f,12f,13.5f,13.5f,12f,20f,10.5f,13.5f,4f,12f,10.5f,9.5f,12f,3f) }
-                "chevron" -> { line(9f,6f,15f,12f,9f,18f) }
-            }
-            canvas.restore()
+    private class PrototypeIconView(context: android.content.Context, private val kind: String, private val tint: Int) : ImageView(context) {
+        init {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            imageTintList = android.content.res.ColorStateList.valueOf(tint)
+            setImageResource(when (kind) {
+                "appearance" -> R.drawable.ic_tile_appearance
+                "browsing" -> R.drawable.ic_tile_browsing
+                "storage" -> R.drawable.ic_tile_storage
+                "about" -> R.drawable.ic_tile_about
+                "updates" -> R.drawable.ic_row_download
+                "whatsnew" -> R.drawable.ic_row_sparkle
+                else -> R.drawable.ic_row_chevron
+            })
         }
     }
 
@@ -602,19 +586,11 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    private class SparkleView(context: android.content.Context, private val tint: Int) : View(context) {
-        private val sparklePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tint; style = Paint.Style.FILL }
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            val cx = width / 2f; val cy = height / 2f; val r = minOf(width, height) * 0.48f
-            val path = Path().apply {
-                moveTo(cx, cy - r); cubicTo(cx + r * .1f, cy - r * .28f, cx + r * .28f, cy - r * .1f, cx + r, cy)
-                cubicTo(cx + r * .28f, cy + r * .1f, cx + r * .1f, cy + r * .28f, cx, cy + r)
-                cubicTo(cx - r * .1f, cy + r * .28f, cx - r * .28f, cy + r * .1f, cx - r, cy)
-                cubicTo(cx - r * .28f, cy - r * .1f, cx - r * .1f, cy - r * .28f, cx, cy - r)
-                close()
-            }
-            canvas.drawPath(path, sparklePaint)
+    private class SparkleView(context: android.content.Context, tint: Int) : ImageView(context) {
+        init {
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            imageTintList = android.content.res.ColorStateList.valueOf(tint)
+            setImageResource(R.drawable.ic_sparkle_fill)
         }
     }
 
