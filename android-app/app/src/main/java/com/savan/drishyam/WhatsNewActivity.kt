@@ -92,7 +92,7 @@ class WhatsNewActivity : AppCompatActivity() {
         }
         page.addView(loading)
         setContentView(page)
-        animatePageEntrance(page)
+        if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(page)
 
         // Render local data immediately, without waiting for GitHub.
         val cached = ReleaseNotesCache.cachedHistory(this)
@@ -216,7 +216,7 @@ class WhatsNewActivity : AppCompatActivity() {
             })
             hero.addView(heroBody)
             content.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 18.dp() })
-            if (motionEnabled(this)) {
+            if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
                 hero.alpha = 0f
                 hero.translationY = 14.dp().toFloat()
                 hero.scaleX = 0.985f
@@ -271,7 +271,7 @@ class WhatsNewActivity : AppCompatActivity() {
             content.addView(card, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = 12.dp()
             })
-            if (motionEnabled(this@WhatsNewActivity)) {
+            if (motionEnabled(this@WhatsNewActivity) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
                 card.alpha = 0f
                 card.translationY = 14.dp().toFloat()
                 card.scaleX = 0.985f
