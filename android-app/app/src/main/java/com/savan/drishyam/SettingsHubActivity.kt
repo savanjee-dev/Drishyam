@@ -367,15 +367,18 @@ class SettingsHubActivity : AppCompatActivity() {
                 intArrayOf(0x80D0C79A.toInt(), 0x40D0C79A, 0x00D0C79A)
             ).apply { shape = android.graphics.drawable.GradientDrawable.OVAL }
             alpha = 0.75f
-            post {
-                fun pulseHalo() {
-                    animate().alpha(1f).scaleX(1.08f).scaleY(1.08f).setDuration(1400).withEndAction {
-                        animate().alpha(0.35f).scaleX(0.94f).scaleY(0.94f).setDuration(1400).withEndAction {
-                            if (isAttachedToWindow) pulseHalo()
+            // Respect both reduced-motion and Glass Effects Off preferences.
+            if (motionEnabled(this@SettingsHubActivity) && !lowFxEnabled) {
+                post {
+                    fun pulseHalo() {
+                        animate().alpha(1f).scaleX(1.08f).scaleY(1.08f).setDuration(1400).withEndAction {
+                            animate().alpha(0.35f).scaleX(0.94f).scaleY(0.94f).setDuration(1400).withEndAction {
+                                if (isAttachedToWindow && motionEnabled(this@SettingsHubActivity) && !lowFxEnabled) pulseHalo()
+                            }.start()
                         }.start()
-                    }.start()
+                    }
+                    pulseHalo()
                 }
-                pulseHalo()
             }
         }
         body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
@@ -472,11 +475,21 @@ class SettingsHubActivity : AppCompatActivity() {
             storyButton.post { startNudge(storyButton, resources.displayMetrics.density) }
         }
 
-        // Subtle entrance and portrait motion; animations remain lightweight and stop with the view.
-        body.alpha = 0f
-        body.translationY = 8.dp().toFloat()
-        body.animate().alpha(1f).translationY(0f).setDuration(240).start()
-        if (motionEnabled(this) && !lowFxEnabled) startBob(portrait, resources.displayMetrics.density)
+        // Keep the card immediately visible when reduced motion or Glass Effects Off is enabled.
+        if (motionEnabled(this) && !lowFxEnabled) {
+            body.alpha = 0f
+            body.translationY = 16.dp().toFloat()
+            body.animate().alpha(1f).translationY(0f)
+                .setDuration(420L).setInterpolator(S1Fx.outCurve).start()
+            startBob(portrait, resources.displayMetrics.density)
+        } else {
+            body.alpha = 1f
+            body.translationY = 0f
+            halo.alpha = 0.75f
+            sheen.alpha = 0f
+            sparkles.alpha = 1f
+            spark2.alpha = 1f
+        }
 
         card.addView(body)
         root.addView(card, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 8.dp() })
