@@ -43,8 +43,7 @@ class WhatsNewActivity : AppCompatActivity() {
             setBackgroundColor(surface)
         }
         val header = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            orientation = LinearLayout.HORIZONTAL
+            orientation = LinearLayout.VERTICAL
             setPadding(16.dp(), 8.dp(), 16.dp(), 12.dp())
         }
         header.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
@@ -56,21 +55,28 @@ class WhatsNewActivity : AppCompatActivity() {
             contentDescription = "Back"
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(52.dp(), 52.dp()))
-        header.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(10.dp(), 0, 0, 0)
-            addView(TextView(this@WhatsNewActivity).apply {
-                text = "What’s New"
-                textSize = 25f
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_bold)
-                setTextColor(onSurface)
-            })
-            addView(TextView(this@WhatsNewActivity).apply {
-                text = "Release history · newest first"
-                textSize = 13f
-                setTextColor(variant)
-            })
-        }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(TextView(this).apply {
+            text = "Release notes"
+            textSize = 11f
+            letterSpacing = .14f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_semibold)
+            setTextColor(variant)
+            setPadding(2.dp(), 18.dp(), 0, 4.dp())
+        })
+        header.addView(TextView(this).apply {
+            text = "What's new"
+            textSize = 38f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.poppins_extrabold)
+            setTextColor(onSurface)
+            letterSpacing = -.02f
+            setPadding(0, 0, 0, 4.dp())
+        })
+        header.addView(TextView(this).apply {
+            text = "Every change, release by release."
+            textSize = 14f
+            setTextColor(variant)
+            setPadding(0, 0, 0, 4.dp())
+        })
         page.addView(header)
 
         scroll = ScrollView(this).apply {
