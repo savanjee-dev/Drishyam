@@ -11,7 +11,6 @@ on:
 permissions:
   contents: read
 
-# Avoid overlapping dependency downloads on feature branches; serialize main releases.
 concurrency:
   group: drishyam-candidate-${{ github.ref }}
   cancel-in-progress: true
@@ -102,10 +101,9 @@ jobs:
           res = Path(sys.argv[1])
           base, v21 = res / "strings.xml", res / "strings_v21.xml"
           if base.exists() and v21.exists():
-              base_root = ET.parse(base).getroot()
+              base_names = {item.get("name") for item in ET.parse(base).getroot() if item.tag in ("string", "item", "plurals", "string-array")}
               v21_tree = ET.parse(v21)
               v21_root = v21_tree.getroot()
-              base_names = {item.get("name") for item in base_root if item.tag in ("string", "item", "plurals", "string-array")}
               for item in list(v21_root):
                   if item.get("name") == "settings_version" and item.get("name") in base_names:
                       v21_root.remove(item)
@@ -161,9 +159,11 @@ jobs:
           arch: x86_64
           profile: pixel_2
           script: |
-            # android-emulator-runner executes this script through /bin/sh, not Bash.
+            # Use GitHub expressions here: the action's shell does not reliably inherit
+            # job-level environment values such as RUNNER_TEMP and VERSION_NAME.
             set -eu
-            APK="$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
+            APK="${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk"
+            test -s "$APK" || { echo "APK not found or empty: $APK"; exit 1; }
             adb wait-for-device
             adb install "$APK"
             adb shell am force-stop com.savan.drishyam
@@ -179,7 +179,6 @@ jobs:
           path: ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
           if-no-files-found: error
           retention-days: 30
-
 
       - name: Generate APK checksum
         shell: bash
