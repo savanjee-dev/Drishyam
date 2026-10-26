@@ -180,7 +180,7 @@ class SettingsActivity : AppCompatActivity() {
             block.addView(sectionText(description, 12f, true).apply { setPadding(0, 2.dp(), 0, 8.dp()) })
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
             val buttons = mutableMapOf<String, TextView>()
-            fun paint(value: String) = buttons.forEach { (key, button) -> button.styleSeg(key.equals(value, true)) }
+            fun paint(value: String) { buttons.forEach { (key, button) -> button.styleSeg(key.equals(value, true)) } }
             options.forEachIndexed { i, option ->
                 val b = TextView(this).apply {
                     text = option; textSize = 12f; gravity = android.view.Gravity.CENTER
