@@ -65,9 +65,9 @@ class SettingsHubActivity : AppCompatActivity() {
                     blob.animate().translationX(0f).translationY(0f).setDuration(duration).start()
                 }.start()
         }
-        addAmbientBlob(0x5589945A, -0.20f, -0.05f, 12000L, 0.42f)
-        addAmbientBlob(0x55D0C79A, 0.72f, 0.18f, 14000L, 0.42f)
-        addAmbientBlob(0x55414D2D, 0.08f, 0.72f, 16000L, 0.22f)
+        addAmbientBlob(0x5589945A, -0.24f, -0.09f, 12000L, 0.42f)
+        addAmbientBlob(0x55D0C79A, 0.78f, 0.26f, 14000L, 0.42f)
+        addAmbientBlob(0x55414D2D, 0.08f, 0.72f, 12000L, 0.42f)
         page.addView(ambient, android.widget.FrameLayout.LayoutParams(-1, -1))
         page.addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         setContentView(page)
@@ -89,11 +89,11 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         root.addView(back)
 
-        val eyebrow = addText(root, "YOUR SPACE, YOUR WAY", 11f, R.color.accent, 22, 6)
+        val eyebrow = addText(root, "Your space, your way".uppercase(), 11f, R.color.accent, 22, 0)
         eyebrow.letterSpacing = 0.16f
-        val heading = addText(root, "Settings", 36f, R.color.fg, 6, 4)
+        val heading = addText(root, "Settings", 38f, R.color.fg, 6, 4)
         heading.letterSpacing = -0.02f
-        heading.typeface = ResourcesCompat.getFont(this, R.font.ericaone)
+        heading.typeface = ResourcesCompat.getFont(this, R.font.poppins_bold)
         heading.setLineSpacing(0f, 1.1f)
         addText(root, "Make Drishyam feel like yours.", 14f, R.color.mute, 0, 6)
 
@@ -123,7 +123,7 @@ class SettingsHubActivity : AppCompatActivity() {
         hero.addView(heroBody)
         root.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 18.dp() })
 
-        val section = addText(root, "PREFERENCES", 11f, R.color.accent, 26, 8)
+        val section = addText(root, "PERSONALISE", 11f, R.color.accent, 28, 12)
         section.letterSpacing = 0.14f
         val tiles = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
@@ -144,7 +144,7 @@ class SettingsHubActivity : AppCompatActivity() {
         tiles.addView(row2, LinearLayout.LayoutParams(-1, 176.dp()).apply { topMargin = 12.dp() })
         root.addView(tiles)
 
-        val quick = addText(root, "QUICK ACTIONS", 11f, R.color.accent, 26, 8)
+        val quick = addText(root, "QUICK ACTIONS", 11f, R.color.accent, 28, 12)
         quick.letterSpacing = 0.14f
         addAction(root, "↻", "Check for updates", "Find the latest verified release") {
             startActivity(Intent(this, UpdatesActivity::class.java))
@@ -153,7 +153,7 @@ class SettingsHubActivity : AppCompatActivity() {
             startActivity(Intent(this, WhatsNewActivity::class.java))
         }
 
-        val more = addText(root, "MORE", 11f, R.color.accent, 26, 8)
+        val more = addText(root, "MORE", 11f, R.color.accent, 28, 12)
         more.letterSpacing = 0.14f
         addOurStory(root)
         addText(root, "Made with curiosity. Built for photography.", 12f, R.color.mute, 24, 0).apply {
@@ -499,8 +499,12 @@ class SettingsHubActivity : AppCompatActivity() {
         val tv = TextView(this).apply {
             text = value
             textSize = size
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity,
-                if (size >= 17f) R.font.montserrat_semibold else R.font.poppins_regular)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, when {
+                value == "Settings" -> R.font.poppins_bold
+                size >= 17f -> R.font.montserrat_bold
+                size == 11f -> R.font.poppins_medium
+                else -> R.font.poppins_regular
+            })
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, color))
             setPadding(0, top.dp(), 0, bottom.dp())
         }
