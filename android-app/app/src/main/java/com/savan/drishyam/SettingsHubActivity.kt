@@ -322,7 +322,9 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(24.dp(), 24.dp(), 24.dp(), 24.dp())
         }
         val cardWidthPx = (resources.displayMetrics.widthPixels - 40.dp()).coerceAtLeast(280.dp())
-        val copyWidthPx = minOf((cardWidthPx * 0.58f).toInt(), cardWidthPx - 160.dp()).coerceAtLeast(150.dp())
+        val innerWidthPx = cardWidthPx - 48.dp()
+        // Keep the story copy clear of the portrait on narrow phones.
+        val copyWidthPx = minOf((innerWidthPx * 0.52f).toInt(), innerWidthPx - 148.dp()).coerceAtLeast(132.dp())
         val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         copy.addView(TextView(this).apply {
             text = "OUR STORY"
@@ -432,7 +434,7 @@ class SettingsHubActivity : AppCompatActivity() {
         portrait.addView(photoTag, android.widget.FrameLayout.LayoutParams(-2, -2,
             Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = (-4).dp() })
         body.addView(portrait, android.widget.FrameLayout.LayoutParams(140.dp(), 152.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-4).dp() })
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = 0; bottomMargin = 0 })
         // A diagonal sheen and two restrained sparkle marks complete the story-card treatment.
         val sheen = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
