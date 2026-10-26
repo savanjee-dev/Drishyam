@@ -265,25 +265,8 @@ class SettingsHubActivity : AppCompatActivity() {
             android.graphics.Color.rgb(137, 148, 90),
             android.graphics.Color.rgb(208, 199, 154)
         )
-        val storyGradientEnd = intArrayOf(
-            android.graphics.Color.rgb(38, 49, 27),
-            android.graphics.Color.rgb(76, 88, 51),
-            android.graphics.Color.rgb(151, 159, 101),
-            android.graphics.Color.rgb(218, 208, 166)
-        )
-        fun blendColor(from: Int, to: Int, fraction: Float): Int {
-            val inverse = 1f - fraction
-            return android.graphics.Color.argb(
-                (android.graphics.Color.alpha(from) * inverse + android.graphics.Color.alpha(to) * fraction).toInt(),
-                (android.graphics.Color.red(from) * inverse + android.graphics.Color.red(to) * fraction).toInt(),
-                (android.graphics.Color.green(from) * inverse + android.graphics.Color.green(to) * fraction).toInt(),
-                (android.graphics.Color.blue(from) * inverse + android.graphics.Color.blue(to) * fraction).toInt()
-            )
-        }
-        val storyBackground = android.graphics.drawable.GradientDrawable(
-            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            storyGradientStart
-        ).apply { cornerRadius = 34.dp().toFloat() }
+        val storyGradientEnd = storyGradientStart
+        val storyBackground = StoryFlowDrawable(resources.displayMetrics.density)
         val card = MaterialCardView(this).apply {
             radius = 34.dp().toFloat()
             cardElevation = 0f
@@ -293,7 +276,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
             isClickable = true
             isFocusable = true
-            pressFx()
+            attachPress(glowable = true, lowFx = lowFxEnabled, reduced = reducedMotionEnabled)
             setOnClickListener {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
@@ -304,17 +287,17 @@ class SettingsHubActivity : AppCompatActivity() {
             duration = 9000L
             repeatCount = android.animation.ValueAnimator.INFINITE
             repeatMode = android.animation.ValueAnimator.REVERSE
+            interpolator = S1Fx.easeInOut
             addUpdateListener { animator ->
                 val fraction = animator.animatedValue as Float
-                storyBackground.colors = IntArray(storyGradientStart.size) { index ->
-                    blendColor(storyGradientStart[index], storyGradientEnd[index], fraction)
-                }
+                storyBackground.progress = fraction
+                storyBackground.invalidateSelf()
                 card.invalidate()
             }
         }
         card.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(v: View) {
-                if (!gradientAnimator.isStarted) gradientAnimator.start()
+                if (motionEnabled(this@SettingsHubActivity) && !lowFxEnabled && !gradientAnimator.isStarted) gradientAnimator.start()
             }
             override fun onViewDetachedFromWindow(v: View) {
                 gradientAnimator.cancel()
