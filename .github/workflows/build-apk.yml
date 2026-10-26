@@ -151,7 +151,10 @@ jobs:
           "$ZIPALIGN" -c -v 4 "$APK"
           echo "APK package, version metadata, and ZIP alignment verified."
 
-      - name: Install APK on Android emulator (device-install smoke test)
+      # Pushes are fast development candidates: compile + signing/package/alignment
+      # checks still run, but emulator boot/install is reserved for manual RC builds.
+      - name: Install APK on Android emulator (release-candidate smoke test)
+        if: github.event_name == 'workflow_dispatch'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
