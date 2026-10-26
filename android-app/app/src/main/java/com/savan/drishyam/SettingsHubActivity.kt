@@ -130,11 +130,11 @@ class SettingsHubActivity : AppCompatActivity() {
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         row1.addView(tile("appearance", "Appearance", "System") {
             startActivity(Intent(this@SettingsHubActivity, SettingsActivity::class.java).putExtra("section", "appearance"))
-        }, LinearLayout.LayoutParams(0, -1, 1f).apply { rightMargin = 6.dp() })
+        }, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = 6.dp() })
         row1.addView(tile("browsing", "Browsing", "Hot · India on") {
             Toast.makeText(this@SettingsHubActivity, "Browsing page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
-        tiles.addView(row1, LinearLayout.LayoutParams(-1, 176.dp()))
+        tiles.addView(row1, LinearLayout.LayoutParams(-1, -2))
         val row2 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         row2.addView(tile("storage", "Storage", "0.0 MB cached") {
             Toast.makeText(this@SettingsHubActivity, "Storage page: next prototype step", Toast.LENGTH_SHORT).show()
@@ -142,7 +142,7 @@ class SettingsHubActivity : AppCompatActivity() {
         row2.addView(tile("about", "About", "Version 2.7.16") {
             Toast.makeText(this@SettingsHubActivity, "About page: next prototype step", Toast.LENGTH_SHORT).show()
         }, LinearLayout.LayoutParams(0, -1, 1f).apply { leftMargin = 6.dp() })
-        tiles.addView(row2, LinearLayout.LayoutParams(-1, 176.dp()).apply { topMargin = 12.dp() })
+        tiles.addView(row2, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 12.dp() })
         root.addView(tiles)
 
         val quick = addText(root, "QUICK ACTIONS", 11f, R.color.accent, 28, 12)
@@ -157,8 +157,10 @@ class SettingsHubActivity : AppCompatActivity() {
         val more = addText(root, "MORE", 11f, R.color.accent, 28, 12)
         more.letterSpacing = 0.14f
         addOurStory(root)
-        addText(root, "Made with curiosity. Built for photography.", 12f, R.color.mute, 26, 0).apply {
+        addText(root, "Made with curiosity.\\nBuilt for photography.", 18f, R.color.fg, 26, 0).apply {
             gravity = Gravity.CENTER
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.pacifico_regular)
+            setLineSpacing(2.dp().toFloat(), 1f)
         }
         staggerIn((0 until root.childCount).map { root.getChildAt(it) }, resources.displayMetrics.density, enabled = motionEnabled(this))
     }
@@ -179,7 +181,8 @@ class SettingsHubActivity : AppCompatActivity() {
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.START
-            setPadding(18.dp(), 18.dp(), 12.dp(), 16.dp())
+            setPadding(18.dp(), 18.dp(), 18.dp(), 18.dp())
+            minimumHeight = 176.dp()
         }
         val iconTile = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -206,19 +209,20 @@ class SettingsHubActivity : AppCompatActivity() {
                 else -> addView(View(this@SettingsHubActivity).apply { background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR, intArrayOf(0xFFD0C79A.toInt(), 0xFF414D2D.toInt())).apply { shape = android.graphics.drawable.GradientDrawable.OVAL; setStroke(3.dp(), 0x3889945A) } }, LinearLayout.LayoutParams(26.dp(), 26.dp()))
             }
         }
-        body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { bottomMargin = 12.dp() })
+        body.addView(preview, LinearLayout.LayoutParams(-1, 26.dp()).apply { topMargin = 12.dp() })
         body.addView(TextView(this).apply {
             text = title
             textSize = 16f
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.fg))
-            setPadding(0, 5.dp(), 0, 4.dp())
+            setPadding(0, 0, 0, 2.dp())
         })
         body.addView(TextView(this).apply {
             text = value
             textSize = 12f
             setTextColor(ContextCompat.getColor(this@SettingsHubActivity, R.color.mute))
             maxLines = 1
+            includeFontPadding = false
             if (title == "Storage") storageValueView = this
         })
         card.addView(body)
@@ -317,18 +321,19 @@ class SettingsHubActivity : AppCompatActivity() {
         copy.addView(TextView(this).apply {
             text = "The people & ideas behind Drishyam"
             textSize = 24f
-            maxLines = 2
+            maxLines = 3
             includeFontPadding = false
-            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
+            typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_extrabold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 14.dp(), 0, 8.dp())
-            maxWidth = (resources.displayMetrics.widthPixels * 0.48f).toInt()
+            maxWidth = ((resources.displayMetrics.widthPixels / resources.displayMetrics.density - 40f) * 0.58f * resources.displayMetrics.density).toInt()
         })
         copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
             textSize = 13f
             setTextColor(0xE6FFFFFF.toInt())
-            maxWidth = (resources.displayMetrics.widthPixels * 0.58f).toInt()
+            maxWidth = (resources.displayMetrics.widthPixels - 238.dp()).coerceAtLeast(100.dp())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
             setLineSpacing(2.dp().toFloat(), 1.35f)
         })
         val storyButton = TextView(this).apply {
@@ -348,7 +353,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         copy.addView(storyButton)
         body.addView(copy, android.widget.FrameLayout.LayoutParams(
-            (resources.displayMetrics.widthPixels * 0.48f).toInt(), -2, Gravity.TOP or Gravity.START
+            (resources.displayMetrics.widthPixels - 238.dp()).coerceAtLeast(100.dp()), -2, Gravity.TOP or Gravity.START
         ))
 
         // Soft radial halo behind the existing developer portrait, preserving R.drawable.savan.
@@ -373,7 +378,7 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
         body.addView(halo, android.widget.FrameLayout.LayoutParams(160.dp(), 160.dp(),
-            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = (-12).dp() })
+            Gravity.BOTTOM or Gravity.END).apply { rightMargin = (-8).dp(); bottomMargin = 8.dp() })
 
         val portrait = android.widget.FrameLayout(this).apply {
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -455,7 +460,7 @@ class SettingsHubActivity : AppCompatActivity() {
             gravity = Gravity.CENTER
         }
         body.addView(spark2, android.widget.FrameLayout.LayoutParams(18.dp(), 18.dp(),
-            Gravity.TOP or Gravity.END).apply { topMargin = 58.dp(); rightMargin = 26.dp() })
+            Gravity.TOP or Gravity.END).apply { topMargin = 58.dp(); rightMargin = 170.dp() })
         body.bringChildToFront(copy)
         body.bringChildToFront(portrait)
         body.bringChildToFront(sparkles)
