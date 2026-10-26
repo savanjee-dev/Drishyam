@@ -260,13 +260,6 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun addOurStory(root: LinearLayout) {
-        val storyGradientStart = intArrayOf(
-            android.graphics.Color.rgb(31, 42, 22),
-            android.graphics.Color.rgb(65, 77, 45),
-            android.graphics.Color.rgb(137, 148, 90),
-            android.graphics.Color.rgb(208, 199, 154)
-        )
-        val storyGradientEnd = storyGradientStart
         val storyBackground = StoryFlowDrawable(resources.displayMetrics.density)
         val card = MaterialCardView(this).apply {
             radius = 34.dp().toFloat()
@@ -330,7 +323,7 @@ class SettingsHubActivity : AppCompatActivity() {
             typeface = ResourcesCompat.getFont(this@SettingsHubActivity, R.font.montserrat_bold)
             setTextColor(android.graphics.Color.WHITE)
             setPadding(0, 14.dp(), 0, 8.dp())
-            maxWidth = (resources.displayMetrics.widthPixels * 0.58f).toInt()
+            maxWidth = (resources.displayMetrics.widthPixels * 0.48f).toInt()
         })
         copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
@@ -359,8 +352,7 @@ class SettingsHubActivity : AppCompatActivity() {
             (resources.displayMetrics.widthPixels * 0.48f).toInt(), -2, Gravity.TOP or Gravity.START
         ))
 
-        // Soft radial-style halo behind the portrait; the supplied prototype photo will replace
-        // the existing portrait resource once the exact asset is available.
+        // Soft radial halo behind the existing developer portrait, preserving R.drawable.savan.
         val halo = View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
