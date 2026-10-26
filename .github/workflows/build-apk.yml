@@ -153,6 +153,24 @@ jobs:
           "$ZIPALIGN" -c -v 4 "$APK"
           echo "APK package, version metadata, and ZIP alignment verified."
 
+      - name: Install APK on Android emulator (device-install smoke test)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            set -euo pipefail
+            APK="$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
+            adb wait-for-device
+            adb install "$APK"
+            adb shell am force-stop com.savan.drishyam
+            adb shell monkey -p com.savan.drishyam 1
+            sleep 5
+            adb shell dumpsys activity activities | grep -F 'com.savan.drishyam'
+            adb uninstall com.savan.drishyam
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
