@@ -34,7 +34,6 @@ class GlassLayout @JvmOverloads constructor(
 
     companion object {
         private const val DOWN = 4f        // the backdrop is captured at 1/6 size
-        private const val BLUR_R = 1       // subtle blur: keep text and controls behind glass recognisable
         private const val PAD = 10         // extra border so blurred edges stay clean
     }
 
@@ -56,7 +55,11 @@ class GlassLayout @JvmOverloads constructor(
     private val rimStart = ContextCompat.getColor(context, R.color.glassRimStart)
     private val rimEnd = ContextCompat.getColor(context, R.color.glassRimEnd)
     private val bgColor = ContextCompat.getColor(context, R.color.bg)
-    private val lowEffects = lowFx(context)
+    private val glassLevel = context.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+        .getString("glass_level", "full") ?: "full"
+    private val lowEffects = lowFx(context) || glassLevel == "off"
+    // Backdrop is downsampled 4x: these radii approximate the prototype's 6dp/18dp levels.
+    private val blurRadius = when (glassLevel) { "subtle" -> 2; "full" -> 4; else -> 0 }
 
     private val bodyPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val tintPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -199,8 +202,8 @@ if (!solid) {
             val t = tmp!!
             b.getPixels(p, 0, cw, 0, 0, cw, ch)
             for (i in 0 until 1) {
-                blurH(p, t, cw, ch, BLUR_R)
-                blurV(t, p, cw, ch, BLUR_R)
+                blurH(p, t, cw, ch, blurRadius)
+                blurV(t, p, cw, ch, blurRadius)
             }
             b.setPixels(p, 0, cw, 0, 0, cw, ch)
 

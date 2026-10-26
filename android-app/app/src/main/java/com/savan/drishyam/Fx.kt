@@ -35,9 +35,13 @@ fun hapticsOn(c: Context): Boolean =
 fun lowFx(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
 
-/** Single motion gate shared by page and component transitions. */
-fun motionEnabled(c: Context): Boolean =
-    !lowFx(c) && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
+/** Single motion gate shared by page and component transitions, including S2 reduced-motion preference. */
+fun motionEnabled(c: Context): Boolean {
+    val prefs = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+    val reduced = prefs.getBoolean("motion_reduced", false) || prefs.getString("motion", "standard") == "reduced"
+    return !lowFx(c) && !reduced &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
+}
 
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
