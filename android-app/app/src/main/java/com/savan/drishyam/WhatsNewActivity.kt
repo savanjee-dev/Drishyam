@@ -80,6 +80,7 @@ class WhatsNewActivity : AppCompatActivity() {
         page.addView(header)
 
         scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
             isFillViewport = true
             clipToPadding = false
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
