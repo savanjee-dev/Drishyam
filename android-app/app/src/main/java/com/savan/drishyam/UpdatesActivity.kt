@@ -46,7 +46,7 @@ class UpdatesActivity : AppCompatActivity() {
         val onSurface = themeColor(com.google.android.material.R.attr.colorOnSurface, R.color.fg)
         val onSurfaceVariant = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant, R.color.mute)
         val primary = themeColor(com.google.android.material.R.attr.colorPrimary, R.color.accent)
-        window.statusBarColor = surface
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = surface
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars =
             !isNightMode()
