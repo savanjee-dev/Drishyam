@@ -135,6 +135,7 @@ class MainActivity : AppCompatActivity() {
         lowFxAtCreate = lowFx(this)
 
         rv = findViewById(R.id.rv)
+        rv.isVerticalScrollBarEnabled = false
         status = findViewById(R.id.status)
         statusPill = findViewById(R.id.statusPill)
         chips = findViewById(R.id.chips)
@@ -147,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         savedBar = findViewById(R.id.savedBar)
         swipe = findViewById(R.id.swipe)
         aboutScroll = findViewById(R.id.about)
+        aboutScroll.isVerticalScrollBarEnabled = false
         glassSource = findViewById(R.id.glassSource)
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
