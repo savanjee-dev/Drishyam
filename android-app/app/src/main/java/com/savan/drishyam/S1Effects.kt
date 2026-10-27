@@ -213,10 +213,10 @@ class SettingsAmbientLayer(context: Context, private val motionEnabled: Boolean)
         super.onAttachedToWindow()
         if (motionEnabled && animator == null) {
             animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 18000L
+                duration = 26000L
                 repeatCount = ValueAnimator.INFINITE
-                repeatMode = ValueAnimator.REVERSE
-                interpolator = S1Fx.easeInOut
+                repeatMode = ValueAnimator.RESTART
+                interpolator = android.view.animation.LinearInterpolator()
                 addUpdateListener { phase = it.animatedValue as Float; invalidate() }
                 start()
             }
@@ -232,27 +232,26 @@ class SettingsAmbientLayer(context: Context, private val motionEnabled: Boolean)
         if (width <= 0 || height <= 0) return
         val w = width.toFloat()
         val h = height.toFloat()
-        val drift = if (motionEnabled) phase else 0.18f
+        val p = if (motionEnabled) phase * (Math.PI.toFloat() * 2f) else 1.1f
         val glowSpecs = arrayOf(
-            floatArrayOf(w * (0.18f + 0.08f * drift), h * (0.24f + 0.04f * drift), 0x3889945A.toFloat()),
-            floatArrayOf(w * (0.82f - 0.07f * drift), h * (0.53f + 0.05f * drift), 0x30D0C79A.toFloat()),
-            floatArrayOf(w * (0.36f + 0.04f * drift), h * (0.82f - 0.03f * drift), 0x28414D2D.toFloat())
+            floatArrayOf(w * (0.50f + 0.34f * kotlin.math.sin(p).toFloat()), h * (0.48f + 0.34f * kotlin.math.cos(p * 1.3f + 0.5f).toFloat()), 0x3889945A.toFloat()),
+            floatArrayOf(w * (0.50f + 0.36f * kotlin.math.sin(p * 0.72f + 2.2f).toFloat()), h * (0.50f + 0.36f * kotlin.math.cos(p * 1.08f + 1.4f).toFloat()), 0x30D0C79A.toFloat()),
+            floatArrayOf(w * (0.50f + 0.31f * kotlin.math.sin(p * 1.42f + 4.1f).toFloat()), h * (0.50f + 0.38f * kotlin.math.cos(p * 0.83f + 3.0f).toFloat()), 0x28414D2D.toFloat())
         )
         glowSpecs.forEach { spec ->
-            val radius = 138f * density
+            val radius = 190f * density
             paint.shader = RadialGradient(spec[0], spec[1], radius,
-                intArrayOf(spec[2].toInt(), 0x00000000), null, Shader.TileMode.CLAMP)
+                intArrayOf(spec[2].toInt(), 0x1899A96A, 0x00000000), floatArrayOf(0f, 0.48f, 1f), Shader.TileMode.CLAMP)
             canvas.drawCircle(spec[0], spec[1], radius, paint)
         }
         paint.shader = null
-        particles.forEachIndexed { i, p ->
-            val travel = if (motionEnabled) ((phase + p[3]) % 1f) else p[3]
-            val wave = kotlin.math.sin((phase * 6.28318f + i).toDouble()).toFloat()
-            val x = p[0] * w + if (motionEnabled) wave * 7f * density else 0f
-            val y = ((p[1] + travel * 0.12f) % 1f) * h
+        particles.forEachIndexed { i, particle ->
+            val t = if (motionEnabled) phase * (Math.PI.toFloat() * 2f) * (0.45f + (i % 5) * 0.11f) + particle[3] * 6.28318f else particle[3] * 6.28318f
+            val x = (0.5f + 0.44f * kotlin.math.sin(t + i * 0.71f).toFloat()) * w
+            val y = (0.5f + 0.46f * kotlin.math.cos(t * (0.72f + (i % 3) * 0.12f) + i).toFloat()) * h
             paint.color = if (i % 4 == 0) 0x66D0C79A else 0x4489945A
-            paint.alpha = (255f * (0.20f + 0.20f * kotlin.math.abs(wave))).toInt().coerceIn(12, 90)
-            canvas.drawCircle(x, y, p[2] * density, paint)
+            paint.alpha = (255f * (0.14f + 0.18f * kotlin.math.abs(kotlin.math.sin(t)))).toInt().coerceIn(10, 82)
+            canvas.drawCircle(x, y, particle[2] * density, paint)
         }
         paint.alpha = 255
     }
