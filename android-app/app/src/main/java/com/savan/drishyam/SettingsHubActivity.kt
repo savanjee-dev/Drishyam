@@ -63,6 +63,8 @@ class SettingsHubActivity : AppCompatActivity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(18), dp(20), dp(150))
+            clipChildren = false
+            clipToPadding = false
         }
         val scroll = ScrollView(this).apply {
             isFillViewport = true
@@ -71,6 +73,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         val root = FrameLayout(this).apply {
             setBackgroundColor(color(R.color.bg))
+            clipChildren = false
         }
         if (!lowFx) addGlows(root, animate)
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
@@ -107,11 +110,13 @@ class SettingsHubActivity : AppCompatActivity() {
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(22), dp(22), dp(22))
-            background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_card)
-            foreground = GradientDrawable(
+            background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(color(R.color.hero), color(R.color.glassFill))
-            ).apply { cornerRadius = dpf(30) }
+            ).apply {
+                cornerRadius = dpf(30)
+                setStroke(dp(1), color(R.color.glassStroke))
+            }
         }
         hero.addView(tv("DRISHYAM  /  MOSS & OLIVE", 11f, R.color.accent, R.font.montserrat_bold).apply {
             letterSpacing = 0.16f
@@ -319,12 +324,8 @@ class SettingsHubActivity : AppCompatActivity() {
         val flowBg = HubFlowGradientDrawable(density, 34f)
         val card = FrameLayout(this).apply {
             minimumHeight = dp(214)
-            clipToOutline = true
-            outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dpf(34))
-                }
-            }
+            clipChildren = false
+            clipToPadding = false
             background = flowBg
             isClickable = true
             isFocusable = true
@@ -333,7 +334,14 @@ class SettingsHubActivity : AppCompatActivity() {
         }
 
         // Sheen band (behind text)
-        val sheen = HubSheenView(this)
+        val sheen = HubSheenView(this).apply {
+            clipToOutline = true
+            outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dpf(34))
+                }
+            }
+        }
         card.addView(sheen, FrameLayout.LayoutParams(-1, -1))
 
         // Text column: 58% of the card; photo sits on the right
@@ -464,9 +472,6 @@ class SettingsHubActivity : AppCompatActivity() {
                     gradientRadius = dpf(140)
                 }
                 alpha = g.alpha
-                if (Build.VERSION.SDK_INT >= 31) {
-                    setRenderEffect(RenderEffect.createBlurEffect(dpf(60), dpf(60), Shader.TileMode.CLAMP))
-                }
             }
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
@@ -499,6 +504,7 @@ class SettingsHubActivity : AppCompatActivity() {
             colors = intArrayOf(0x8089945A.toInt(), 0x0089945A)
             gradientRadius = dpf(90)
         }
+        glow.alpha = 0
         val useGlow = glowable && !lowFx && !reduced
         if (useGlow) foreground = glow
         var glowAnim: ValueAnimator? = null
