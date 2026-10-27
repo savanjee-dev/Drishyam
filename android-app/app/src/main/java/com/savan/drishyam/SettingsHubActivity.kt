@@ -76,7 +76,11 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
-        if (!lowFx) addGlows(root, animate)
+        if (!lowFx) {
+            addGlows(root, animate)
+            // Ambient layer remains behind content and never intercepts touch events.
+            root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
+        }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         installScrollBounce(scroll)
@@ -349,7 +353,8 @@ class SettingsHubActivity : AppCompatActivity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(24), dp(24), dp(24))
+            // Reserve the lower-right corner for the unchanged developer portrait and badge.
+            setPadding(dp(22), dp(24), dp(8), dp(24))
         }
         left.addView(TextView(this).apply {
             text = "OUR STORY"
@@ -362,8 +367,8 @@ class SettingsHubActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         left.addView(TextView(this).apply {
             text = "The people & ideas behind Drishyam"
-            textSize = 24f
-            setLineSpacing(0f, 1.15f)
+            textSize = 23f
+            setLineSpacing(0f, 1.12f)
             setTextColor(Color.WHITE)
             typeface = font(R.font.montserrat_extrabold)
             setPadding(0, dp(14), 0, dp(8))
@@ -372,8 +377,8 @@ class SettingsHubActivity : AppCompatActivity() {
         left.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
             textSize = 13f
-            setLineSpacing(0f, 1.5f)
-            alpha = 0.92f
+            setLineSpacing(0f, 1.42f)
+            alpha = 0.94f
             setTextColor(Color.WHITE)
             typeface = font(R.font.poppins_regular)
             breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
