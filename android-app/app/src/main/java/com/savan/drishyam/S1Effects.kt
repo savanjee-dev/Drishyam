@@ -150,103 +150,43 @@ fun startStoryFlow(d: StoryFlowDrawable) {
 class SheenView(context: Context): View(context) {
     private val paint=Paint(Paint.ANTI_ALIAS_FLAG)
     override fun onDraw(canvas:Canvas) {
-        val w=width.toFloat(); val h=height.toFloat()
-        canvas.save(); canvas.skew(-0.3249f,0f)
-        paint.shader=LinearGradient(0f,0f,w,0f,intArrayOf(0x00FFFFFF,0x42FFFFFF,0x00FFFFFF),null,Shader.TileMode.CLAMP)
-        canvas.drawRect(0f,0f,w,h,paint); canvas.restore()
-    }
-}
-fun startSheen(v:View, cardWidth:Float) {
-    ObjectAnimator.ofFloat(v,View.TRANSLATION_X,-.6f*cardWidth,1.2f*cardWidth).apply { duration=3800L; repeatCount=ValueAnimator.INFINITE; interpolator=S1Fx.easeInOut; start() }
-}
-fun startTwinkle(v:View, delayMs:Long) {
-    ObjectAnimator.ofPropertyValuesHolder(v,PropertyValuesHolder.ofFloat(View.ALPHA,.25f,1f),PropertyValuesHolder.ofFloat(View.SCALE_X,.8f,1.15f),PropertyValuesHolder.ofFloat(View.SCALE_Y,.8f,1.15f)).apply { duration=2600L; startDelay=delayMs; repeatCount=ValueAnimator.INFINITE; repeatMode=ValueAnimator.REVERSE; interpolator=S1Fx.easeInOut; start() }
-}
-fun startNudge(v:View,density:Float) { ObjectAnimator.ofFloat(v,View.TRANSLATION_X,0f,5f*density).apply { duration=1600L; repeatCount=ValueAnimator.INFINITE; repeatMode=ValueAnimator.REVERSE; interpolator=S1Fx.easeInOut; start() } }
-
-class FadedCircleImage(context:Context): ImageView(context) {
-    private val maskPaint=Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode=PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
-    override fun onDraw(canvas:Canvas) {
-        val w=width.toFloat(); val h=height.toFloat(); if(w<=0f||h<=0f)return
-        val layer=canvas.saveLayer(0f,0f,w,h,null)
-        super.onDraw(canvas)
-        val cx=w*.5f; val cy=h*.44f
-        val far=Math.hypot((w*.5).toDouble(),(h*.56).toDouble()).toFloat()
-        maskPaint.shader=RadialGradient(cx,cy,far,intArrayOf(0xFF000000.toInt(),0xFF000000.toInt(),0x99000000.toInt(),0x00000000),floatArrayOf(0f,.52f,.70f,.90f),Shader.TileMode.CLAMP)
-        canvas.drawRect(0f,0f,w,h,maskPaint); canvas.restoreToCount(layer)
-    }
-}
-fun haloDrawable(density:Float)=GradientDrawable().apply { gradientType=GradientDrawable.RADIAL_GRADIENT; colors=intArrayOf(0x80D0C79A.toInt(),0x00D0C79A); gradientRadius=80f*density }
-fun startHaloPulse(v:View) { ObjectAnimator.ofPropertyValuesHolder(v,PropertyValuesHolder.ofFloat(View.ALPHA,.35f,1f),PropertyValuesHolder.ofFloat(View.SCALE_X,.94f,1.08f),PropertyValuesHolder.ofFloat(View.SCALE_Y,.94f,1.08f)).apply { duration=2800L; repeatCount=ValueAnimator.INFINITE; repeatMode=ValueAnimator.REVERSE; interpolator=S1Fx.easeInOut; start() } }
-fun startBob(v:View,density:Float) { ObjectAnimator.ofFloat(v,View.TRANSLATION_Y,0f,-4f*density).apply { duration=3400L; repeatCount=ValueAnimator.INFINITE; repeatMode=ValueAnimator.REVERSE; interpolator=S1Fx.easeInOut; start() } }
-fun staggerIn(views:List<View>,density:Float,enabled:Boolean) {
-    if(!enabled)return
-    views.forEachIndexed { i,v ->
-        v.alpha=0f; v.translationY=16f*density
-        v.animate().alpha(1f).translationY(0f).setStartDelay(i*40L).setDuration(420L).setInterpolator(S1Fx.outCurve).start()
-    }
-}
-
-
-// Full-page ambient effects layer. Non-interactive and self-stops when detached.
-class SettingsAmbientLayer(context: Context, private val motionEnabled: Boolean) : View(context) {
-    private val density = resources.displayMetrics.density
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var phase = 0f
-    private var animator: ValueAnimator? = null
-    private val particles = (0 until 24).map { i ->
-        floatArrayOf(((i * 37) % 97) / 97f, ((i * 61 + 13) % 89) / 89f,
-            1.2f + ((i * 7) % 13) / 10f, ((i * 19) % 100) / 100f)
-    }
-    init {
-        isClickable = false
-        isFocusable = false
-        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-        setLayerType(LAYER_TYPE_HARDWARE, null)
-    }
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (motionEnabled && animator == null) {
-            animator = ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 18000L
-                repeatCount = ValueAnimator.INFINITE
-                repeatMode = ValueAnimator.REVERSE
-                interpolator = S1Fx.easeInOut
-                addUpdateListener { phase = it.animatedValue as Float; invalidate() }
-                start()
-            }
-        }
-    }
-    override fun onDetachedFromWindow() {
-        animator?.cancel()
-        animator = null
-        super.onDetachedFromWindow()
-    }
-    override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (width <= 0 || height <= 0) return
+
         val w = width.toFloat()
         val h = height.toFloat()
-        val drift = if (motionEnabled) phase else 0.18f
-        val glowSpecs = arrayOf(
-            floatArrayOf(w * (0.18f + 0.08f * drift), h * (0.24f + 0.04f * drift), 0x3889945A.toFloat()),
-            floatArrayOf(w * (0.82f - 0.07f * drift), h * (0.53f + 0.05f * drift), 0x30D0C79A.toFloat()),
-            floatArrayOf(w * (0.36f + 0.04f * drift), h * (0.82f - 0.03f * drift), 0x28414D2D.toFloat())
+        val t = if (motionEnabled) phase * (Math.PI * 2.0).toFloat() else 0.55f
+        val slow = kotlin.math.sin(t).toFloat()
+        val cross = kotlin.math.cos(t * 0.72f + 0.8f).toFloat()
+        val driftY = kotlin.math.sin(t * 0.58f + 1.7f).toFloat()
+
+        // Broad, feathered colour fields drift across one another like a slow aurora.
+        val glows = arrayOf(
+            floatArrayOf(w * (0.18f + 0.17f * slow), h * (0.19f + 0.09f * driftY), 0x5089945A.toFloat()),
+            floatArrayOf(w * (0.82f - 0.18f * cross), h * (0.43f + 0.13f * slow), 0x45D0C79A.toFloat()),
+            floatArrayOf(w * (0.40f + 0.15f * driftY), h * (0.78f - 0.10f * cross), 0x3D667C45.toFloat()),
+            floatArrayOf(w * (0.70f + 0.11f * slow), h * (0.88f + 0.04f * driftY), 0x2ECDC49A.toFloat())
         )
-        glowSpecs.forEach { spec ->
-            val radius = 138f * density
-            paint.shader = RadialGradient(spec[0], spec[1], radius,
-                intArrayOf(spec[2].toInt(), 0x00000000), null, Shader.TileMode.CLAMP)
+        glows.forEachIndexed { index, spec ->
+            val radius = (height * (if (index == 1) 0.40f else 0.34f)).coerceAtLeast(190f * density)
+            val center = spec[2].toInt()
+            paint.shader = RadialGradient(
+                spec[0], spec[1], radius,
+                intArrayOf(center, center and 0x00FFFFFF, 0x00000000),
+                floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP
+            )
             canvas.drawCircle(spec[0], spec[1], radius, paint)
         }
         paint.shader = null
+
+        // Tiny soft motes follow the current flow, adding depth without visual clutter.
         particles.forEachIndexed { i, p ->
-            val travel = if (motionEnabled) ((phase + p[3]) % 1f) else p[3]
-            val wave = kotlin.math.sin((phase * 6.28318f + i).toDouble()).toFloat()
-            val x = p[0] * w + if (motionEnabled) wave * 7f * density else 0f
-            val y = ((p[1] + travel * 0.12f) % 1f) * h
+            val wave = kotlin.math.sin((t * 1.05f + i * 0.48f).toDouble()).toFloat()
+            val drift = kotlin.math.cos((t * 0.72f + i * 0.31f).toDouble()).toFloat()
+            val x = p[0] * w + if (motionEnabled) wave * 18f * density else 0f
+            val y = ((p[1] + if (motionEnabled) (phase * 0.16f + drift * 0.025f) else 0f) % 1f) * h
             paint.color = if (i % 4 == 0) 0x66D0C79A else 0x4489945A
-            paint.alpha = (255f * (0.20f + 0.20f * kotlin.math.abs(wave))).toInt().coerceIn(12, 90)
+            paint.alpha = (255f * (0.15f + 0.18f * kotlin.math.abs(wave))).toInt().coerceIn(10, 82)
             canvas.drawCircle(x, y, p[2] * density, paint)
         }
         paint.alpha = 255
