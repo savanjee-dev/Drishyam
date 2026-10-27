@@ -82,8 +82,23 @@ class SettingsHubActivity : AppCompatActivity() {
             // Ambient layer remains behind content and never intercepts touch events.
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
         }
-        // Keep the real page background visible beneath the transparent status bar.
-        // No translucent strip is placed over the top of the screen.
+        // A genuine themed fade blends ambient colour into the page background.
+        // It is a gradient, not a translucent black strip, and sits behind all content.
+        if (!lowFx) {
+            root.addView(View(this).apply {
+                background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(
+                        android.graphics.Color.TRANSPARENT,
+                        withAlpha(color(R.color.bg), 0.22f),
+                        color(R.color.bg)
+                    )
+                )
+                isClickable = false
+                isFocusable = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, 1, FrameLayout.LayoutParams(-1, dp(148), Gravity.TOP))
+        }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
