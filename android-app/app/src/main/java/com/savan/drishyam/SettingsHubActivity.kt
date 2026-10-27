@@ -230,7 +230,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     // Previews (prototype: .prev, 26dp tall)
     private fun appearancePreview(): View = View(this).apply {
-        background = SplitSwatchDrawable(density, color(R.color.accent))
+        background = HubSplitSwatchDrawable(density, color(R.color.accent))
         layoutParams = FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER_VERTICAL or Gravity.START)
     }
 
@@ -316,7 +316,7 @@ class SettingsHubActivity : AppCompatActivity() {
     // ================= Our story card =================
 
     private fun ourStoryCard(animate: Boolean): FrameLayout {
-        val flowBg = FlowGradientDrawable(density, 34f)
+        val flowBg = HubFlowGradientDrawable(density, 34f)
         val card = FrameLayout(this).apply {
             minimumHeight = dp(214)
             clipToOutline = true
@@ -333,7 +333,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
 
         // Sheen band (behind text)
-        val sheen = SheenView(this)
+        val sheen = HubSheenView(this)
         card.addView(sheen, FrameLayout.LayoutParams(-1, -1))
 
         // Text column: 58% of the card; photo sits on the right
@@ -408,7 +408,7 @@ class SettingsHubActivity : AppCompatActivity() {
         photoBox.addView(halo, FrameLayout.LayoutParams(dp(160), dp(146), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
             topMargin = -dp(14)
         })
-        val photo = FadedCircleImage(this).apply {
+        val photo = HubFadedCircleImage(this).apply {
             setImageResource(R.drawable.savan)
             scaleType = ImageView.ScaleType.CENTER_CROP
             contentDescription = "Savan, lead developer"
@@ -555,7 +555,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    private fun startFlow(bg: FlowGradientDrawable) {
+    private fun startFlow(bg: HubFlowGradientDrawable) {
         if (reduced) return
         ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 9000L
@@ -683,7 +683,7 @@ class SettingsHubActivity : AppCompatActivity() {
 }
 
 /** Hard diagonal split (135deg), clipped to a 9dp rounded square with a 1dp border. */
-private class SplitSwatchDrawable(private val density: Float, private val border: Int) : Drawable() {
+private class HubSplitSwatchDrawable(private val density: Float, private val border: Int) : Drawable() {
     private val radius = 9f * density
     private val light = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF3F1E7.toInt() }
     private val dark = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF0A0D08.toInt() }
@@ -712,7 +712,7 @@ private class SplitSwatchDrawable(private val density: Float, private val border
 }
 
 /** Sheen band: 40% wide, skewed -18 degrees, soft white gradient. */
-private class SheenView(context: android.content.Context) : View(context) {
+private class HubSheenView(context: android.content.Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
@@ -727,7 +727,7 @@ private class SheenView(context: android.content.Context) : View(context) {
 }
 
 /** Developer photo: circle crop with the radial fade mask (50% 44%; 52%, 70%, 90%). */
-private class FadedCircleImage(context: android.content.Context) : ImageView(context) {
+private class HubFadedCircleImage(context: android.content.Context) : ImageView(context) {
     private val mask = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
@@ -745,7 +745,7 @@ private class FadedCircleImage(context: android.content.Context) : ImageView(con
 
 
 /** Story card background: 120deg gradient, background-size 300%, position shifts with progress 0..1. */
-private class FlowGradientDrawable(private val density: Float, private val radiusDp: Float) : Drawable() {
+private class HubFlowGradientDrawable(private val density: Float, private val radiusDp: Float) : Drawable() {
     var progress = 0f
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val colors = intArrayOf(
