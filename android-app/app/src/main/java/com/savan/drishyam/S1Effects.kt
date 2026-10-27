@@ -186,3 +186,69 @@ fun staggerIn(views:List<View>,density:Float,enabled:Boolean) {
         v.animate().alpha(1f).translationY(0f).setStartDelay(i*40L).setDuration(420L).setInterpolator(S1Fx.outCurve).start()
     }
 }
+
+
+// Full-page ambient effects layer. Non-interactive and self-stops when detached.
+class SettingsAmbientLayer(context: Context, private val motionEnabled: Boolean) : View(context) {
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var phase = 0f
+    private var animator: ValueAnimator? = null
+    private val particles = (0 until 24).map { i ->
+        floatArrayOf(((i * 37) % 97) / 97f, ((i * 61 + 13) % 89) / 89f,
+            1.2f + ((i * 7) % 13) / 10f, ((i * 19) % 100) / 100f)
+    }
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        setLayerType(LAYER_TYPE_HARDWARE, null)
+    }
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (motionEnabled && animator == null) {
+            animator = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 18000L
+                repeatCount = ValueAnimator.INFINITE
+                repeatMode = ValueAnimator.REVERSE
+                interpolator = S1Fx.easeInOut
+                addUpdateListener { phase = it.animatedValue as Float; invalidate() }
+                start()
+            }
+        }
+    }
+    override fun onDetachedFromWindow() {
+        animator?.cancel()
+        animator = null
+        super.onDetachedFromWindow()
+    }
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        if (width <= 0 || height <= 0) return
+        val w = width.toFloat()
+        val h = height.toFloat()
+        val drift = if (motionEnabled) phase else 0.18f
+        val glowSpecs = arrayOf(
+            floatArrayOf(w * (0.18f + 0.08f * drift), h * (0.24f + 0.04f * drift), 0x3889945A.toFloat()),
+            floatArrayOf(w * (0.82f - 0.07f * drift), h * (0.53f + 0.05f * drift), 0x30D0C79A.toFloat()),
+            floatArrayOf(w * (0.36f + 0.04f * drift), h * (0.82f - 0.03f * drift), 0x28414D2D.toFloat())
+        )
+        glowSpecs.forEach { spec ->
+            val radius = 138f * density
+            paint.shader = RadialGradient(spec[0], spec[1], radius,
+                intArrayOf(spec[2].toInt(), 0x00000000), null, Shader.TileMode.CLAMP)
+            canvas.drawCircle(spec[0], spec[1], radius, paint)
+        }
+        paint.shader = null
+        particles.forEachIndexed { i, p ->
+            val travel = if (motionEnabled) ((phase + p[3]) % 1f) else p[3]
+            val wave = kotlin.math.sin((phase * 6.28318f + i).toDouble()).toFloat()
+            val x = p[0] * w + if (motionEnabled) wave * 7f * density else 0f
+            val y = ((p[1] + travel * 0.12f) % 1f) * h
+            paint.color = if (i % 4 == 0) 0x66D0C79A else 0x4489945A
+            paint.alpha = (255f * (0.20f + 0.20f * kotlin.math.abs(wave))).toInt().coerceIn(12, 90)
+            canvas.drawCircle(x, y, p[2] * density, paint)
+        }
+        paint.alpha = 255
+    }
+}
