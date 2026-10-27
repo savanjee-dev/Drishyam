@@ -1056,13 +1056,15 @@ private class StoryGalaxyView(
         Star(.63f, .94f, 1.7f, 3.3f),
         Star(.055f, .69f, 1.55f, 5.0f)
     )
-    // Five highlight locations stay clear of the portrait on the right-hand side.
+    // Seven highlight locations stay in the text-side/centre lane, away from the portrait.
     private val highlightStars = listOf(
         Star(.19f, .13f, 2.0f, .4f),
-        Star(.48f, .11f, 2.15f, 2.6f),
+        Star(.46f, .11f, 2.15f, 2.6f),
         Star(.49f, .88f, 1.95f, 4.8f),
         Star(.12f, .48f, 2.1f, 1.7f),
-        Star(.39f, .70f, 2.0f, 3.9f)
+        Star(.36f, .70f, 2.0f, 3.9f),
+        Star(.27f, .34f, 2.25f, 5.2f),
+        Star(.53f, .63f, 2.2f, 0.9f)
     )
     private var phase = 0f
     private var highlightIndex = -1
@@ -1120,31 +1122,33 @@ private class StoryGalaxyView(
                 else -> kotlin.math.sin(((cycle - 0.82f) / 0.18f * 3.14159265f).toDouble()).toFloat()
             }.coerceAtLeast(0f)
         } else 0f
-        val inset = 2.2f * density
+        val inset = 2.5f * density
         val corner = 30f * density
-        val bulge = stretch * 5.5f * density
+        // Keep the animated path inside the card's rounded clip, so its movement is visible.
+        // The four sides flex toward the centre together, then relax and pause.
+        val bulge = stretch * 10f * density
         val left = inset
         val top = inset
         val right = w - inset
         val bottom = h - inset
 
-        // Only the decorative outline stretches; text, button and portrait remain still.
         val edgePath = Path().apply {
             moveTo(left + corner, top)
-            cubicTo(w * .36f, top - bulge, w * .64f, top - bulge, right - corner, top)
-            cubicTo(right + bulge, h * .34f, right + bulge, h * .66f, right, bottom - corner)
-            cubicTo(w * .64f, bottom + bulge, w * .36f, bottom + bulge, left + corner, bottom)
-            cubicTo(left - bulge, h * .66f, left - bulge, h * .34f, left, top + corner)
+            cubicTo(w * .36f, top + bulge, w * .64f, top + bulge, right - corner, top)
+            cubicTo(right - bulge, h * .34f, right - bulge, h * .66f, right, bottom - corner)
+            cubicTo(w * .64f, bottom - bulge, w * .36f, bottom - bulge, left + corner, bottom)
+            cubicTo(left + bulge, h * .66f, left + bulge, h * .34f, left, top + corner)
             quadTo(left, top, left + corner, top)
             close()
         }
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = density * (1.1f + stretch * 1.15f)
-        paint.color = Color.argb((42f + stretch * 82f).toInt(), 255, 232, 174)
+        paint.strokeWidth = density * (1.35f + stretch * 1.8f)
+        paint.color = Color.argb((65f + stretch * 125f).toInt(), 255, 232, 174)
         paint.clearShadowLayer()
         canvas.drawPath(edgePath, paint)
-        paint.strokeWidth = density * (4.0f + stretch * 4.5f)
-        paint.color = Color.argb((7f + stretch * 27f + wave * 5f).toInt(), 255, 220, 145)
+        // A broader, brighter halo makes the edge flex readable without moving card content.
+        paint.strokeWidth = density * (5.5f + stretch * 7f)
+        paint.color = Color.argb((10f + stretch * 40f + wave * 8f).toInt(), 255, 220, 145)
         canvas.drawPath(edgePath, paint)
 
         paint.style = Paint.Style.FILL
