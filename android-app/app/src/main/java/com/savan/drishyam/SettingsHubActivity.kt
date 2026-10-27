@@ -79,12 +79,25 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         if (!lowFx) {
             addGlows(root, animate)
-            // Ambient layer remains behind content and never intercepts touch events.
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
+            root.addView(SettingsStarfieldView(this, reduced), FrameLayout.LayoutParams(-1, -1))
         }
-        // Do not place a top fade overlay over the animated background.
-        // Let the ambient layer remain visible beneath the transparent status bar.
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        // Fixed feathered edges fade scrolling content into the page surface, without a solid bar.
+        root.addView(View(this).apply {
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
+        }, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
+        root.addView(View(this).apply {
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
+                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
+        }, FrameLayout.LayoutParams(-1, dp(132), Gravity.BOTTOM))
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
@@ -602,7 +615,7 @@ class SettingsHubActivity : AppCompatActivity() {
     /** Press feedback combines a water-like ripple with a soft, fading sunlight glow. */
     private fun View.attachPress(glowable: Boolean) {
         val touchEffect = TouchRippleGlowDrawable(density)
-        val useTouchEffect = glowable && !lowFx && !reduced
+        val useTouchEffect = glowable && !lowFx
         if (useTouchEffect) foreground = touchEffect
         var touchAnimator: ValueAnimator? = null
         setOnTouchListener { v, e ->
@@ -619,7 +632,7 @@ class SettingsHubActivity : AppCompatActivity() {
                         touchAnimator?.cancel()
                         touchEffect.begin(e.x, e.y)
                         touchAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = 1050L
+                            duration = if (reduced) 2400L else 1050L
                             interpolator = EASE_OUT
                             addUpdateListener { a -> touchEffect.setProgress(a.animatedValue as Float) }
                             addListener(object : android.animation.AnimatorListenerAdapter() {
@@ -846,19 +859,19 @@ private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
         val fade = (1f - progress).coerceIn(0f, 1f)
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
-            intArrayOf(0x6689945A, 0x3889945A, 0x1689945A, 0x0089945A),
+            intArrayOf(0xA689945A.toInt(), 0x7289945A, 0x3889945A, 0x0089945A),
             floatArrayOf(0f, 0.34f, 0.72f, 1f),
             Shader.TileMode.CLAMP
         )
-        glowPaint.alpha = (fade * 220f).toInt()
+        glowPaint.alpha = (fade * 255f).toInt()
         canvas.drawCircle(centerX, centerY, radius, glowPaint)
 
         // Layered wave fronts make the ripple feel less flat.
         ripplePaint.color = 0xFF89945A.toInt()
-        ripplePaint.alpha = (fade * 150f).toInt()
+        ripplePaint.alpha = (fade * 220f).toInt()
         ripplePaint.strokeWidth = density * (1.7f - 0.8f * progress)
         canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
-        ripplePaint.alpha = (fade * 75f).toInt()
+        ripplePaint.alpha = (fade * 125f).toInt()
         ripplePaint.strokeWidth = density * 2.4f
         canvas.drawCircle(centerX, centerY, maxRadius * (progress * 0.72f), ripplePaint)
         canvas.restoreToCount(save)
@@ -878,6 +891,71 @@ private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
 
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/** Ambient stars drift across the whole page; reduced motion uses extremely slow movement. */
+private class SettingsStarfieldView(context: Context, private val reducedMotion: Boolean) : View(context) {
+    private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val speed: Float, val alpha: Float)
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val stars = ArrayList<Star>()
+    private var animator: ValueAnimator? = null
+    private var progress = 0f
+
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        val random = java.util.Random(713L)
+        repeat(58) {
+            stars += Star(0.04f + random.nextFloat() * 0.92f, random.nextFloat(),
+                (0.65f + random.nextFloat() * 1.35f) * density,
+                random.nextFloat() * 6.28318f, 0.12f + random.nextFloat() * 0.34f,
+                0.22f + random.nextFloat() * 0.48f)
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        animator?.cancel()
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = if (reducedMotion) 90000L else 26000L
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { progress = it.animatedValue as Float; invalidate() }
+            start()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        animator?.cancel()
+        animator = null
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        stars.forEach { star ->
+            val drift = progress * star.speed
+            val x = ((star.x + drift * 0.10f) % 1f) * w
+            val y = ((star.y + drift) % 1f) * h
+            val twinkle = 0.72f + 0.28f * kotlin.math.sin(progress * 6.28318f + star.phase)
+            val motionFactor = if (reducedMotion) 0.52f else 1f
+            val a = (star.alpha * twinkle * motionFactor * 255f).toInt().coerceIn(0, 255)
+            paint.color = Color.argb(a, 218, 222, 165)
+            paint.style = Paint.Style.FILL
+            canvas.drawCircle(x, y, star.radius, paint)
+            if (star.radius > 1.55f * density) {
+                paint.alpha = (a * 0.22f).toInt()
+                paint.strokeWidth = 0.7f * density
+                canvas.drawLine(x - star.radius * 2.2f, y, x + star.radius * 2.2f, y, paint)
+                canvas.drawLine(x, y - star.radius * 2.2f, x, y + star.radius * 2.2f, paint)
+            }
+        }
+    }
 }
 
 /** Hard diagonal split (135deg), clipped to a 9dp rounded square with a 1dp border. */
