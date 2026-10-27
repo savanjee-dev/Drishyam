@@ -83,7 +83,6 @@ class SettingsHubActivity : AppCompatActivity() {
         if (!lowFx) {
             addGlows(root, animate)
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
-            root.addView(SettingsStarfieldView(this, reduced, lightMode), FrameLayout.LayoutParams(-1, -1))
         }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         // Fixed feathered edges fade scrolling content into the page surface, without a solid bar.
@@ -1045,27 +1044,23 @@ private class StoryGalaxyView(
     context: Context,
     private val animateStars: Boolean
 ) : View(context) {
-    private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val drift: Float)
+    private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float)
 
     private val density = resources.displayMetrics.density
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    // Six restrained perimeter stars; keep the card copy and portrait free of decoration.
     private val stars = listOf(
-        Star(.035f, .09f, 3.1f, .1f, 1.2f), Star(.22f, .045f, 2.4f, 1.4f, .7f),
-        Star(.43f, .055f, 3.2f, 2.2f, 1.1f), Star(.68f, .045f, 2.5f, .7f, .8f),
-        Star(.92f, .09f, 3.1f, 2.8f, 1.0f), Star(.965f, .31f, 2.5f, 1.9f, .6f),
-        Star(.97f, .53f, 3.0f, .3f, .8f), Star(.95f, .75f, 2.4f, 2.5f, .6f),
-        Star(.88f, .91f, 3.0f, 1.1f, 1.0f), Star(.68f, .955f, 2.5f, 2.1f, .6f),
-        Star(.45f, .95f, 3.0f, .5f, .9f), Star(.22f, .95f, 2.4f, 1.8f, .6f),
-        Star(.035f, .81f, 2.8f, 2.7f, .8f), Star(.025f, .59f, 2.4f, .8f, .6f),
-        Star(.03f, .37f, 3.0f, 1.6f, .9f), Star(.58f, .12f, 2.3f, 2.9f, .6f),
-        Star(.77f, .19f, 1.6f, .4f, .4f), Star(.14f, .72f, 1.6f, 2.3f, .4f),
-        Star(.82f, .82f, 1.7f, 1.3f, .4f), Star(.35f, .89f, 1.5f, .9f, .4f)
+        Star(.055f, .12f, 1.7f, 0.3f),
+        Star(.34f, .055f, 1.45f, 2.0f),
+        Star(.91f, .16f, 1.65f, 4.1f),
+        Star(.95f, .78f, 1.55f, 1.1f),
+        Star(.63f, .94f, 1.7f, 3.3f),
+        Star(.055f, .69f, 1.55f, 5.0f)
     )
     private var phase = 0f
+    // A slow, low-amplitude brightness shift—not continuous glitter or movement.
     private val ticker = if (animateStars) ValueAnimator.ofFloat(0f, (Math.PI * 2).toFloat()).apply {
-        duration = 5200L
+        duration = 14000L
         repeatCount = ValueAnimator.INFINITE
         addUpdateListener {
             phase = it.animatedValue as Float
@@ -1077,7 +1072,6 @@ private class StoryGalaxyView(
         isClickable = false
         isFocusable = false
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
     }
 
     override fun onAttachedToWindow() {
@@ -1095,31 +1089,25 @@ private class StoryGalaxyView(
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
-        stars.forEachIndexed { index, star ->
-            val wave = if (animateStars) (kotlin.math.sin(phase + star.phase) + 1f) / 2f else 0.62f
-            val alpha = (105f + wave * 145f).toInt().coerceIn(0, 250)
-            val drift = if (animateStars) kotlin.math.sin(phase * .7f + star.phase).toFloat() * star.drift * density else 0f
-            val cx = w * star.x + drift
-            val cy = h * star.y + if (animateStars) kotlin.math.cos(phase * .55f + star.phase).toFloat() * star.drift * density else 0f
+        stars.forEach { star ->
+            val subtleWave = if (animateStars) kotlin.math.sin(phase * 0.5f + star.phase).toFloat() else 0f
+            // Keep a dim, stable base so stars never vanish; animate brightness only slightly.
+            val alpha = (76f + subtleWave * 16f).toInt().coerceIn(58, 94)
+            val cx = w * star.x
+            val cy = h * star.y
             val r = star.radius * density
-            paint.color = if (index % 3 == 0) Color.rgb(224, 207, 157) else Color.rgb(255, 248, 220)
+            paint.color = if (star.phase.toInt() % 2 == 0) 0xFFE0D3A8.toInt() else 0xFFFFF5D9.toInt()
             paint.alpha = alpha
-            paint.setShadowLayer(3f * density, 0f, 0f, Color.argb(alpha, 220, 203, 150))
+            paint.clearShadowLayer()
             val path = Path().apply {
-                moveTo(cx, cy - r * 1.65f)
-                quadTo(cx + r * .18f, cy - r * .18f, cx + r * 1.45f, cy)
-                quadTo(cx + r * .18f, cy + r * .18f, cx, cy + r * 1.65f)
-                quadTo(cx - r * .18f, cy + r * .18f, cx - r * 1.45f, cy)
-                quadTo(cx - r * .18f, cy - r * .18f, cx, cy - r * 1.65f)
+                moveTo(cx, cy - r)
+                quadTo(cx + r * .12f, cy - r * .12f, cx + r, cy)
+                quadTo(cx + r * .12f, cy + r * .12f, cx, cy + r)
+                quadTo(cx - r * .12f, cy + r * .12f, cx - r, cy)
+                quadTo(cx - r * .12f, cy - r * .12f, cx, cy - r)
                 close()
             }
             canvas.drawPath(path, paint)
-            if (star.radius > 2.8f) {
-                paint.clearShadowLayer()
-                paint.alpha = (alpha * .72f).toInt()
-                canvas.drawCircle(cx, cy, r * .28f, paint)
-            }
-            paint.clearShadowLayer()
         }
     }
 }
