@@ -82,6 +82,16 @@ class SettingsHubActivity : AppCompatActivity() {
             // Ambient layer remains behind content and never intercepts touch events.
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
         }
+        // Softly blend the background at the top without changing content insets or spacing.
+        root.addView(View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(Color.TRANSPARENT, color(R.color.bg))
+            )
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(-1, dp(64), Gravity.TOP))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
