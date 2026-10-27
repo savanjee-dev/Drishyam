@@ -336,8 +336,15 @@ class SettingsHubActivity : AppCompatActivity() {
         val flowBg = HubFlowGradientDrawable(density, 30f)
         val card = FrameLayout(this).apply {
             minimumHeight = dp(224)
-            clipChildren = false
-            clipToPadding = false
+            // Keep decorative stars and touch feedback inside the rounded card.
+            clipChildren = true
+            clipToPadding = true
+            clipToOutline = true
+            outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dpf(30f))
+                }
+            }
             background = flowBg
             isClickable = true
             isFocusable = true
@@ -493,10 +500,12 @@ class SettingsHubActivity : AppCompatActivity() {
         // Tiny moving stars restore the original glitter effect without changing the card layout.
         if (animate && !lowFx) {
             val starSpecs = listOf(
-                Triple(0.08f, 0.18f, 9f), Triple(0.31f, 0.12f, 7f),
-                Triple(0.47f, 0.78f, 8f), Triple(0.64f, 0.16f, 10f),
-                Triple(0.78f, 0.72f, 8f), Triple(0.90f, 0.34f, 7f),
-                Triple(0.16f, 0.82f, 7f), Triple(0.55f, 0.48f, 6f)
+                Triple(0.06f, 0.14f, 8f), Triple(0.22f, 0.88f, 7f),
+                Triple(0.36f, 0.08f, 10f), Triple(0.48f, 0.91f, 7f),
+                Triple(0.63f, 0.12f, 11f), Triple(0.76f, 0.86f, 8f),
+                Triple(0.91f, 0.18f, 9f), Triple(0.94f, 0.73f, 7f),
+                Triple(0.57f, 0.83f, 8f), Triple(0.13f, 0.42f, 7f),
+                Triple(0.84f, 0.43f, 12f), Triple(0.39f, 0.76f, 7f)
             )
             starSpecs.forEachIndexed { index, spec ->
                 val star = TextView(this).apply {
