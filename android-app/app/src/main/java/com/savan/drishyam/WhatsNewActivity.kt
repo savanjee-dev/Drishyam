@@ -33,7 +33,7 @@ class WhatsNewActivity : AppCompatActivity() {
         val surface = color(com.google.android.material.R.attr.colorSurface, R.color.bg)
         val onSurface = color(com.google.android.material.R.attr.colorOnSurface, R.color.fg)
         val variant = color(com.google.android.material.R.attr.colorOnSurfaceVariant, R.color.mute)
-        window.statusBarColor = surface
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = surface
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = !night()
         WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = !night()
