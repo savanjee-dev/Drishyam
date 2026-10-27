@@ -36,6 +36,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * Settings hub (Phase 1). Built to match Drishyam_Settings_Prototype_v9.html.
@@ -55,6 +59,12 @@ class SettingsHubActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+
+        // Draw the Settings surface behind the system status bar for a seamless full-page view.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars =
+            (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES
 
         lowFx = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
         reduced = !motionEnabled(this)
@@ -82,6 +92,12 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
         installScrollBounce(scroll)
 
         // ---- Back button: plain 48dp circle, no rectangle ----
