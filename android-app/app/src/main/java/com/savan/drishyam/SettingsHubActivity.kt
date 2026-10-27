@@ -55,6 +55,7 @@ class SettingsHubActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
 
         lowFx = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
@@ -83,6 +84,12 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
+            content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
         installScrollBounce(scroll)
 
         // ---- Back button: plain 48dp circle, no rectangle ----
