@@ -76,8 +76,8 @@ fun View.attachPress(glowable: Boolean, lowFx: Boolean, reduced: Boolean) {
     val density = resources.displayMetrics.density
     val glow = GradientDrawable().apply {
         gradientType = GradientDrawable.RADIAL_GRADIENT
-        colors = intArrayOf(0x8089945A.toInt(), 0x0089945A)
-        gradientRadius = 90f*density
+        colors = intArrayOf(0x6699A96A, 0x2699A96A, 0x0099A96A)
+        gradientRadius = 180f*density
     }
     val useGlow = glowable && !lowFx && !reduced
     if (useGlow) foreground = glow
@@ -94,8 +94,13 @@ fun View.attachPress(glowable: Boolean, lowFx: Boolean, reduced: Boolean) {
                     glow.setGradientCenter((e.x/v.width.coerceAtLeast(1)), (e.y/v.height.coerceAtLeast(1)))
                     glowAnim?.cancel()
                     glowAnim=ValueAnimator.ofFloat(0f,1f).apply {
-                        duration=450L; interpolator=S1Fx.ease
-                        addUpdateListener { a -> val t=a.animatedValue as Float; glow.alpha=(255*t).toInt(); glow.gradientRadius=90f*density*(.4f+.6f*t) }
+                        duration=720L; interpolator=android.view.animation.LinearInterpolator()
+                        addUpdateListener { a ->
+                            val t=a.animatedValue as Float
+                            // Expand while fading instead of flashing brighter first.
+                            glow.alpha=(210f*(1f-t)*(1f-t)).toInt().coerceIn(0,210)
+                            glow.gradientRadius=density*(24f+220f*t)
+                        }
                         start()
                     }
                 }
