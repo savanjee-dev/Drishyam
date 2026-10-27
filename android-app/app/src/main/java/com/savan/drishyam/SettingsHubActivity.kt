@@ -1048,7 +1048,6 @@ private class StoryGalaxyView(
 
     private val density = resources.displayMetrics.density
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    // Six quiet perimeter stars plus three occasional highlights.
     private val stars = listOf(
         Star(.055f, .12f, 1.7f, .3f),
         Star(.34f, .055f, 1.45f, 2.0f),
@@ -1057,13 +1056,16 @@ private class StoryGalaxyView(
         Star(.63f, .94f, 1.7f, 3.3f),
         Star(.055f, .69f, 1.55f, 5.0f)
     )
+    // Five highlight locations stay clear of the portrait on the right-hand side.
     private val highlightStars = listOf(
         Star(.19f, .13f, 2.0f, .4f),
-        Star(.91f, .49f, 2.15f, 2.6f),
-        Star(.73f, .91f, 1.95f, 4.8f)
+        Star(.48f, .11f, 2.15f, 2.6f),
+        Star(.49f, .88f, 1.95f, 4.8f),
+        Star(.12f, .48f, 2.1f, 1.7f),
+        Star(.39f, .70f, 2.0f, 3.9f)
     )
     private var phase = 0f
-    private var highlightIndex = 0
+    private var highlightIndex = -1
     private var nextHighlightAt = 0L
     private val random = java.util.Random()
     private val ticker = if (animateStars) ValueAnimator.ofFloat(0f, (Math.PI * 2).toFloat()).apply {
@@ -1072,7 +1074,11 @@ private class StoryGalaxyView(
         addUpdateListener {
             phase = it.animatedValue as Float
             if (System.currentTimeMillis() >= nextHighlightAt) {
-                highlightIndex = random.nextInt(highlightStars.size)
+                var next = random.nextInt(highlightStars.size)
+                if (highlightStars.size > 1) {
+                    while (next == highlightIndex) next = random.nextInt(highlightStars.size)
+                }
+                highlightIndex = next
                 nextHighlightAt = System.currentTimeMillis() + 1800L + random.nextInt(3200)
             }
             postInvalidateOnAnimation()
@@ -1087,7 +1093,7 @@ private class StoryGalaxyView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        nextHighlightAt = System.currentTimeMillis() + 1200L
+        nextHighlightAt = System.currentTimeMillis() + 900L
         ticker?.start()
     }
 
@@ -1102,52 +1108,68 @@ private class StoryGalaxyView(
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
 
-        // Subtle four-edge stretch/glow: the border gently breathes, pauses, then repeats.
-        val cycle: Float = if (animateStars) (phase / (2f * 3.14159265f)) % 1f else 0f
-        val breath: Float = (if (!animateStars) {
-            0f
-        } else {
+        // Four card edges flex outward in a clear stretch-relax-pause rhythm.
+        val cycle = if (animateStars) (phase / (2f * 3.14159265f)) % 1f else 0f
+        val wave = if (animateStars) ((kotlin.math.sin(phase.toDouble()) + 1.0) / 2.0).toFloat() else 0f
+        val stretch = if (animateStars) {
             when {
-                cycle < 0.24f -> kotlin.math.sin((cycle / 0.24f * 3.14159265f).toDouble()).toFloat()
-                cycle < 0.64f -> 0f
-                else -> kotlin.math.sin(((cycle - 0.64f) / 0.36f * 3.14159265f).toDouble()).toFloat()
-            }
-        }).coerceAtLeast(0f)
-        val inset = dpfSafe(1.5f + breath * 1.2f, density)
+                cycle < 0.22f -> kotlin.math.sin((cycle / 0.22f * 3.14159265f).toDouble()).toFloat()
+                cycle < 0.42f -> 0f
+                cycle < 0.64f -> kotlin.math.sin(((cycle - 0.42f) / 0.22f * 3.14159265f).toDouble()).toFloat()
+                cycle < 0.82f -> 0f
+                else -> kotlin.math.sin(((cycle - 0.82f) / 0.18f * 3.14159265f).toDouble()).toFloat()
+            }.coerceAtLeast(0f)
+        } else 0f
+        val inset = 2.2f * density
         val corner = 30f * density
+        val bulge = stretch * 5.5f * density
+        val left = inset
+        val top = inset
+        val right = w - inset
+        val bottom = h - inset
+
+        // Only the decorative outline stretches; text, button and portrait remain still.
+        val edgePath = Path().apply {
+            moveTo(left + corner, top)
+            cubicTo(w * .36f, top - bulge, w * .64f, top - bulge, right - corner, top)
+            cubicTo(right + bulge, h * .34f, right + bulge, h * .66f, right, bottom - corner)
+            cubicTo(w * .64f, bottom + bulge, w * .36f, bottom + bulge, left + corner, bottom)
+            cubicTo(left - bulge, h * .66f, left - bulge, h * .34f, left, top + corner)
+            quadTo(left, top, left + corner, top)
+            close()
+        }
         paint.style = Paint.Style.STROKE
-        paint.strokeWidth = density * (0.75f + breath * 0.45f)
-        paint.color = Color.argb((24f + breath * 32f).toInt(), 232, 220, 176)
+        paint.strokeWidth = density * (1.1f + stretch * 1.15f)
+        paint.color = Color.argb((42f + stretch * 82f).toInt(), 255, 232, 174)
         paint.clearShadowLayer()
-        val outline = android.graphics.RectF(inset, inset, w - inset, h - inset)
-        canvas.drawRoundRect(outline, corner, corner, paint)
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = density * (2.2f + breath * 1.5f)
-        paint.color = Color.argb((7f + breath * 12f).toInt(), 238, 220, 167)
-        canvas.drawRoundRect(outline, corner, corner, paint)
+        canvas.drawPath(edgePath, paint)
+        paint.strokeWidth = density * (4.0f + stretch * 4.5f)
+        paint.color = Color.argb((7f + stretch * 27f + wave * 5f).toInt(), 255, 220, 145)
+        canvas.drawPath(edgePath, paint)
 
         paint.style = Paint.Style.FILL
         stars.forEach { star ->
-            val wave = if (animateStars) kotlin.math.sin(phase * .5f + star.phase).toFloat() else 0f
-            drawStar(canvas, star, (76f + wave * 12f).toInt().coerceIn(60, 92), false, w, h)
+            val twinkle = if (animateStars) kotlin.math.sin(phase * .5f + star.phase).toFloat() else 0f
+            drawStar(canvas, star, (76f + twinkle * 12f).toInt().coerceIn(60, 92), false, w, h)
         }
         highlightStars.forEachIndexed { index, star ->
-            val active = animateStars && index == highlightIndex
-            val pulse = if (active) ((kotlin.math.sin(phase * 1.25f + star.phase) + 1f) / 2f).toFloat() else 0f
-            val alpha = if (active) (95f + pulse * 105f).toInt() else 0
-            if (alpha > 0) drawStar(canvas, star, alpha, true, w, h)
+            if (animateStars && index == highlightIndex) {
+                val pulse = ((kotlin.math.sin(phase * 1.7f + star.phase) + 1f) / 2f).toFloat()
+                val alpha = (135f + pulse * 120f).toInt().coerceAtMost(255)
+                drawStar(canvas, star, alpha, true, w, h)
+            }
         }
     }
 
     private fun drawStar(canvas: Canvas, star: Star, alpha: Int, highlight: Boolean, w: Float, h: Float) {
         val cx = w * star.x
         val cy = h * star.y
-        val r = star.radius * density * if (highlight) 1.12f else 1f
+        val r = star.radius * density * if (highlight) 1.35f else 1f
         paint.style = Paint.Style.FILL
         paint.color = if (highlight) 0xFFFFF0C3.toInt() else 0xFFE0D3A8.toInt()
-        paint.alpha = alpha.coerceIn(0, 210)
+        paint.alpha = alpha.coerceIn(0, 235)
         paint.clearShadowLayer()
-        if (highlight) paint.setShadowLayer(2.4f * density, 0f, 0f, Color.argb(alpha / 3, 255, 226, 160))
+        if (highlight) paint.setShadowLayer(4.2f * density, 0f, 0f, Color.argb(alpha / 2, 255, 226, 160))
         val path = Path().apply {
             moveTo(cx, cy - r)
             quadTo(cx + r * .12f, cy - r * .12f, cx + r, cy)
@@ -1159,6 +1181,4 @@ private class StoryGalaxyView(
         canvas.drawPath(path, paint)
         paint.clearShadowLayer()
     }
-
-    private fun dpfSafe(value: Float, density: Float) = value * density
 }
