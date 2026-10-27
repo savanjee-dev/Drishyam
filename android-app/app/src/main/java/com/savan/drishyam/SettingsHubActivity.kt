@@ -110,15 +110,17 @@ class SettingsHubActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.requestApplyInsets(root)
         installScrollBounce(scroll)
 
-        // ---- Back button: plain 48dp circle, no rectangle ----
-        val back = TextView(this).apply {
-            text = "‹"
-            textSize = 30f
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(4))
-            setTextColor(color(R.color.fg))
-            background = glassCircle()
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+        // ---- Back button: shared cream/olive circular style used on every Settings page ----
+        val back = ImageView(this).apply {
+            setImageResource(R.drawable.ic_back)
+            imageTintList = android.content.res.ColorStateList.valueOf(color(R.color.fg))
+            scaleType = ImageView.ScaleType.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(color(R.color.surface))
+                setStroke(dp(1), 0xFFC9C9B4.toInt())
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
             isClickable = true
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
@@ -515,44 +517,9 @@ class SettingsHubActivity : AppCompatActivity() {
             rightMargin = dp(8)
         })
 
-        // Added last so sparkles render above later-added card content and remain visible.
-        if (animate && !lowFx) {
-            // Keep sparkles around the card perimeter and in the open seams, not over copy, CTA, or portrait.
-            val starSpecs = listOf(
-                Triple(0.03f, 0.06f, 11f), Triple(0.25f, 0.035f, 10f),
-                Triple(0.49f, 0.035f, 12f), Triple(0.72f, 0.035f, 10f),
-                Triple(0.92f, 0.06f, 12f), Triple(0.965f, 0.27f, 10f),
-                Triple(0.965f, 0.49f, 12f), Triple(0.965f, 0.72f, 10f),
-                Triple(0.91f, 0.91f, 12f), Triple(0.70f, 0.94f, 10f),
-                Triple(0.47f, 0.94f, 12f), Triple(0.24f, 0.94f, 10f),
-                Triple(0.035f, 0.82f, 11f), Triple(0.025f, 0.61f, 10f),
-                Triple(0.025f, 0.38f, 12f), Triple(0.60f, 0.09f, 10f)
-            )
-            starSpecs.forEachIndexed { index, spec ->
-                val star = TextView(this).apply {
-                    text = if (index % 2 == 0) "✦" else "✧"
-                    textSize = spec.third
-                    gravity = Gravity.CENTER
-                    setTextColor(if (index % 3 == 0) 0xFFD5C9A5.toInt() else 0xFFF4EED0.toInt())
-                    alpha = 0.96f
-                    // Keep sparkles above elevated photo/button children; perimeter placement avoids covering content.
-                    elevation = dpf(8f)
-                    setShadowLayer(dpf(4f), 0f, 0f, 0xFFD5C9A5.toInt())
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    isClickable = false
-                    isFocusable = false
-                }
-                card.addView(star, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.START))
-                card.post {
-                    // Render above the gradient and content; perimeter coordinates keep the text and portrait clear.
-                    star.bringToFront()
-                    star.x = (card.width * spec.first).coerceAtMost((card.width - star.width).toFloat())
-                    star.y = (card.height * spec.second).coerceAtMost((card.height - star.height).toFloat())
-                    startStarDrift(star, index)
-                }
-            }
-        }
-
+        // A dedicated drawing layer keeps the galaxy visible above elevated card content.
+        // It always draws stars; motion is optional so reduced-motion/Glass Off never hides them.
+        card.addView(StoryGalaxyView(this, animate && !lowFx), FrameLayout.LayoutParams(-1, -1))
 
         if (animate) {
             startFlow(flowBg)
@@ -1067,4 +1034,92 @@ private class HubFlowGradientDrawable(private val density: Float, private val ra
     override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+
+/**
+ * Persistent, lightweight Our Story galaxy overlay. Stars are drawn directly to Canvas
+ * rather than individual TextViews, avoiding z-order and layout timing issues.
+ */
+private class StoryGalaxyView(
+    context: Context,
+    private val animateStars: Boolean
+) : View(context) {
+    private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val drift: Float)
+
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val stars = listOf(
+        Star(.035f, .09f, 3.1f, .1f, 1.2f), Star(.22f, .045f, 2.4f, 1.4f, .7f),
+        Star(.43f, .055f, 3.2f, 2.2f, 1.1f), Star(.68f, .045f, 2.5f, .7f, .8f),
+        Star(.92f, .09f, 3.1f, 2.8f, 1.0f), Star(.965f, .31f, 2.5f, 1.9f, .6f),
+        Star(.97f, .53f, 3.0f, .3f, .8f), Star(.95f, .75f, 2.4f, 2.5f, .6f),
+        Star(.88f, .91f, 3.0f, 1.1f, 1.0f), Star(.68f, .955f, 2.5f, 2.1f, .6f),
+        Star(.45f, .95f, 3.0f, .5f, .9f), Star(.22f, .95f, 2.4f, 1.8f, .6f),
+        Star(.035f, .81f, 2.8f, 2.7f, .8f), Star(.025f, .59f, 2.4f, .8f, .6f),
+        Star(.03f, .37f, 3.0f, 1.6f, .9f), Star(.58f, .12f, 2.3f, 2.9f, .6f),
+        Star(.77f, .19f, 1.6f, .4f, .4f), Star(.14f, .72f, 1.6f, 2.3f, .4f),
+        Star(.82f, .82f, 1.7f, 1.3f, .4f), Star(.35f, .89f, 1.5f, .9f, .4f)
+    )
+    private var phase = 0f
+    private val ticker = if (animateStars) ValueAnimator.ofFloat(0f, (Math.PI * 2).toFloat()).apply {
+        duration = 5200L
+        repeatCount = ValueAnimator.INFINITE
+        addUpdateListener {
+            phase = it.animatedValue as Float
+            postInvalidateOnAnimation()
+        }
+    } else null
+
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        setLayerType(LAYER_TYPE_SOFTWARE, null)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        ticker?.start()
+    }
+
+    override fun onDetachedFromWindow() {
+        ticker?.cancel()
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        stars.forEachIndexed { index, star ->
+            val wave = if (animateStars) (kotlin.math.sin(phase + star.phase) + 1f) / 2f else 0.62f
+            val alpha = (105f + wave * 145f).toInt().coerceIn(0, 250)
+            val drift = if (animateStars) kotlin.math.sin(phase * .7f + star.phase).toFloat() * star.drift * density else 0f
+            val cx = w * star.x + drift
+            val cy = h * star.y + if (animateStars) kotlin.math.cos(phase * .55f + star.phase).toFloat() * star.drift * density else 0f
+            val r = star.radius * density
+            paint.color = if (index % 3 == 0) Color.rgb(224, 207, 157) else Color.rgb(255, 248, 220)
+            paint.alpha = alpha
+            paint.setShadowLayer(3f * density, 0f, 0f, Color.argb(alpha, 220, 203, 150))
+            val path = Path().apply {
+                moveTo(cx, cy - r * 1.65f)
+                quadTo(cx + r * .18f, cy - r * .18f, cx + r * 1.45f, cy)
+                quadTo(cx + r * .18f, cy + r * .18f, cx, cy + r * 1.65f)
+                quadTo(cx - r * .18f, cy + r * .18f, cx - r * 1.45f, cy)
+                quadTo(cx - r * .18f, cy - r * .18f, cx, cy - r * 1.65f)
+                close()
+            }
+            canvas.drawPath(path, paint)
+            if (star.radius > 2.8f) {
+                paint.clearShadowLayer()
+                paint.alpha = (alpha * .72f).toInt()
+                canvas.drawCircle(cx, cy, r * .28f, paint)
+            }
+            paint.clearShadowLayer()
+        }
+    }
 }
