@@ -36,7 +36,7 @@ class ViewerActivity : AppCompatActivity() {
         // Keep system-bar icons readable over the viewer's pale Light Mode bars.
         val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
-        window.statusBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
+        window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = !nightMode
