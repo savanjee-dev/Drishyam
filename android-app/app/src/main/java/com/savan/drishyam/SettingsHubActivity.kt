@@ -55,6 +55,7 @@ class SettingsHubActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        window.statusBarColor = Color.TRANSPARENT
 
         lowFx = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
         reduced = !motionEnabled(this)
@@ -389,6 +390,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setTextColor(0xFF1B2117.toInt())
             typeface = font(R.font.montserrat_bold)
             gravity = Gravity.CENTER
+            rotation = -35f // The arrow tip aims diagonally up-right toward the portrait.
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         val readButton = LinearLayout(this).apply {
@@ -414,7 +416,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 typeface = font(R.font.montserrat_bold)
                 gravity = Gravity.CENTER
             })
-            addView(readArrow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            addView(readArrow, LinearLayout.LayoutParams(dp(22), dp(22)).apply {
                 leftMargin = dp(4)
             })
             setOnClickListener {
@@ -481,6 +483,33 @@ class SettingsHubActivity : AppCompatActivity() {
             rightMargin = dp(8)
         })
 
+        // Tiny moving stars restore the original glitter effect without changing the card layout.
+        if (animate && !lowFx) {
+            val starSpecs = listOf(
+                Triple(0.08f, 0.18f, 9f), Triple(0.31f, 0.12f, 7f),
+                Triple(0.47f, 0.78f, 8f), Triple(0.64f, 0.16f, 10f),
+                Triple(0.78f, 0.72f, 8f), Triple(0.90f, 0.34f, 7f),
+                Triple(0.16f, 0.82f, 7f), Triple(0.55f, 0.48f, 6f)
+            )
+            starSpecs.forEachIndexed { index, spec ->
+                val star = TextView(this).apply {
+                    text = if (index % 2 == 0) "✦" else "✧"
+                    textSize = spec.third
+                    gravity = Gravity.CENTER
+                    setTextColor(0xFFF4EED0.toInt())
+                    alpha = 0.35f
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    elevation = dpf(7)
+                }
+                card.addView(star, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.START))
+                card.post {
+                    star.x = (card.width * spec.first).coerceAtMost((card.width - star.width).toFloat())
+                    star.y = (card.height * spec.second).coerceAtMost((card.height - star.height).toFloat())
+                    startStarDrift(star, index)
+                }
+            }
+        }
+
         if (animate) {
             startFlow(flowBg)
             startBob(photo)
@@ -513,7 +542,7 @@ class SettingsHubActivity : AppCompatActivity() {
             G(R.color.hero, 0.48f, 7200, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
             G(R.color.accent, 0.32f, 9000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
         )
-        for (g in list) {
+        list.forEachIndexed { index, g ->
             val c = color(g.colorRes)
             val v = View(this).apply {
                 background = GradientDrawable().apply {
@@ -530,9 +559,14 @@ class SettingsHubActivity : AppCompatActivity() {
             }
             root.addView(v, 0, lp)
             if (animate) {
+                val motion = when (index) {
+                    0 -> floatArrayOf(-74f, 96f, -28f, 118f)
+                    1 -> floatArrayOf(88f, -96f, -92f, 62f)
+                    else -> floatArrayOf(-92f, 76f, 72f, -104f)
+                }
                 ObjectAnimator.ofPropertyValuesHolder(v,
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, dpf(86)),
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, dpf(68)),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, dpf(motion[0]), dpf(motion[1])),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, dpf(motion[2]), dpf(motion[3])),
                     PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.24f),
                     PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.24f)).apply {
                     duration = g.dur
@@ -547,18 +581,12 @@ class SettingsHubActivity : AppCompatActivity() {
 
     // ================= Effects =================
 
-    /** Press: scale 0.92 (90ms) and springback; touch light expands beyond the control and dissolves. */
+    /** Press feedback combines a water-like ripple with a soft, fading sunlight glow. */
     private fun View.attachPress(glowable: Boolean) {
-        val glow = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            gradientType = GradientDrawable.RADIAL_GRADIENT
-            colors = intArrayOf(0x8089945A.toInt(), 0x0089945A)
-            gradientRadius = dpf(24)
-        }
-        glow.alpha = 0
-        val useGlow = glowable && !lowFx && !reduced
-        if (useGlow) foreground = glow
-        var glowAnim: ValueAnimator? = null
+        val touchEffect = TouchRippleGlowDrawable(density)
+        val useTouchEffect = glowable && !lowFx && !reduced
+        if (useTouchEffect) foreground = touchEffect
+        var touchAnimator: ValueAnimator? = null
         setOnTouchListener { v, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -569,35 +597,23 @@ class SettingsHubActivity : AppCompatActivity() {
                         interpolator = EASE_OUT
                         start()
                     }
-                    if (useGlow) {
-                        glow.setGradientCenter(
-                            if (v.width > 0) e.x / v.width else 0.5f,
-                            if (v.height > 0) e.y / v.height else 0.5f
-                        )
-                        glowAnim?.cancel()
-                        val maxRadius = Math.hypot(v.width.toDouble(), v.height.toDouble()).toFloat() * 1.35f
-                        glowAnim = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = 720L
+                    if (useTouchEffect) {
+                        touchAnimator?.cancel()
+                        touchEffect.begin(e.x, e.y)
+                        touchAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+                            duration = 1050L
                             interpolator = EASE_OUT
-                            addUpdateListener { a ->
-                                val t = a.animatedValue as Float
-                                glow.alpha = (150f * (1f - t)).toInt()
-                                glow.gradientRadius = dpf(24) + (maxRadius - dpf(24)) * t
-                            }
+                            addUpdateListener { a -> touchEffect.setProgress(a.animatedValue as Float) }
+                            addListener(object : android.animation.AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: android.animation.Animator) {
+                                    touchEffect.finish()
+                                }
+                            })
                             start()
                         }
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (useGlow) {
-                        glowAnim?.cancel()
-                        glowAnim = ValueAnimator.ofInt(glow.alpha, 0).apply {
-                            duration = 220L
-                            interpolator = EASE
-                            addUpdateListener { a -> glow.alpha = a.animatedValue as Int }
-                            start()
-                        }
-                    }
                     if (reduced) { v.scaleX = 1f; v.scaleY = 1f } else springBack(v)
                 }
             }
@@ -654,6 +670,22 @@ class SettingsHubActivity : AppCompatActivity() {
             interpolator = EASE_IN_OUT
             start()
         }
+    }
+
+    private fun startStarDrift(star: View, index: Int) {
+        if (reduced || lowFx) return
+        val dx = if (index % 2 == 0) dpf(12) else -dpf(10)
+        val dy = if (index % 3 == 0) -dpf(10) else dpf(8)
+        ObjectAnimator.ofPropertyValuesHolder(star,
+            PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, dx, 0f),
+            PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, dy, 0f)).apply {
+            duration = 4200L + index * 170L
+            startDelay = index * 180L
+            repeatCount = ObjectAnimator.INFINITE
+            interpolator = EASE_IN_OUT
+            start()
+        }
+        startTwinkle(star, index * 130L)
     }
 
     private fun startArrowNudge(arrow: View) {
@@ -745,6 +777,76 @@ class SettingsHubActivity : AppCompatActivity() {
         private val EASE_IN_OUT = PathInterpolator(0.42f, 0f, 0.58f, 1f)
         private val EASE = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
     }
+}
+
+/** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
+private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.35f * density
+    }
+    private var centerX = 0f
+    private var centerY = 0f
+    private var progress = 1f
+    private var active = false
+
+    fun begin(x: Float, y: Float) {
+        centerX = x.coerceIn(0f, bounds.width().toFloat())
+        centerY = y.coerceIn(0f, bounds.height().toFloat())
+        progress = 0f
+        active = true
+        invalidateSelf()
+    }
+
+    fun setProgress(value: Float) {
+        progress = value.coerceIn(0f, 1f)
+        invalidateSelf()
+    }
+
+    fun finish() {
+        active = false
+        glowPaint.shader = null
+        invalidateSelf()
+    }
+
+    override fun draw(canvas: Canvas) {
+        if (!active || bounds.isEmpty) return
+        val save = canvas.save()
+        canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+        val maxRadius = kotlin.math.hypot(bounds.width().toDouble(), bounds.height().toDouble()).toFloat() * 1.2f
+        val radius = (maxRadius * (0.12f + 0.88f * progress)).coerceAtLeast(1f)
+        val fade = (1f - progress).coerceIn(0f, 1f)
+
+        glowPaint.shader = RadialGradient(
+            centerX, centerY, radius,
+            intArrayOf(0x5589945A, 0x2489945A, 0x0089945A),
+            floatArrayOf(0f, 0.58f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        glowPaint.alpha = (fade * 180f).toInt()
+        canvas.drawCircle(centerX, centerY, radius, glowPaint)
+
+        ripplePaint.color = 0xFF89945A.toInt()
+        ripplePaint.alpha = (fade * 145f).toInt()
+        canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
+        canvas.restoreToCount(save)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        glowPaint.alpha = alpha
+        ripplePaint.alpha = alpha
+        invalidateSelf()
+    }
+
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
+        glowPaint.colorFilter = colorFilter
+        ripplePaint.colorFilter = colorFilter
+        invalidateSelf()
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
 
 /** Hard diagonal split (135deg), clipped to a 9dp rounded square with a 1dp border. */
