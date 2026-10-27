@@ -1,3 +1,4 @@
+n
 package com.savan.drishyam
 
 import android.animation.Keyframe
@@ -380,7 +381,7 @@ class SettingsHubActivity : AppCompatActivity() {
         left.addView(TextView(this).apply {
             text = "Read the story →"
             textSize = 13f
-            setTextColor(0xFF1B2117.toInt())
+            setTextColor(color(R.color.fg))
             typeface = font(R.font.montserrat_bold)
             background = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dpf(999); setColor(Color.WHITE) }
             setPadding(dp(18), dp(12), dp(18), dp(12))
