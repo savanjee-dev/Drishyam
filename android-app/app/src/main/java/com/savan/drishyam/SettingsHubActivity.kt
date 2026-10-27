@@ -63,6 +63,8 @@ class SettingsHubActivity : AppCompatActivity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(18), dp(20), dp(150))
+            clipChildren = false
+            clipToPadding = false
         }
         val scroll = ScrollView(this).apply {
             isFillViewport = true
@@ -71,6 +73,7 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         val root = FrameLayout(this).apply {
             setBackgroundColor(color(R.color.bg))
+            clipChildren = false
         }
         if (!lowFx) addGlows(root, animate)
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
@@ -107,11 +110,13 @@ class SettingsHubActivity : AppCompatActivity() {
         val hero = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(22), dp(22), dp(22))
-            background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_card)
-            foreground = GradientDrawable(
+            background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(color(R.color.hero), color(R.color.glassFill))
-            ).apply { cornerRadius = dpf(30) }
+            ).apply {
+                cornerRadius = dpf(30)
+                setStroke(dp(1), color(R.color.glassStroke))
+            }
         }
         hero.addView(tv("DRISHYAM  /  MOSS & OLIVE", 11f, R.color.accent, R.font.montserrat_bold).apply {
             letterSpacing = 0.16f
@@ -230,7 +235,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     // Previews (prototype: .prev, 26dp tall)
     private fun appearancePreview(): View = View(this).apply {
-        background = SplitSwatchDrawable(density, color(R.color.accent))
+        background = HubSplitSwatchDrawable(density, color(R.color.accent))
         layoutParams = FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER_VERTICAL or Gravity.START)
     }
 
@@ -316,15 +321,11 @@ class SettingsHubActivity : AppCompatActivity() {
     // ================= Our story card =================
 
     private fun ourStoryCard(animate: Boolean): FrameLayout {
-        val flowBg = FlowGradientDrawable(density, 34f)
+        val flowBg = HubFlowGradientDrawable(density, 34f)
         val card = FrameLayout(this).apply {
             minimumHeight = dp(214)
-            clipToOutline = true
-            outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dpf(34))
-                }
-            }
+            clipChildren = false
+            clipToPadding = false
             background = flowBg
             isClickable = true
             isFocusable = true
@@ -333,7 +334,14 @@ class SettingsHubActivity : AppCompatActivity() {
         }
 
         // Sheen band (behind text)
-        val sheen = SheenView(this)
+        val sheen = HubSheenView(this).apply {
+            clipToOutline = true
+            outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dpf(34))
+                }
+            }
+        }
         card.addView(sheen, FrameLayout.LayoutParams(-1, -1))
 
         // Text column: 58% of the card; photo sits on the right
@@ -408,7 +416,7 @@ class SettingsHubActivity : AppCompatActivity() {
         photoBox.addView(halo, FrameLayout.LayoutParams(dp(160), dp(146), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
             topMargin = -dp(14)
         })
-        val photo = FadedCircleImage(this).apply {
+        val photo = HubFadedCircleImage(this).apply {
             setImageResource(R.drawable.savan)
             scaleType = ImageView.ScaleType.CENTER_CROP
             contentDescription = "Savan, lead developer"
@@ -464,9 +472,6 @@ class SettingsHubActivity : AppCompatActivity() {
                     gradientRadius = dpf(140)
                 }
                 alpha = g.alpha
-                if (Build.VERSION.SDK_INT >= 31) {
-                    setRenderEffect(RenderEffect.createBlurEffect(dpf(60), dpf(60), Shader.TileMode.CLAMP))
-                }
             }
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
@@ -499,6 +504,7 @@ class SettingsHubActivity : AppCompatActivity() {
             colors = intArrayOf(0x8089945A.toInt(), 0x0089945A)
             gradientRadius = dpf(90)
         }
+        glow.alpha = 0
         val useGlow = glowable && !lowFx && !reduced
         if (useGlow) foreground = glow
         var glowAnim: ValueAnimator? = null
@@ -545,17 +551,17 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun springBack(v: View) {
-        fun keys(p: Int) = PropertyValuesHolder.ofKeyframe(p,
+        fun keys(name: String) = PropertyValuesHolder.ofKeyframe(name,
             Keyframe.ofFloat(0f, 0.92f), Keyframe.ofFloat(0.45f, 1.06f),
             Keyframe.ofFloat(0.70f, 0.985f), Keyframe.ofFloat(1f, 1f))
-        ObjectAnimator.ofPropertyValuesHolder(v, keys(View.SCALE_X), keys(View.SCALE_Y)).apply {
+        ObjectAnimator.ofPropertyValuesHolder(v, keys("scaleX"), keys("scaleY")).apply {
             duration = 600L
             interpolator = EASE_OUT
             start()
         }
     }
 
-    private fun startFlow(bg: FlowGradientDrawable) {
+    private fun startFlow(bg: HubFlowGradientDrawable) {
         if (reduced) return
         ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 9000L
@@ -683,7 +689,7 @@ class SettingsHubActivity : AppCompatActivity() {
 }
 
 /** Hard diagonal split (135deg), clipped to a 9dp rounded square with a 1dp border. */
-private class SplitSwatchDrawable(private val density: Float, private val border: Int) : Drawable() {
+private class HubSplitSwatchDrawable(private val density: Float, private val border: Int) : Drawable() {
     private val radius = 9f * density
     private val light = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF3F1E7.toInt() }
     private val dark = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF0A0D08.toInt() }
@@ -712,7 +718,7 @@ private class SplitSwatchDrawable(private val density: Float, private val border
 }
 
 /** Sheen band: 40% wide, skewed -18 degrees, soft white gradient. */
-private class SheenView(context: android.content.Context) : View(context) {
+private class HubSheenView(context: android.content.Context) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
@@ -727,7 +733,7 @@ private class SheenView(context: android.content.Context) : View(context) {
 }
 
 /** Developer photo: circle crop with the radial fade mask (50% 44%; 52%, 70%, 90%). */
-private class FadedCircleImage(context: android.content.Context) : ImageView(context) {
+private class HubFadedCircleImage(context: android.content.Context) : ImageView(context) {
     private val mask = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN) }
     override fun onDraw(canvas: Canvas) {
         val w = width.toFloat(); val h = height.toFloat()
@@ -745,7 +751,7 @@ private class FadedCircleImage(context: android.content.Context) : ImageView(con
 
 
 /** Story card background: 120deg gradient, background-size 300%, position shifts with progress 0..1. */
-private class FlowGradientDrawable(private val density: Float, private val radiusDp: Float) : Drawable() {
+private class HubFlowGradientDrawable(private val density: Float, private val radiusDp: Float) : Drawable() {
     var progress = 0f
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val colors = intArrayOf(
