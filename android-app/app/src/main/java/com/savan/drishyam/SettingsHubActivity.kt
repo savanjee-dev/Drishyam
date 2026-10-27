@@ -1103,12 +1103,16 @@ private class StoryGalaxyView(
         if (w <= 0f || h <= 0f) return
 
         // Subtle four-edge stretch/glow: the border gently breathes, pauses, then repeats.
-        val cycle = if (animateStars) ((phase / (Math.PI * 2f) * 1.0f) % 1f) else 0f
-        val breath = if (!animateStars) 0f else when {
-            cycle < .24f -> kotlin.math.sin((cycle / .24f * Math.PI).toFloat()).toFloat()
-            cycle < .64f -> 0f
-            else -> kotlin.math.sin(((cycle - .64f) / .36f * Math.PI).toFloat()).toFloat()
-        }.coerceAtLeast(0f)
+        val cycle: Float = if (animateStars) (phase / (2f * 3.14159265f)) % 1f else 0f
+        val breath: Float = (if (!animateStars) {
+            0f
+        } else {
+            when {
+                cycle < 0.24f -> kotlin.math.sin((cycle / 0.24f * 3.14159265f).toDouble()).toFloat()
+                cycle < 0.64f -> 0f
+                else -> kotlin.math.sin(((cycle - 0.64f) / 0.36f * 3.14159265f).toDouble()).toFloat()
+            }
+        }).coerceAtLeast(0f)
         val inset = dpfSafe(1.5f + breath * 1.2f, density)
         val corner = 30f * density
         paint.style = Paint.Style.STROKE
