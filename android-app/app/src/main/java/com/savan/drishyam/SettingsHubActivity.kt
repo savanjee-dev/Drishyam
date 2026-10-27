@@ -491,9 +491,9 @@ class SettingsHubActivity : AppCompatActivity() {
     private fun addGlows(root: FrameLayout, animate: Boolean) {
         data class G(val colorRes: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int)
         val list = listOf(
-            G(R.color.accent2, 0.42f, 12000, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
-            G(R.color.hero, 0.42f, 14000, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
-            G(R.color.accent, 0.22f, 16000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
+            G(R.color.accent2, 0.52f, 5600, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
+            G(R.color.hero, 0.48f, 7200, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
+            G(R.color.accent, 0.32f, 9000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
         )
         for (g in list) {
             val c = color(g.colorRes)
@@ -513,10 +513,10 @@ class SettingsHubActivity : AppCompatActivity() {
             root.addView(v, 0, lp)
             if (animate) {
                 ObjectAnimator.ofPropertyValuesHolder(v,
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, dpf(40)),
-                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, dpf(30)),
-                    PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.15f),
-                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.15f)).apply {
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, dpf(86)),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, dpf(68)),
+                    PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.24f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.24f)).apply {
                     duration = g.dur
                     repeatCount = ObjectAnimator.INFINITE
                     repeatMode = ObjectAnimator.REVERSE
@@ -647,8 +647,8 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private fun startBob(photo: View) {
         if (reduced) return
-        ObjectAnimator.ofFloat(photo, View.TRANSLATION_Y, 0f, -dpf(4)).apply {
-            duration = 3400L
+        ObjectAnimator.ofFloat(photo, View.TRANSLATION_Y, -dpf(3), -dpf(17)).apply {
+            duration = 2600L
             repeatCount = ObjectAnimator.INFINITE
             repeatMode = ObjectAnimator.REVERSE
             interpolator = EASE_IN_OUT
