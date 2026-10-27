@@ -391,8 +391,10 @@ class SettingsHubActivity : AppCompatActivity() {
                     textSize = spec.third
                     gravity = Gravity.CENTER
                     setTextColor(if (index % 3 == 0) 0xFFD5C9A5.toInt() else 0xFFF4EED0.toInt())
-                    alpha = 0.88f
-                    setShadowLayer(dpf(3.5f), 0f, 0f, 0xFFD5C9A5.toInt())
+                    alpha = 0.96f
+                    // Keep sparkles above elevated photo/button children; perimeter placement avoids covering content.
+                    elevation = dpf(8f)
+                    setShadowLayer(dpf(4f), 0f, 0f, 0xFFD5C9A5.toInt())
                     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
                     isClickable = false
                     isFocusable = false
