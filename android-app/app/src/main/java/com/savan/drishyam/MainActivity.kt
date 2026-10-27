@@ -154,6 +154,24 @@ class MainActivity : AppCompatActivity() {
         // Keep the glass header below status-bar icons while the animated page background
         // remains visible behind the transparent system bar.
         val root = findViewById<View>(R.id.root)
+        // Fade the background into the transparent status-bar area; leave all existing
+        // content padding and system-bar insets untouched.
+        (root as? android.widget.FrameLayout)?.addView(
+            View(this).apply {
+                background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(
+                        android.graphics.Color.TRANSPARENT,
+                        androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.bg)
+                    )
+                )
+                isClickable = false
+                isFocusable = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            },
+            0,
+            android.widget.FrameLayout.LayoutParams(-1, 64.dp(), android.view.Gravity.TOP)
+        )
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             (glassTop.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
