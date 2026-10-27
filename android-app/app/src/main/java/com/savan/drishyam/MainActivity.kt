@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                 isFocusable = false
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             },
-            0,
+            1,
             android.widget.FrameLayout.LayoutParams(-1, 64.dp(), android.view.Gravity.TOP)
         )
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
