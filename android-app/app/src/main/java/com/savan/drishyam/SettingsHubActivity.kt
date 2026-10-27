@@ -372,6 +372,38 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
 
+        // Stars are created before content so they shimmer across the card without obscuring text, CTA, or portrait.
+        if (animate && !lowFx) {
+            val starSpecs = listOf(
+                Triple(0.05f, 0.10f, 8f), Triple(0.18f, 0.76f, 7f),
+                Triple(0.30f, 0.08f, 9f), Triple(0.40f, 0.93f, 7f),
+                Triple(0.53f, 0.12f, 10f), Triple(0.64f, 0.90f, 8f),
+                Triple(0.73f, 0.08f, 9f), Triple(0.91f, 0.15f, 8f),
+                Triple(0.96f, 0.72f, 7f), Triple(0.56f, 0.72f, 8f),
+                Triple(0.12f, 0.48f, 7f), Triple(0.84f, 0.47f, 10f),
+                Triple(0.35f, 0.57f, 7f), Triple(0.70f, 0.56f, 7f),
+                Triple(0.25f, 0.34f, 6f), Triple(0.95f, 0.38f, 7f)
+            )
+            starSpecs.forEachIndexed { index, spec ->
+                val star = TextView(this).apply {
+                    text = if (index % 2 == 0) "✦" else "✧"
+                    textSize = spec.third
+                    gravity = Gravity.CENTER
+                    setTextColor(if (index % 3 == 0) 0xFFD5C9A5.toInt() else 0xFFF4EED0.toInt())
+                    alpha = 0.48f
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    isClickable = false
+                    isFocusable = false
+                }
+                card.addView(star, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.START))
+                card.post {
+                    star.x = (card.width * spec.first).coerceAtMost((card.width - star.width).toFloat())
+                    star.y = (card.height * spec.second).coerceAtMost((card.height - star.height).toFloat())
+                    startStarDrift(star, index)
+                }
+            }
+        }
+
         // Calm, wide cinematic composition: copy on the left, portrait floating on the right.
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -514,35 +546,6 @@ class SettingsHubActivity : AppCompatActivity() {
             rightMargin = dp(8)
         })
 
-        // Tiny moving stars restore the original glitter effect without changing the card layout.
-        if (animate && !lowFx) {
-            val starSpecs = listOf(
-                Triple(0.06f, 0.14f, 8f), Triple(0.22f, 0.88f, 7f),
-                Triple(0.36f, 0.08f, 10f), Triple(0.48f, 0.91f, 7f),
-                Triple(0.63f, 0.12f, 11f), Triple(0.76f, 0.86f, 8f),
-                Triple(0.91f, 0.18f, 9f), Triple(0.94f, 0.73f, 7f),
-                Triple(0.57f, 0.83f, 8f), Triple(0.13f, 0.42f, 7f),
-                Triple(0.84f, 0.43f, 12f), Triple(0.39f, 0.76f, 7f)
-            )
-            starSpecs.forEachIndexed { index, spec ->
-                val star = TextView(this).apply {
-                    text = if (index % 2 == 0) "✦" else "✧"
-                    textSize = spec.third
-                    gravity = Gravity.CENTER
-                    setTextColor(0xFFF4EED0.toInt())
-                    alpha = 0.35f
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    elevation = dpf(7)
-                }
-                card.addView(star, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.START))
-                card.post {
-                    star.x = (card.width * spec.first).coerceAtMost((card.width - star.width).toFloat())
-                    star.y = (card.height * spec.second).coerceAtMost((card.height - star.height).toFloat())
-                    startStarDrift(star, index)
-                }
-            }
-        }
-
         if (animate) {
             startFlow(flowBg)
             startBob(photo)
@@ -576,17 +579,18 @@ class SettingsHubActivity : AppCompatActivity() {
             G(R.color.accent, if (lightMode) 0.68f else 0.32f, 9000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
         )
         list.forEachIndexed { index, g ->
+            // Light mode uses Drishyam's olive-led Moss & Champagne identity.
             val c = if (lightMode) when (index) {
-                0 -> 0xFFFF9B70.toInt()
-                1 -> 0xFFFF765F.toInt()
-                else -> 0xFFFFB347.toInt()
+                0 -> 0xFF89945A.toInt()
+                1 -> 0xFFB7A879.toInt()
+                else -> 0xFFD5C9A5.toInt()
             } else color(g.colorRes)
             val v = View(this).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     gradientType = GradientDrawable.RADIAL_GRADIENT
                     colors = intArrayOf(c, withAlpha(c, 0f))
-                    gradientRadius = dpf(if (lightMode) 220 else 140)
+                    gradientRadius = dpf(if (lightMode) 250 else 140)
                 }
                 alpha = g.alpha
             }
@@ -865,7 +869,7 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         val fade = (1f - progress).coerceIn(0f, 1f)
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
-            if (lightMode) intArrayOf(0xBFFF875D.toInt(), 0x99FF9C67.toInt(), 0x55FFB347, 0x00FFB347)
+            if (lightMode) intArrayOf(0x9989945A.toInt(), 0x77B7A879, 0x55D5C9A5, 0x00D5C9A5)
             else intArrayOf(0xA689945A.toInt(), 0x7289945A, 0x3889945A, 0x0089945A),
             floatArrayOf(0f, 0.34f, 0.72f, 1f),
             Shader.TileMode.CLAMP
@@ -874,7 +878,7 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         canvas.drawCircle(centerX, centerY, radius, glowPaint)
 
         // Layered wave fronts make the ripple feel less flat.
-        ripplePaint.color = if (lightMode) 0xFFFF805E.toInt() else 0xFF89945A.toInt()
+        ripplePaint.color = 0xFF89945A.toInt()
         ripplePaint.alpha = (fade * 220f).toInt()
         ripplePaint.strokeWidth = density * (1.7f - 0.8f * progress)
         canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
@@ -952,7 +956,10 @@ private class SettingsStarfieldView(context: Context, private val reducedMotion:
             val twinkle = 0.72f + 0.28f * kotlin.math.sin(progress * 6.28318f + star.phase)
             val motionFactor = if (reducedMotion) 0.52f else 1f
             val a = (star.alpha * twinkle * motionFactor * 255f).toInt().coerceIn(0, 255)
-            paint.color = if (lightMode) Color.argb(a, 255, 132, 76) else Color.argb(a, 218, 222, 165)
+            paint.color = if (lightMode) {
+                if (stars.indexOf(star) % 4 == 0) Color.argb(a, 183, 168, 121)
+                else Color.argb(a, 112, 126, 77)
+            } else Color.argb(a, 218, 222, 165)
             paint.style = Paint.Style.FILL
             canvas.drawCircle(x, y, star.radius, paint)
             if (star.radius > 1.55f * density) {
