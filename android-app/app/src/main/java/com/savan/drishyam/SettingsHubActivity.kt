@@ -467,7 +467,7 @@ class SettingsHubActivity : AppCompatActivity() {
             startFlow(flowBg)
             startBob(photo)
             startHaloPulse(halo)
-            startBob(readButton)
+            startNudge(readButton)
         }
         return card
     }
