@@ -118,9 +118,10 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
         super.onCreate(savedInstanceState)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
-        // Match system-bar icon contrast to the active theme; keep Dark Mode unchanged.
-        window.statusBarColor = ContextCompat.getColor(this, R.color.bg)
+        // Draw the app background beneath the status bar; keep system icons theme-aware.
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
         val systemUi = window.decorView.systemUiVisibility
         val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -149,6 +150,23 @@ class MainActivity : AppCompatActivity() {
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
         overlay = findViewById(R.id.overlay)
+
+        // Keep the glass header below status-bar icons while the animated page background
+        // remains visible behind the transparent system bar.
+        val root = findViewById<View>(R.id.root)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            (glassTop.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+                val desired = bars.top + 8.dp()
+                if (lp.topMargin != desired) { lp.topMargin = desired; glassTop.layoutParams = lp }
+            }
+            (glassNav.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+                val desired = bars.bottom + 8.dp()
+                if (lp.bottomMargin != desired) { lp.bottomMargin = desired; glassNav.layoutParams = lp }
+            }
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
         segFav = findViewById(R.id.segFav)
         segBook = findViewById(R.id.segBook)
         sortHot = findViewById(R.id.sortHot)
