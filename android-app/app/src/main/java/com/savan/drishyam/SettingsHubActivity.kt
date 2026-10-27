@@ -51,6 +51,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private var lowFx = false
     private var reduced = false
+    private var lightMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -60,6 +61,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
         lowFx = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
         reduced = !motionEnabled(this)
+        lightMode = Color.luminance(color(R.color.bg)) > 0.5f
         val animate = !reduced
 
         val content = LinearLayout(this).apply {
@@ -80,7 +82,7 @@ class SettingsHubActivity : AppCompatActivity() {
         if (!lowFx) {
             addGlows(root, animate)
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
-            root.addView(SettingsStarfieldView(this, reduced), FrameLayout.LayoutParams(-1, -1))
+            root.addView(SettingsStarfieldView(this, reduced, lightMode), FrameLayout.LayoutParams(-1, -1))
         }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         // Fixed feathered edges fade scrolling content into the page surface, without a solid bar.
@@ -569,18 +571,22 @@ class SettingsHubActivity : AppCompatActivity() {
     private fun addGlows(root: FrameLayout, animate: Boolean) {
         data class G(val colorRes: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int)
         val list = listOf(
-            G(R.color.accent2, 0.52f, 5600, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
-            G(R.color.hero, 0.48f, 7200, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
-            G(R.color.accent, 0.32f, 9000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
+            G(R.color.accent2, if (lightMode) 0.88f else 0.52f, 5600, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
+            G(R.color.hero, if (lightMode) 0.82f else 0.48f, 7200, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
+            G(R.color.accent, if (lightMode) 0.68f else 0.32f, 9000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
         )
         list.forEachIndexed { index, g ->
-            val c = color(g.colorRes)
+            val c = if (lightMode) when (index) {
+                0 -> 0xFFFF9B70.toInt()
+                1 -> 0xFFFF765F.toInt()
+                else -> 0xFFFFB347.toInt()
+            } else color(g.colorRes)
             val v = View(this).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     gradientType = GradientDrawable.RADIAL_GRADIENT
                     colors = intArrayOf(c, withAlpha(c, 0f))
-                    gradientRadius = dpf(140)
+                    gradientRadius = dpf(if (lightMode) 220 else 140)
                 }
                 alpha = g.alpha
             }
@@ -614,7 +620,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     /** Press feedback combines a water-like ripple with a soft, fading sunlight glow. */
     private fun View.attachPress(glowable: Boolean) {
-        val touchEffect = TouchRippleGlowDrawable(density)
+        val touchEffect = TouchRippleGlowDrawable(density, lightMode)
         val useTouchEffect = glowable && !lowFx
         if (useTouchEffect) foreground = touchEffect
         var touchAnimator: ValueAnimator? = null
@@ -811,7 +817,7 @@ class SettingsHubActivity : AppCompatActivity() {
 }
 
 /** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
-private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
+private class TouchRippleGlowDrawable(private val density: Float, private val lightMode: Boolean) : Drawable() {
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -859,7 +865,8 @@ private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
         val fade = (1f - progress).coerceIn(0f, 1f)
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
-            intArrayOf(0xA689945A.toInt(), 0x7289945A, 0x3889945A, 0x0089945A),
+            if (lightMode) intArrayOf(0xBFFF875D.toInt(), 0x99FF9C67.toInt(), 0x55FFB347, 0x00FFB347)
+            else intArrayOf(0xA689945A.toInt(), 0x7289945A, 0x3889945A, 0x0089945A),
             floatArrayOf(0f, 0.34f, 0.72f, 1f),
             Shader.TileMode.CLAMP
         )
@@ -867,7 +874,7 @@ private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
         canvas.drawCircle(centerX, centerY, radius, glowPaint)
 
         // Layered wave fronts make the ripple feel less flat.
-        ripplePaint.color = 0xFF89945A.toInt()
+        ripplePaint.color = if (lightMode) 0xFFFF805E.toInt() else 0xFF89945A.toInt()
         ripplePaint.alpha = (fade * 220f).toInt()
         ripplePaint.strokeWidth = density * (1.7f - 0.8f * progress)
         canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
@@ -894,7 +901,7 @@ private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
 }
 
 /** Ambient stars drift across the whole page; reduced motion uses extremely slow movement. */
-private class SettingsStarfieldView(context: Context, private val reducedMotion: Boolean) : View(context) {
+private class SettingsStarfieldView(context: Context, private val reducedMotion: Boolean, private val lightMode: Boolean) : View(context) {
     private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val speed: Float, val alpha: Float)
     private val density = resources.displayMetrics.density
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -911,7 +918,7 @@ private class SettingsStarfieldView(context: Context, private val reducedMotion:
             stars += Star(0.04f + random.nextFloat() * 0.92f, random.nextFloat(),
                 (0.65f + random.nextFloat() * 1.35f) * density,
                 random.nextFloat() * 6.28318f, 0.12f + random.nextFloat() * 0.34f,
-                0.22f + random.nextFloat() * 0.48f)
+                (if (lightMode) 0.62f else 0.22f) + random.nextFloat() * (if (lightMode) 0.34f else 0.48f))
         }
     }
 
@@ -945,7 +952,7 @@ private class SettingsStarfieldView(context: Context, private val reducedMotion:
             val twinkle = 0.72f + 0.28f * kotlin.math.sin(progress * 6.28318f + star.phase)
             val motionFactor = if (reducedMotion) 0.52f else 1f
             val a = (star.alpha * twinkle * motionFactor * 255f).toInt().coerceIn(0, 255)
-            paint.color = Color.argb(a, 218, 222, 165)
+            paint.color = if (lightMode) Color.argb(a, 255, 132, 76) else Color.argb(a, 218, 222, 165)
             paint.style = Paint.Style.FILL
             canvas.drawCircle(x, y, star.radius, paint)
             if (star.radius > 1.55f * density) {
