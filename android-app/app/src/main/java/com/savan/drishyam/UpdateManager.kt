@@ -28,6 +28,7 @@ object UpdateManager {
 
     fun check(context: Activity, popupSource: View, manual: Boolean = false) {
         val prefs = context.getSharedPreferences(PREFS_UPDATES, Context.MODE_PRIVATE)
+        if (!manual && !prefs.getBoolean("auto_check_updates", true)) return
         if (!manual && System.currentTimeMillis() - prefs.getLong(KEY_LAST_SUCCESSFUL_CHECK, 0L) < CHECK_INTERVAL_MS) return
         if (checking) return
         checking = true

@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -30,7 +29,8 @@ class UpdatesActivity : AppCompatActivity() {
     private lateinit var checkButton: MaterialButton
     private lateinit var downloadButton: MaterialButton
     private lateinit var releaseButton: MaterialButton
-    private lateinit var downloadProgress: ProgressBar
+    private lateinit var downloadProgress: WavyProgressView
+    private lateinit var statusRing: StatusRingView
     private var apkUrl: String? = null
     private var verifiedApk: VerifiedReleaseApk? = null
     private var releasePage: String? = null
@@ -64,11 +64,6 @@ class UpdatesActivity : AppCompatActivity() {
             addView(root)
         }
 
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, 4.dp())
-        }
         val back = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
             text = "‹"
             textSize = 30f
@@ -80,25 +75,29 @@ class UpdatesActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 3.dp())
             setOnClickListener { finish() }
         }
-        header.addView(back, LinearLayout.LayoutParams(52.dp(), 52.dp()))
-        val heading = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(8.dp(), 0, 0, 0)
-        }
-        heading.addView(TextView(this).apply {
-            text = "Drishyam updates"
-            textSize = 25f
-            maxLines = 1
-            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
-            setTextColor(onSurface)
+        root.addView(back, LinearLayout.LayoutParams(52.dp(), 52.dp()))
+        root.addView(TextView(this).apply {
+            text = "Software"
+            textSize = 11f
+            letterSpacing = .14f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            setTextColor(primary)
+            setPadding(2.dp(), 20.dp(), 0, 4.dp())
         })
-        heading.addView(TextView(this).apply {
-            text = "Every release, a better perspective"
+        root.addView(TextView(this).apply {
+            text = "Updates"
+            textSize = 38f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.poppins_extrabold)
+            setTextColor(onSurface)
+            letterSpacing = -.02f
+            setPadding(0, 0, 0, 4.dp())
+        })
+        root.addView(TextView(this).apply {
+            text = "Stay on the latest verified Drishyam."
             textSize = 14f
             setTextColor(onSurfaceVariant)
+            setPadding(0, 0, 0, 6.dp())
         })
-        header.addView(heading, LinearLayout.LayoutParams(0, -2, 1f))
-        root.addView(header)
 
         val statusCard = MaterialCardView(this).apply {
             radius = 34.dp().toFloat()
@@ -112,27 +111,32 @@ class UpdatesActivity : AppCompatActivity() {
         val cardContent = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
-        cardContent.addView(TextView(this).apply {
-            text = "YOUR DRISHYAM EXPERIENCE"
-            textSize = 11f
-            letterSpacing = 0.12f
-            setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
+        statusRing = StatusRingView(this).apply { state = "up" }
+        cardContent.addView(statusRing, LinearLayout.LayoutParams(156.dp(), 156.dp()).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            bottomMargin = 14.dp()
         })
         cardContent.addView(TextView(this).apply {
-            text = "A fresh perspective."
+            text = "You're up to date"
+            textSize = 22f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
+            setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
+            gravity = Gravity.CENTER
+        })
+        cardContent.addView(TextView(this).apply {
+            text = "Drishyam " + BuildConfig.VERSION_NAME + " is the latest verified release."
             textSize = 29f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
             setTextColor(themeColor(com.google.android.material.R.attr.colorOnPrimaryContainer, R.color.fg))
+            gravity = Gravity.CENTER
             setPadding(0, 6.dp(), 0, 18.dp())
         })
         versionText = TextView(this).apply {
-            text = "Latest version: Not checked yet"
-            textSize = 16f
-            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            text = "v${BuildConfig.VERSION_NAME}"
+            textSize = 23f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
             setTextColor(onSurface)
         }
-        versionText.text = "Installed version · v${BuildConfig.VERSION_NAME}"
-        cardContent.addView(versionText)
         status = TextView(this).apply {
             text = "Tap Check for updates to check the latest published stable release."
             textSize = 14f
@@ -141,10 +145,75 @@ class UpdatesActivity : AppCompatActivity() {
             setPadding(0, 10.dp(), 0, 0)
         }
         cardContent.addView(status)
+        cardContent.addView(TextView(this).apply {
+            text = "APK signature checked before install"
+            textSize = 12f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            setTextColor(primary)
+            gravity = Gravity.CENTER
+            setPadding(0, 12.dp(), 0, 0)
+        })
+        checkButton = MaterialButton(this).apply {
+            text = "Check now"
+            textSize = 13f
+            isAllCaps = false
+            cornerRadius = 22.dp()
+            setOnClickListener { checkForUpdates() }
+        }
+        downloadButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            text = "Download"
+            textSize = 13f
+            isAllCaps = false
+            cornerRadius = 22.dp()
+            visibility = View.GONE
+            setOnClickListener { downloadUpdate() }
+        }
+        val actionRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        actionRow.addView(checkButton, LinearLayout.LayoutParams(0, 52.dp(), 1f))
+        actionRow.addView(downloadButton, LinearLayout.LayoutParams(0, 52.dp(), 1f).apply { leftMargin = 8.dp() })
+        cardContent.addView(actionRow, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 16.dp() })
         statusCard.addView(cardContent)
         root.addView(statusCard, LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = 18.dp()
         })
+
+        val versionComparison = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 14.dp(), 0, 0)
+        }
+        fun versionCard(label: String, valueView: View): MaterialCardView = MaterialCardView(this).apply {
+            radius = 22.dp().toFloat()
+            cardElevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = themeColor(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
+            setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainer, R.color.glassFill))
+            setContentPadding(16.dp(), 14.dp(), 16.dp(), 14.dp())
+            val body = LinearLayout(this@UpdatesActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@UpdatesActivity).apply {
+                    text = label
+                    textSize = 11f
+                    setTextColor(onSurfaceVariant)
+                })
+                addView(valueView)
+            }
+            addView(body)
+        }
+        val installedValue = TextView(this).apply {
+            text = "v${BuildConfig.VERSION_NAME}"
+            textSize = 23f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_bold)
+            setTextColor(onSurface)
+        }
+        val latestValue = versionCard("Latest", versionText)
+        versionComparison.addView(versionCard("Installed", installedValue), LinearLayout.LayoutParams(0, -2, 1f))
+        versionComparison.addView(View(this), LinearLayout.LayoutParams(12.dp(), 1))
+        versionComparison.addView(latestValue, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(versionComparison)
 
         root.addView(TextView(this).apply {
             text = "Release notes"
@@ -170,35 +239,60 @@ class UpdatesActivity : AppCompatActivity() {
         notesCard.addView(notes)
         root.addView(notesCard)
 
-        checkButton = MaterialButton(this).apply {
-            text = "Check for updates"
-            textSize = 15f
-            isAllCaps = false
-            cornerRadius = 22.dp()
-            setOnClickListener { checkForUpdates() }
+        val updatePrefs = getSharedPreferences("drishyam_update_state", MODE_PRIVATE)
+        val preferencesCard = MaterialCardView(this).apply {
+            radius = 24.dp().toFloat()
+            cardElevation = 0f
+            strokeWidth = 1.dp()
+            strokeColor = themeColor(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
+            setCardBackgroundColor(themeColor(com.google.android.material.R.attr.colorSurfaceContainer, R.color.glassFill))
+            setContentPadding(18.dp(), 12.dp(), 18.dp(), 12.dp())
         }
-        root.addView(checkButton, LinearLayout.LayoutParams(-1, 56.dp()).apply {
-            topMargin = 20.dp()
+        val preferencesBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        preferencesBody.addView(TextView(this).apply {
+            text = "Update preferences"
+            textSize = 18f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+            setTextColor(onSurface)
+            setPadding(0, 4.dp(), 0, 8.dp())
         })
-        downloadButton = MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
-            text = "Download update"
-            textSize = 15f
-            isAllCaps = false
-            cornerRadius = 22.dp()
-            visibility = View.GONE
-            setOnClickListener { downloadUpdate() }
+        fun addUpdateToggle(title: String, description: String, key: String, defaultValue: Boolean) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, 8.dp(), 0, 8.dp())
+            }
+            val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            copy.addView(TextView(this).apply {
+                text = title
+                textSize = 14f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@UpdatesActivity, R.font.montserrat_semibold)
+                setTextColor(onSurface)
+            })
+            copy.addView(TextView(this).apply {
+                text = description
+                textSize = 12f
+                setPadding(0, 3.dp(), 8.dp(), 0)
+                setTextColor(onSurfaceVariant)
+            })
+            row.addView(copy, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(com.google.android.material.materialswitch.MaterialSwitch(this).apply {
+                isChecked = updatePrefs.getBoolean(key, defaultValue)
+                contentDescription = title
+                setOnCheckedChangeListener { _, enabled -> updatePrefs.edit().putBoolean(key, enabled).apply() }
+            })
+            preferencesBody.addView(row)
         }
-        root.addView(downloadButton, LinearLayout.LayoutParams(-1, 54.dp()).apply {
-            topMargin = 10.dp()
-        })
-        downloadProgress = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
-            max = 100
+        addUpdateToggle("Check automatically", "Check on launch at most once every 24 hours.", "auto_check_updates", true)
+        addUpdateToggle("Wi-Fi only", "Require Wi-Fi before downloading an APK.", "wifi_only_downloads", false)
+        preferencesCard.addView(preferencesBody)
+        root.addView(preferencesCard, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 14.dp() })
+
+        downloadProgress = WavyProgressView(this).apply {
             progress = 0
-            isIndeterminate = false
             visibility = View.GONE
-            progressTintList = android.content.res.ColorStateList.valueOf(primary)
         }
-        root.addView(downloadProgress, LinearLayout.LayoutParams(-1, 6.dp()).apply {
+        root.addView(downloadProgress, LinearLayout.LayoutParams(-1, 30.dp()).apply {
             topMargin = 8.dp()
             bottomMargin = 4.dp()
         })
@@ -216,8 +310,8 @@ class UpdatesActivity : AppCompatActivity() {
         })
 
         setContentView(scroll)
-        animatePageEntrance(scroll)
-        if (motionEnabled(this)) {
+        if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(scroll)
+        if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
             val expressiveCards = listOf(statusCard, notesCard)
             expressiveCards.forEachIndexed { index, card ->
                 card.alpha = 0f
@@ -236,6 +330,7 @@ class UpdatesActivity : AppCompatActivity() {
         checkInProgress = true
         checkButton.isEnabled = false
         checkButton.text = "Checking…"
+        statusRing.state = "checking"
         status.text = "Connecting to GitHub Releases…"
         apkUrl = null
         verifiedApk = null
@@ -285,6 +380,7 @@ class UpdatesActivity : AppCompatActivity() {
                 checkButton.text = "Check again"
 
                 if (result == null) {
+                    statusRing.state = "error"
                     status.text = failure ?: "Update check failed. Please try again."
                     Toast.makeText(this, status.text, Toast.LENGTH_LONG).show()
                     return@runOnUiThread
@@ -293,6 +389,7 @@ class UpdatesActivity : AppCompatActivity() {
                 val tag = result.optString("tag_name", "").trim()
                 val version = tag.removePrefix("v").trim()
                 if (!Regex("^\\d+\\.\\d+\\.\\d+$").matches(version)) {
+                    statusRing.state = "error"
                     status.text = "GitHub returned an invalid release version. Please try again later."
                     notes.text = "Release notes are unavailable for this release."
                     return@runOnUiThread
@@ -301,12 +398,13 @@ class UpdatesActivity : AppCompatActivity() {
                 releasePage = result.optString("html_url").takeIf { it.startsWith("https://github.com/") }
                     ?: "https://github.com/savanjee-dev/Drishyam/releases/latest"
                 latestVersion = version
-                versionText.text = "Latest version: Drishyam v$version"
+                versionText.text = "v$version"
                 val comparison = compareVersions(version, BuildConfig.VERSION_NAME)
+                statusRing.state = if (comparison > 0) "available" else "up"
                 status.text = when {
-                    comparison > 0 -> "A newer version is available."
-                    comparison == 0 -> "✓ You're up to date. You're using the latest Drishyam version."
-                    else -> "The latest published release is older than this installation. No update is available."
+                    comparison > 0 -> "Checked just now · A newer version is available."
+                    comparison == 0 -> "Checked just now · You're up to date. You're using the latest Drishyam version."
+                    else -> "Checked just now · The latest published release is older than this installation. No update is available."
                 }
 
                 val rawNotes = result.opt("body")
@@ -350,6 +448,15 @@ class UpdatesActivity : AppCompatActivity() {
             Toast.makeText(this, "No verified APK download is available yet. Check for updates again.", Toast.LENGTH_LONG).show()
             return
         }
+        if (getSharedPreferences("drishyam_update_state", MODE_PRIVATE).getBoolean("wifi_only_downloads", false)) {
+            val connectivity = getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val network = connectivity.activeNetwork
+            val capabilities = network?.let { connectivity.getNetworkCapabilities(it) }
+            if (capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) != true) {
+                Toast.makeText(this, "Wi-Fi only is enabled. Connect to Wi-Fi to download this update.", Toast.LENGTH_LONG).show()
+                return
+            }
+        }
         downloadButton.isEnabled = false
         downloadButton.text = "Verifying download…"
         VerifiedUpdateInstaller.downloadAndInstall(this, release) { message ->
@@ -358,15 +465,15 @@ class UpdatesActivity : AppCompatActivity() {
             val percent = Regex("(\\d{1,3})%").find(message)?.groupValues?.getOrNull(1)?.toIntOrNull()
             if (percent != null) {
                 downloadProgress.visibility = View.VISIBLE
-                downloadProgress.isIndeterminate = false
                 downloadProgress.progress = percent.coerceIn(0, 100)
+                statusRing.state = "downloading"
             } else if (message.contains("Downloading", ignoreCase = true)) {
                 downloadProgress.visibility = View.VISIBLE
-                downloadProgress.isIndeterminate = true
+                statusRing.state = "downloading"
             } else {
                 downloadProgress.visibility = View.GONE
-                downloadProgress.isIndeterminate = false
                 downloadProgress.progress = 0
+                if (message.contains("verified", ignoreCase = true)) statusRing.state = "ready"
             }
             val downloading = message.contains("Downloading update", ignoreCase = true)
             downloadButton.isEnabled = !downloading
@@ -404,4 +511,69 @@ class UpdatesActivity : AppCompatActivity() {
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
+}
+
+private class StatusRingView(context: android.content.Context) : View(context) {
+    var state: String = "up"
+        set(value) { field = value; invalidate() }
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val d = resources.displayMetrics.density
+        val cx = width / 2f; val cy = height / 2f
+        val radius = minOf(width, height) * .32f
+        paint.style = android.graphics.Paint.Style.STROKE; paint.strokeWidth = 9f*d
+        paint.strokeCap = android.graphics.Paint.Cap.ROUND
+        paint.color = 0x3889945A
+        canvas.drawCircle(cx, cy, radius, paint)
+        paint.color = if (state == "error") 0xFFB3261E.toInt() else 0xFF89945A.toInt()
+        if (state == "checking" || state == "downloading") {
+            canvas.drawArc(cx-radius, cy-radius, cx+radius, cy+radius, -90f, 235f, false, paint)
+        } else if (state == "available") {
+            canvas.drawArc(cx-radius, cy-radius, cx+radius, cy+radius, -90f, 125f, false, paint)
+            val p = android.graphics.Path().apply { moveTo(cx,cy-18*d); lineTo(cx,cy+15*d); moveTo(cx-12*d,cy+4*d); lineTo(cx,cy+16*d); lineTo(cx+12*d,cy+4*d) }
+            canvas.drawPath(p,paint)
+        } else {
+            canvas.drawCircle(cx,cy,radius,paint)
+            val p = android.graphics.Path().apply { moveTo(cx-19*d,cy); lineTo(cx-5*d,cy+14*d); lineTo(cx+22*d,cy-17*d) }
+            canvas.drawPath(p,paint)
+        }
+    }
+}
+private class WavyProgressView(context: android.content.Context) : View(context) {
+    var progress: Int = 0
+        set(value) { field = value.coerceIn(0,100); invalidate() }
+    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = 6f * resources.displayMetrics.density
+        strokeCap = android.graphics.Paint.Cap.ROUND
+        strokeJoin = android.graphics.Paint.Join.ROUND
+    }
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val cy = height / 2f
+        if (w <= 0f) return
+        val d = resources.displayMetrics.density
+        val amplitude = 4f * d
+        val path = android.graphics.Path()
+        val end = w * progress / 100f
+        for (x in 0..w.toInt() step 3) {
+            val y = cy + kotlin.math.sin(x / (22f * d)) * amplitude
+            if (x == 0) path.moveTo(x.toFloat(), y) else path.lineTo(x.toFloat(), y)
+        }
+        paint.color = 0x3889945A
+        canvas.drawPath(path, paint)
+        if (progress > 0) {
+            val filled = android.graphics.Path()
+            for (x in 0..end.toInt() step 3) {
+                val y = cy + kotlin.math.sin(x / (22f * d)) * amplitude
+                if (x == 0) filled.moveTo(x.toFloat(), y) else filled.lineTo(x.toFloat(), y)
+            }
+            paint.color = 0xFF89945A.toInt()
+            canvas.drawPath(filled, paint)
+            paint.style = android.graphics.Paint.Style.FILL
+            canvas.drawCircle(end, cy + kotlin.math.sin(end / (22f * d)) * amplitude, 5f*d, paint)
+            paint.style = android.graphics.Paint.Style.STROKE
+        }
+    }
 }

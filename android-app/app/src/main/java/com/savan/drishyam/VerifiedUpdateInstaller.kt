@@ -24,6 +24,16 @@ internal object VerifiedUpdateInstaller {
     @Volatile private var downloading = false
 
     fun downloadAndInstall(activity: Activity, release: VerifiedReleaseApk, status: (String) -> Unit = {}) {
+        val updatePrefs = activity.getSharedPreferences("drishyam_update_state", android.content.Context.MODE_PRIVATE)
+        if (updatePrefs.getBoolean("wifi_only_downloads", false)) {
+            val connectivity = activity.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val network = connectivity.activeNetwork
+            val capabilities = network?.let { connectivity.getNetworkCapabilities(it) }
+            if (capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) != true) {
+                status("Wi-Fi only is enabled. Connect to Wi-Fi to download this update.")
+                return
+            }
+        }
         synchronized(this) {
             if (downloading) {
                 status("A Drishyam update download is already running.")

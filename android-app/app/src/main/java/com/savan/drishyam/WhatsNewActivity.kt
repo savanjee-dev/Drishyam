@@ -22,6 +22,7 @@ class WhatsNewActivity : AppCompatActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var loading: TextView
     private var restoreScrollY = 0
+    private var selectedVersion = BuildConfig.VERSION_NAME
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -42,8 +43,7 @@ class WhatsNewActivity : AppCompatActivity() {
             setBackgroundColor(surface)
         }
         val header = LinearLayout(this).apply {
-            gravity = Gravity.CENTER_VERTICAL
-            orientation = LinearLayout.HORIZONTAL
+            orientation = LinearLayout.VERTICAL
             setPadding(16.dp(), 8.dp(), 16.dp(), 12.dp())
         }
         header.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
@@ -55,21 +55,28 @@ class WhatsNewActivity : AppCompatActivity() {
             contentDescription = "Back"
             setOnClickListener { finish() }
         }, LinearLayout.LayoutParams(52.dp(), 52.dp()))
-        header.addView(LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(10.dp(), 0, 0, 0)
-            addView(TextView(this@WhatsNewActivity).apply {
-                text = "What’s New"
-                textSize = 25f
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_bold)
-                setTextColor(onSurface)
-            })
-            addView(TextView(this@WhatsNewActivity).apply {
-                text = "Release history · newest first"
-                textSize = 13f
-                setTextColor(variant)
-            })
-        }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(TextView(this).apply {
+            text = "Release notes"
+            textSize = 11f
+            letterSpacing = .14f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_semibold)
+            setTextColor(variant)
+            setPadding(2.dp(), 18.dp(), 0, 4.dp())
+        })
+        header.addView(TextView(this).apply {
+            text = "What's new"
+            textSize = 38f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.poppins_extrabold)
+            setTextColor(onSurface)
+            letterSpacing = -.02f
+            setPadding(0, 0, 0, 4.dp())
+        })
+        header.addView(TextView(this).apply {
+            text = "Every change, release by release."
+            textSize = 14f
+            setTextColor(variant)
+            setPadding(0, 0, 0, 4.dp())
+        })
         page.addView(header)
 
         scroll = ScrollView(this).apply {
@@ -91,7 +98,7 @@ class WhatsNewActivity : AppCompatActivity() {
         }
         page.addView(loading)
         setContentView(page)
-        animatePageEntrance(page)
+        if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(page)
 
         // Render local data immediately, without waiting for GitHub.
         val cached = ReleaseNotesCache.cachedHistory(this)
@@ -134,8 +141,34 @@ class WhatsNewActivity : AppCompatActivity() {
         val outline = color(com.google.android.material.R.attr.colorOutlineVariant, R.color.glassStroke)
         val onSurface = color(com.google.android.material.R.attr.colorOnSurface, R.color.fg)
         val variant = color(com.google.android.material.R.attr.colorOnSurfaceVariant, R.color.mute)
+        val versions = (listOf(BuildConfig.VERSION_NAME) + releases.map { it.version }).distinct().take(3)
+        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        versions.forEachIndexed { index, version ->
+            val tab = TextView(this).apply {
+                text = version
+                textSize = 12f
+                gravity = Gravity.CENTER
+                setPadding(8.dp(), 10.dp(), 8.dp(), 10.dp())
+                styleSeg(version == selectedVersion)
+                isClickable = true; isFocusable = true
+                setOnClickListener { selectedVersion = version; render(releases) }
+            }
+            tabs.addView(tab, LinearLayout.LayoutParams(0, -2, 1f).apply { if (index > 0) leftMargin = 6.dp() })
+        }
+        content.addView(tabs, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 16.dp() })
+        val visibleReleases = releases.filter { it.version == selectedVersion }
+        if (visibleReleases.isEmpty()) {
+            content.addView(TextView(this).apply {
+                text = "Release notes for v$selectedVersion aren't available in the saved release history yet. Check for updates when you're online to refresh the notes."
+                textSize = 14f
+                setLineSpacing(4.dp().toFloat(), 1f)
+                setTextColor(onSurface)
+                setPadding(16.dp(), 18.dp(), 16.dp(), 18.dp())
+            })
+            return
+        }
 
-        val latest = releases.firstOrNull()
+        val latest = visibleReleases.firstOrNull()
         if (latest != null) {
             val hero = MaterialCardView(this).apply {
                 radius = 32.dp().toFloat()
@@ -149,26 +182,26 @@ class WhatsNewActivity : AppCompatActivity() {
             }
             val heroBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             heroBody.addView(TextView(this).apply {
-                text = "THE LATEST CHAPTER"
+                text = if (releases.firstOrNull()?.version == latest.version) "LATEST" else "RELEASE"
                 textSize = 11f
                 letterSpacing = 0.16f
                 setTextColor(onPrimaryContainer)
             })
             heroBody.addView(TextView(this).apply {
-                text = "A fresh perspective."
-                textSize = 30f
+                text = latest.version
+                textSize = 46f
                 typeface = androidx.core.content.res.ResourcesCompat.getFont(this@WhatsNewActivity, R.font.montserrat_bold)
                 setTextColor(onPrimaryContainer)
                 setPadding(0, 8.dp(), 0, 6.dp())
             })
             heroBody.addView(TextView(this).apply {
-                text = "Drishyam ${latest.version} · What's changed"
+                text = latest.title.ifBlank { "Drishyam ${latest.version}" }
                 textSize = 14f
                 setTextColor(onPrimaryContainer)
             })
             hero.addView(heroBody)
             content.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 18.dp() })
-            if (motionEnabled(this)) {
+            if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
                 hero.alpha = 0f
                 hero.translationY = 14.dp().toFloat()
                 hero.scaleX = 0.985f
@@ -179,7 +212,7 @@ class WhatsNewActivity : AppCompatActivity() {
             }
         }
 
-        releases.forEachIndexed { index, release ->
+        visibleReleases.forEachIndexed { index, release ->
             val card = MaterialCardView(this).apply {
                 radius = 28.dp().toFloat()
                 cardElevation = 0f
@@ -195,7 +228,7 @@ class WhatsNewActivity : AppCompatActivity() {
             }
             val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             body.addView(TextView(this).apply {
-                text = if (index == 0) "LATEST RELEASE" else "RELEASE"
+                text = if (index == 0 && releases.firstOrNull()?.version == release.version) "LATEST RELEASE" else "RELEASE NOTES"
                 textSize = 10f
                 letterSpacing = 0.12f
                 setTextColor(if (index == 0) onPrimaryContainer else variant)
@@ -223,7 +256,7 @@ class WhatsNewActivity : AppCompatActivity() {
             content.addView(card, LinearLayout.LayoutParams(-1, -2).apply {
                 bottomMargin = 12.dp()
             })
-            if (motionEnabled(this@WhatsNewActivity)) {
+            if (motionEnabled(this@WhatsNewActivity) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
                 card.alpha = 0f
                 card.translationY = 14.dp().toFloat()
                 card.scaleX = 0.985f

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="hero">#222A1A</color>
     <!-- Drishyam 2.6: Moss & Olive — cinematic dark mode -->
     <color name="transparent">#00000000</color>
     <color name="bg">#0A0D08</color>

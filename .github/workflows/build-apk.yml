@@ -1,4 +1,4 @@
-name: Build Drishyam APK (Candidate Only)
+name: Build Drishyam APK (Candidate Only) # S1 candidate verification
 
 on:
   workflow_dispatch:
@@ -6,11 +6,11 @@ on:
     paths:
       - "android-app/**"
       - ".github/workflows/build-drishyam.yml"
+      - ".github/workflows/build-apk.yml"
 
 permissions:
   contents: read
 
-# Avoid overlapping dependency downloads on feature branches; serialize main releases.
 concurrency:
   group: drishyam-candidate-${{ github.ref }}
   cancel-in-progress: true
@@ -101,10 +101,9 @@ jobs:
           res = Path(sys.argv[1])
           base, v21 = res / "strings.xml", res / "strings_v21.xml"
           if base.exists() and v21.exists():
-              base_root = ET.parse(base).getroot()
+              base_names = {item.get("name") for item in ET.parse(base).getroot() if item.tag in ("string", "item", "plurals", "string-array")}
               v21_tree = ET.parse(v21)
               v21_root = v21_tree.getroot()
-              base_names = {item.get("name") for item in base_root if item.tag in ("string", "item", "plurals", "string-array")}
               for item in list(v21_root):
                   if item.get("name") == "settings_version" and item.get("name") in base_names:
                       v21_root.remove(item)
@@ -134,6 +133,51 @@ jobs:
           test -n "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
 
+      - name: Verify APK package, version, and ZIP alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$RUNNER_TEMP/drishyam-output/Drishyam-$VERSION_NAME.apk"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -n 1)"
+          test -n "$AAPT" || { echo "::error::aapt not found"; exit 1; }
+          test -n "$ZIPALIGN" || { echo "::error::zipalign not found"; exit 1; }
+          BADGING="$("$AAPT" dump badging "$APK")"
+          grep -F "package: name='com.savan.drishyam' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'" <<< "$BADGING" || {
+            echo "::error::APK package/version does not match expected metadata"
+            "$AAPT" dump badging "$APK" | head -n 1
+            exit 1
+          }
+          "$ZIPALIGN" -c -v 4 "$APK"
+          echo "APK package, version metadata, and ZIP alignment verified."
+
+      - name: Download the latest published APK as an upgrade baseline
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/drishyam-upgrade"
+          curl --fail --location --retry 3 \
+            https://github.com/savanjee-dev/Drishyam/releases/download/v2.7.16/Drishyam-2.7.16.apk \
+            --output "$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk"
+          test -s "$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -n 1)"
+          BADGING="$("$AAPT" dump badging "$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk")"
+          grep -F "package: name='com.savan.drishyam' versionCode='44' versionName='2.7.16'" <<< "$BADGING"
+
+      # Pushes are fast development candidates: compile + signing/package/alignment
+      # checks still run, but emulator boot/install is reserved for manual RC builds.
+      - name: Install APK on Android emulator (release-candidate smoke test)
+        if: github.event_name == 'workflow_dispatch'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          script: |
+            set -eu; APK="$GITHUB_WORKSPACE/android-app/app/build/outputs/apk/release/app-release.apk"; BASELINE="$RUNNER_TEMP/drishyam-upgrade/Drishyam-2.7.16.apk"; test -s "$APK"; test -s "$BASELINE"; adb wait-for-device; adb install "$BASELINE"; adb shell pm path com.savan.drishyam; adb install -r "$APK"; adb shell am force-stop com.savan.drishyam; adb shell monkey -p com.savan.drishyam 1; sleep 5; adb shell dumpsys activity activities | grep -F 'com.savan.drishyam'; adb uninstall com.savan.drishyam
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -141,7 +185,6 @@ jobs:
           path: ${{ runner.temp }}/drishyam-output/Drishyam-${{ steps.app.outputs.version_name }}.apk
           if-no-files-found: error
           retention-days: 30
-
 
       - name: Generate APK checksum
         shell: bash
