@@ -58,6 +58,7 @@ class UpdatesActivity : AppCompatActivity() {
             setBackgroundColor(surface)
         }
         val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
             isFillViewport = true
             clipToPadding = false
             setPadding(20.dp(), 12.dp(), 20.dp(), 8.dp())
