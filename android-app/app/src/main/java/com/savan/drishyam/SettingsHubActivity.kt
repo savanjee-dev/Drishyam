@@ -386,7 +386,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val readButton = TextView(this).apply {
             text = "Read the story  →"
             textSize = 12.5f
-            setTextColor(color(R.color.fg))
+            setTextColor(0xFF1B2117.toInt())
             typeface = font(R.font.montserrat_bold)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
@@ -445,7 +445,7 @@ class SettingsHubActivity : AppCompatActivity() {
             text = "LEAD DEVELOPER"
             textSize = 8f
             letterSpacing = 0.06f
-            setTextColor(color(R.color.fg))
+            setTextColor(0xFF1B2117.toInt())
             typeface = font(R.font.montserrat_bold)
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -785,7 +785,11 @@ private class HubFadedCircleImage(context: android.content.Context) : ImageView(
 
 /** Story card background: 120deg gradient, background-size 300%, position shifts with progress 0..1. */
 private class HubFlowGradientDrawable(private val density: Float, private val radiusDp: Float) : Drawable() {
-    var progress = 0f
+    var progress: Float = 0f
+        set(value) {
+            field = value
+            invalidateSelf()
+        }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val colors = intArrayOf(
         0xFF1F2A16.toInt(), 0xFF414D2D.toInt(), 0xFF89945A.toInt(),
