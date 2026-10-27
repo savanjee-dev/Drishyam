@@ -71,6 +71,7 @@ class SettingsHubActivity : AppCompatActivity() {
             clipToPadding = false
         }
         val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
             isFillViewport = true
             clipToPadding = false
             addView(content)
@@ -372,44 +373,6 @@ class SettingsHubActivity : AppCompatActivity() {
             }
         }
 
-        // Stars are created before content so they shimmer across the card without obscuring text, CTA, or portrait.
-        if (animate && !lowFx) {
-            // Keep sparkles around the card perimeter and in the open seams, not over copy, CTA, or portrait.
-            val starSpecs = listOf(
-                Triple(0.03f, 0.06f, 11f), Triple(0.25f, 0.035f, 10f),
-                Triple(0.49f, 0.035f, 12f), Triple(0.72f, 0.035f, 10f),
-                Triple(0.92f, 0.06f, 12f), Triple(0.965f, 0.27f, 10f),
-                Triple(0.965f, 0.49f, 12f), Triple(0.965f, 0.72f, 10f),
-                Triple(0.91f, 0.91f, 12f), Triple(0.70f, 0.94f, 10f),
-                Triple(0.47f, 0.94f, 12f), Triple(0.24f, 0.94f, 10f),
-                Triple(0.035f, 0.82f, 11f), Triple(0.025f, 0.61f, 10f),
-                Triple(0.025f, 0.38f, 12f), Triple(0.60f, 0.09f, 10f)
-            )
-            starSpecs.forEachIndexed { index, spec ->
-                val star = TextView(this).apply {
-                    text = if (index % 2 == 0) "✦" else "✧"
-                    textSize = spec.third
-                    gravity = Gravity.CENTER
-                    setTextColor(if (index % 3 == 0) 0xFFD5C9A5.toInt() else 0xFFF4EED0.toInt())
-                    alpha = 0.96f
-                    // Keep sparkles above elevated photo/button children; perimeter placement avoids covering content.
-                    elevation = dpf(8f)
-                    setShadowLayer(dpf(4f), 0f, 0f, 0xFFD5C9A5.toInt())
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                    isClickable = false
-                    isFocusable = false
-                }
-                card.addView(star, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.START))
-                card.post {
-                    // Render above the gradient and content; perimeter coordinates keep the text and portrait clear.
-                    star.bringToFront()
-                    star.x = (card.width * spec.first).coerceAtMost((card.width - star.width).toFloat())
-                    star.y = (card.height * spec.second).coerceAtMost((card.height - star.height).toFloat())
-                    startStarDrift(star, index)
-                }
-            }
-        }
-
         // Calm, wide cinematic composition: copy on the left, portrait floating on the right.
         val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -551,6 +514,45 @@ class SettingsHubActivity : AppCompatActivity() {
         card.addView(photoBox, FrameLayout.LayoutParams(dp(150), dp(184), Gravity.END or Gravity.CENTER_VERTICAL).apply {
             rightMargin = dp(8)
         })
+
+        // Added last so sparkles render above later-added card content and remain visible.
+        if (animate && !lowFx) {
+            // Keep sparkles around the card perimeter and in the open seams, not over copy, CTA, or portrait.
+            val starSpecs = listOf(
+                Triple(0.03f, 0.06f, 11f), Triple(0.25f, 0.035f, 10f),
+                Triple(0.49f, 0.035f, 12f), Triple(0.72f, 0.035f, 10f),
+                Triple(0.92f, 0.06f, 12f), Triple(0.965f, 0.27f, 10f),
+                Triple(0.965f, 0.49f, 12f), Triple(0.965f, 0.72f, 10f),
+                Triple(0.91f, 0.91f, 12f), Triple(0.70f, 0.94f, 10f),
+                Triple(0.47f, 0.94f, 12f), Triple(0.24f, 0.94f, 10f),
+                Triple(0.035f, 0.82f, 11f), Triple(0.025f, 0.61f, 10f),
+                Triple(0.025f, 0.38f, 12f), Triple(0.60f, 0.09f, 10f)
+            )
+            starSpecs.forEachIndexed { index, spec ->
+                val star = TextView(this).apply {
+                    text = if (index % 2 == 0) "✦" else "✧"
+                    textSize = spec.third
+                    gravity = Gravity.CENTER
+                    setTextColor(if (index % 3 == 0) 0xFFD5C9A5.toInt() else 0xFFF4EED0.toInt())
+                    alpha = 0.96f
+                    // Keep sparkles above elevated photo/button children; perimeter placement avoids covering content.
+                    elevation = dpf(8f)
+                    setShadowLayer(dpf(4f), 0f, 0f, 0xFFD5C9A5.toInt())
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                    isClickable = false
+                    isFocusable = false
+                }
+                card.addView(star, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.START))
+                card.post {
+                    // Render above the gradient and content; perimeter coordinates keep the text and portrait clear.
+                    star.bringToFront()
+                    star.x = (card.width * spec.first).coerceAtMost((card.width - star.width).toFloat())
+                    star.y = (card.height * spec.second).coerceAtMost((card.height - star.height).toFloat())
+                    startStarDrift(star, index)
+                }
+            }
+        }
+
 
         if (animate) {
             startFlow(flowBg)
