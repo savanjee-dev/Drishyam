@@ -1047,23 +1047,34 @@ private class StoryGalaxyView(
     private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float)
 
     private val density = resources.displayMetrics.density
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    // Six restrained perimeter stars; keep the card copy and portrait free of decoration.
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    // Six quiet perimeter stars plus three occasional highlights.
     private val stars = listOf(
-        Star(.055f, .12f, 1.7f, 0.3f),
+        Star(.055f, .12f, 1.7f, .3f),
         Star(.34f, .055f, 1.45f, 2.0f),
         Star(.91f, .16f, 1.65f, 4.1f),
         Star(.95f, .78f, 1.55f, 1.1f),
         Star(.63f, .94f, 1.7f, 3.3f),
         Star(.055f, .69f, 1.55f, 5.0f)
     )
+    private val highlightStars = listOf(
+        Star(.19f, .13f, 2.0f, .4f),
+        Star(.91f, .49f, 2.15f, 2.6f),
+        Star(.73f, .91f, 1.95f, 4.8f)
+    )
     private var phase = 0f
-    // A slow, low-amplitude brightness shift—not continuous glitter or movement.
+    private var highlightIndex = 0
+    private var nextHighlightAt = 0L
+    private val random = java.util.Random()
     private val ticker = if (animateStars) ValueAnimator.ofFloat(0f, (Math.PI * 2).toFloat()).apply {
-        duration = 14000L
+        duration = 18000L
         repeatCount = ValueAnimator.INFINITE
         addUpdateListener {
             phase = it.animatedValue as Float
+            if (System.currentTimeMillis() >= nextHighlightAt) {
+                highlightIndex = random.nextInt(highlightStars.size)
+                nextHighlightAt = System.currentTimeMillis() + 1800L + random.nextInt(3200)
+            }
             postInvalidateOnAnimation()
         }
     } else null
@@ -1076,6 +1087,7 @@ private class StoryGalaxyView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        nextHighlightAt = System.currentTimeMillis() + 1200L
         ticker?.start()
     }
 
@@ -1089,25 +1101,60 @@ private class StoryGalaxyView(
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
+
+        // Subtle four-edge stretch/glow: the border gently breathes, pauses, then repeats.
+        val cycle = if (animateStars) ((phase / (Math.PI * 2f) * 1.0f) % 1f) else 0f
+        val breath = if (!animateStars) 0f else when {
+            cycle < .24f -> kotlin.math.sin((cycle / .24f * Math.PI).toFloat()).toFloat()
+            cycle < .64f -> 0f
+            else -> kotlin.math.sin(((cycle - .64f) / .36f * Math.PI).toFloat()).toFloat()
+        }.coerceAtLeast(0f)
+        val inset = dpfSafe(1.5f + breath * 1.2f, density)
+        val corner = 30f * density
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = density * (0.75f + breath * 0.45f)
+        paint.color = Color.argb((24f + breath * 32f).toInt(), 232, 220, 176)
+        paint.clearShadowLayer()
+        val outline = android.graphics.RectF(inset, inset, w - inset, h - inset)
+        canvas.drawRoundRect(outline, corner, corner, paint)
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = density * (2.2f + breath * 1.5f)
+        paint.color = Color.argb((7f + breath * 12f).toInt(), 238, 220, 167)
+        canvas.drawRoundRect(outline, corner, corner, paint)
+
+        paint.style = Paint.Style.FILL
         stars.forEach { star ->
-            val subtleWave = if (animateStars) kotlin.math.sin(phase * 0.5f + star.phase).toFloat() else 0f
-            // Keep a dim, stable base so stars never vanish; animate brightness only slightly.
-            val alpha = (76f + subtleWave * 16f).toInt().coerceIn(58, 94)
-            val cx = w * star.x
-            val cy = h * star.y
-            val r = star.radius * density
-            paint.color = if (star.phase.toInt() % 2 == 0) 0xFFE0D3A8.toInt() else 0xFFFFF5D9.toInt()
-            paint.alpha = alpha
-            paint.clearShadowLayer()
-            val path = Path().apply {
-                moveTo(cx, cy - r)
-                quadTo(cx + r * .12f, cy - r * .12f, cx + r, cy)
-                quadTo(cx + r * .12f, cy + r * .12f, cx, cy + r)
-                quadTo(cx - r * .12f, cy + r * .12f, cx - r, cy)
-                quadTo(cx - r * .12f, cy - r * .12f, cx, cy - r)
-                close()
-            }
-            canvas.drawPath(path, paint)
+            val wave = if (animateStars) kotlin.math.sin(phase * .5f + star.phase).toFloat() else 0f
+            drawStar(canvas, star, (76f + wave * 12f).toInt().coerceIn(60, 92), false, w, h)
+        }
+        highlightStars.forEachIndexed { index, star ->
+            val active = animateStars && index == highlightIndex
+            val pulse = if (active) ((kotlin.math.sin(phase * 1.25f + star.phase) + 1f) / 2f).toFloat() else 0f
+            val alpha = if (active) (95f + pulse * 105f).toInt() else 0
+            if (alpha > 0) drawStar(canvas, star, alpha, true, w, h)
         }
     }
+
+    private fun drawStar(canvas: Canvas, star: Star, alpha: Int, highlight: Boolean, w: Float, h: Float) {
+        val cx = w * star.x
+        val cy = h * star.y
+        val r = star.radius * density * if (highlight) 1.12f else 1f
+        paint.style = Paint.Style.FILL
+        paint.color = if (highlight) 0xFFFFF0C3.toInt() else 0xFFE0D3A8.toInt()
+        paint.alpha = alpha.coerceIn(0, 210)
+        paint.clearShadowLayer()
+        if (highlight) paint.setShadowLayer(2.4f * density, 0f, 0f, Color.argb(alpha / 3, 255, 226, 160))
+        val path = Path().apply {
+            moveTo(cx, cy - r)
+            quadTo(cx + r * .12f, cy - r * .12f, cx + r, cy)
+            quadTo(cx + r * .12f, cy + r * .12f, cx, cy + r)
+            quadTo(cx - r * .12f, cy + r * .12f, cx - r, cy)
+            quadTo(cx - r * .12f, cy - r * .12f, cx, cy - r)
+            close()
+        }
+        canvas.drawPath(path, paint)
+        paint.clearShadowLayer()
+    }
+
+    private fun dpfSafe(value: Float, density: Float) = value * density
 }
