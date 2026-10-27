@@ -821,22 +821,35 @@ private class TouchRippleGlowDrawable(private val density: Float) : Drawable() {
         if (!active || bounds.isEmpty) return
         val save = canvas.save()
         canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
-        val maxRadius = kotlin.math.hypot(bounds.width().toDouble(), bounds.height().toDouble()).toFloat() * 1.2f
-        val radius = (maxRadius * (0.12f + 0.88f * progress)).coerceAtLeast(1f)
-        val fade = (1f - progress).coerceIn(0f, 1f)
+        val w = bounds.width().toFloat()
+        val h = bounds.height().toFloat()
+        // Clip the complete interaction to the control's rounded silhouette.
+        val corner = (kotlin.math.min(w, h) * 0.16f).coerceAtLeast(1f)
+        val clip = Path().apply {
+            addRoundRect(0f, 0f, w, h, corner, corner, Path.Direction.CW)
+        }
+        canvas.clipPath(clip)
 
+        val maxRadius = kotlin.math.hypot(w.toDouble(), h.toDouble()).toFloat() * 0.72f
+        val radius = (maxRadius * (0.18f + 0.82f * progress)).coerceAtLeast(1f)
+        val fade = (1f - progress).coerceIn(0f, 1f)
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
-            intArrayOf(0x5589945A, 0x2489945A, 0x0089945A),
-            floatArrayOf(0f, 0.58f, 1f),
+            intArrayOf(0x6689945A, 0x3889945A, 0x1689945A, 0x0089945A),
+            floatArrayOf(0f, 0.34f, 0.72f, 1f),
             Shader.TileMode.CLAMP
         )
-        glowPaint.alpha = (fade * 180f).toInt()
+        glowPaint.alpha = (fade * 220f).toInt()
         canvas.drawCircle(centerX, centerY, radius, glowPaint)
 
+        // Layered wave fronts make the ripple feel less flat.
         ripplePaint.color = 0xFF89945A.toInt()
-        ripplePaint.alpha = (fade * 145f).toInt()
+        ripplePaint.alpha = (fade * 150f).toInt()
+        ripplePaint.strokeWidth = density * (1.7f - 0.8f * progress)
         canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
+        ripplePaint.alpha = (fade * 75f).toInt()
+        ripplePaint.strokeWidth = density * 2.4f
+        canvas.drawCircle(centerX, centerY, maxRadius * (progress * 0.72f), ripplePaint)
         canvas.restoreToCount(save)
     }
 
