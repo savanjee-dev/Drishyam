@@ -656,11 +656,14 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private fun startArrowNudge(arrow: View) {
         if (reduced) return
-        // The portrait sits to the right of the button, so only the arrow drifts towards it.
-        ObjectAnimator.ofFloat(arrow, View.TRANSLATION_X, 0f, dpf(5)).apply {
+        // Only the arrow follows a short diagonal path toward the portrait.
+        arrow.translationX = 0f
+        arrow.translationY = 0f
+        ObjectAnimator.ofPropertyValuesHolder(arrow,
+            PropertyValuesHolder.ofFloat(View.TRANSLATION_X, 0f, dpf(5), 0f),
+            PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, 0f, -dpf(5), 0f)).apply {
             duration = 1350L
             repeatCount = ObjectAnimator.INFINITE
-            repeatMode = ObjectAnimator.REVERSE
             interpolator = EASE_IN_OUT
             start()
         }
