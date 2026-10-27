@@ -83,6 +83,7 @@ class SettingsHubActivity : AppCompatActivity() {
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
         }
         // Softly blend the background at the top without changing content insets or spacing.
+        // Keep this as a non-interactive overlay so the existing top inset remains unchanged.
         root.addView(View(this).apply {
             background = android.graphics.drawable.GradientDrawable(
                 android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
