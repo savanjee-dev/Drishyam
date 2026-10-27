@@ -545,10 +545,10 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun springBack(v: View) {
-        fun keys(p: Int) = PropertyValuesHolder.ofKeyframe(p,
+        fun keys(name: String) = PropertyValuesHolder.ofKeyframe(name,
             Keyframe.ofFloat(0f, 0.92f), Keyframe.ofFloat(0.45f, 1.06f),
             Keyframe.ofFloat(0.70f, 0.985f), Keyframe.ofFloat(1f, 1f))
-        ObjectAnimator.ofPropertyValuesHolder(v, keys(View.SCALE_X), keys(View.SCALE_Y)).apply {
+        ObjectAnimator.ofPropertyValuesHolder(v, keys("scaleX"), keys("scaleY")).apply {
             duration = 600L
             interpolator = EASE_OUT
             start()
