@@ -383,11 +383,16 @@ class SettingsHubActivity : AppCompatActivity() {
             breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
         })
 
-        val readButton = TextView(this).apply {
-            text = "Read the story  →"
-            textSize = 12.5f
+        val readArrow = TextView(this).apply {
+            text = "→"
+            textSize = 14f
             setTextColor(0xFF1B2117.toInt())
             typeface = font(R.font.montserrat_bold)
+            gravity = Gravity.CENTER
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val readButton = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -399,6 +404,17 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(dp(16), dp(11), dp(16), dp(11))
             isClickable = true
             isFocusable = true
+            contentDescription = "Read the story"
+            addView(TextView(this@SettingsHubActivity).apply {
+                text = "Read the story"
+                textSize = 12.5f
+                setTextColor(0xFF1B2117.toInt())
+                typeface = font(R.font.montserrat_bold)
+                gravity = Gravity.CENTER
+            })
+            addView(readArrow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                leftMargin = dp(4)
+            })
             setOnClickListener {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
@@ -467,7 +483,7 @@ class SettingsHubActivity : AppCompatActivity() {
             startFlow(flowBg)
             startBob(photo)
             startHaloPulse(halo)
-            startNudge(readButton)
+            startArrowNudge(readArrow)
         }
         return card
     }
@@ -529,13 +545,13 @@ class SettingsHubActivity : AppCompatActivity() {
 
     // ================= Effects =================
 
-    /** Press: scale 0.92 (90ms) and springback; glow when glowable and Glass is on. */
+    /** Press: scale 0.92 (90ms) and springback; touch light expands beyond the control and dissolves. */
     private fun View.attachPress(glowable: Boolean) {
         val glow = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             gradientType = GradientDrawable.RADIAL_GRADIENT
             colors = intArrayOf(0x8089945A.toInt(), 0x0089945A)
-            gradientRadius = dpf(90)
+            gradientRadius = dpf(24)
         }
         glow.alpha = 0
         val useGlow = glowable && !lowFx && !reduced
@@ -552,15 +568,19 @@ class SettingsHubActivity : AppCompatActivity() {
                         start()
                     }
                     if (useGlow) {
-                        glow.setGradientCenter(e.x / v.width, e.y / v.height)
+                        glow.setGradientCenter(
+                            if (v.width > 0) e.x / v.width else 0.5f,
+                            if (v.height > 0) e.y / v.height else 0.5f
+                        )
                         glowAnim?.cancel()
+                        val maxRadius = Math.hypot(v.width.toDouble(), v.height.toDouble()).toFloat() * 1.35f
                         glowAnim = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = 450L
-                            interpolator = EASE
+                            duration = 720L
+                            interpolator = EASE_OUT
                             addUpdateListener { a ->
                                 val t = a.animatedValue as Float
-                                glow.alpha = (255 * t).toInt()
-                                glow.gradientRadius = dpf(90) * (0.4f + 0.6f * t)
+                                glow.alpha = (150f * (1f - t)).toInt()
+                                glow.gradientRadius = dpf(24) + (maxRadius - dpf(24)) * t
                             }
                             start()
                         }
@@ -570,7 +590,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     if (useGlow) {
                         glowAnim?.cancel()
                         glowAnim = ValueAnimator.ofInt(glow.alpha, 0).apply {
-                            duration = 450L
+                            duration = 220L
                             interpolator = EASE
                             addUpdateListener { a -> glow.alpha = a.animatedValue as Int }
                             start()
@@ -634,10 +654,11 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    private fun startNudge(v: View) {
+    private fun startArrowNudge(arrow: View) {
         if (reduced) return
-        ObjectAnimator.ofFloat(v, View.TRANSLATION_X, 0f, dpf(5)).apply {
-            duration = 1600L
+        // The portrait sits to the right of the button, so only the arrow drifts towards it.
+        ObjectAnimator.ofFloat(arrow, View.TRANSLATION_X, 0f, dpf(5)).apply {
+            duration = 1350L
             repeatCount = ObjectAnimator.INFINITE
             repeatMode = ObjectAnimator.REVERSE
             interpolator = EASE_IN_OUT
