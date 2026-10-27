@@ -369,7 +369,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             // Reserve the lower-right corner for the unchanged developer portrait and badge.
-            setPadding(dp(22), dp(24), dp(8), dp(24))
+            setPadding(dp(24), dp(24), dp(24), dp(24))
         }
         left.addView(TextView(this).apply {
             text = "OUR STORY"
@@ -382,8 +382,8 @@ class SettingsHubActivity : AppCompatActivity() {
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         left.addView(TextView(this).apply {
             text = "The people & ideas behind Drishyam"
-            textSize = 23f
-            setLineSpacing(0f, 1.12f)
+            textSize = 24f
+            setLineSpacing(0f, 1.15f)
             setTextColor(Color.WHITE)
             typeface = font(R.font.montserrat_extrabold)
             setPadding(0, dp(14), 0, dp(8))
@@ -392,22 +392,41 @@ class SettingsHubActivity : AppCompatActivity() {
         left.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
             textSize = 13f
-            setLineSpacing(0f, 1.42f)
-            alpha = 0.94f
+            setLineSpacing(0f, 1.5f)
+            alpha = 0.92f
             setTextColor(Color.WHITE)
             typeface = font(R.font.poppins_regular)
             breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
         })
-        left.addView(TextView(this).apply {
-            text = "Read the story →"
-            textSize = 13f
+        val arrow = TextView(this).apply {
+            text = "→"
+            textSize = 16f
             setTextColor(color(R.color.fg))
             typeface = font(R.font.montserrat_bold)
+            gravity = Gravity.CENTER
+            setPadding(dp(3), 0, 0, 0)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val storyButton = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
             background = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dpf(999); setColor(Color.WHITE) }
             setPadding(dp(18), dp(12), dp(18), dp(12))
+            elevation = dpf(8)
+            isClickable = true
+            isFocusable = true
+            contentDescription = "Read the story"
+            addView(TextView(this@SettingsHubActivity).apply {
+                text = "Read the story"
+                textSize = 13f
+                setTextColor(color(R.color.fg))
+                typeface = font(R.font.montserrat_bold)
+            })
+            addView(arrow)
             setOnClickListener { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true)) }
             attachPress(glowable = false)
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(22) })
+        }
+        left.addView(storyButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(22) })
 
         row.addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.58f))
         row.addView(View(this), LinearLayout.LayoutParams(0, 1, 0.42f))
@@ -469,7 +488,7 @@ class SettingsHubActivity : AppCompatActivity() {
             startTwinkle(spark2, 1200L)
             startBob(photo)
             startHaloPulse(halo)
-            startNudge(left.getChildAt(3))
+            startNudge(arrow)
         }
         return card
     }
