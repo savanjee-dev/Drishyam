@@ -325,135 +325,149 @@ class SettingsHubActivity : AppCompatActivity() {
     // ================= Our story card =================
 
     private fun ourStoryCard(animate: Boolean): FrameLayout {
-        val flowBg = HubFlowGradientDrawable(density, 34f)
+        val flowBg = HubFlowGradientDrawable(density, 30f)
         val card = FrameLayout(this).apply {
-            minimumHeight = dp(214)
+            minimumHeight = dp(224)
             clipChildren = false
             clipToPadding = false
             background = flowBg
             isClickable = true
             isFocusable = true
+            setPadding(0, 0, 0, 0)
             attachPress(glowable = true)
-            setOnClickListener { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true)) }
-        }
-
-        // Sheen band (behind text)
-        val sheen = HubSheenView(this).apply {
-            clipToOutline = true
-            outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dpf(34))
-                }
+            setOnClickListener {
+                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
         }
-        card.addView(sheen, FrameLayout.LayoutParams(-1, -1))
 
-        // Text column: 58% of the card; photo sits on the right
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val left = LinearLayout(this).apply {
+        // Calm, wide cinematic composition: copy on the left, portrait floating on the right.
+        val copy = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            // Reserve the lower-right corner for the unchanged developer portrait and badge.
-            setPadding(dp(22), dp(24), dp(8), dp(24))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(22), dp(24), dp(4), dp(24))
+            clipChildren = false
+            clipToPadding = false
         }
-        left.addView(TextView(this).apply {
+        copy.addView(TextView(this).apply {
             text = "OUR STORY"
             textSize = 10f
             letterSpacing = 0.16f
             setTextColor(Color.WHITE)
             typeface = font(R.font.montserrat_bold)
-            background = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dpf(999); setColor(0x33FFFFFF) }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpf(999)
+                setColor(0x26FFFFFF)
+                setStroke(dp(1), 0x30FFFFFF)
+            }
             setPadding(dp(11), dp(6), dp(11), dp(6))
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        left.addView(TextView(this).apply {
+
+        copy.addView(TextView(this).apply {
             text = "The people & ideas behind Drishyam"
-            textSize = 23f
-            setLineSpacing(0f, 1.12f)
+            textSize = 21f
+            setLineSpacing(0f, 1.08f)
             setTextColor(Color.WHITE)
             typeface = font(R.font.montserrat_extrabold)
-            setPadding(0, dp(14), 0, dp(8))
+            setPadding(0, dp(12), dp(2), dp(7))
             breakStrategy = android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY
         })
-        left.addView(TextView(this).apply {
+
+        copy.addView(TextView(this).apply {
             text = "Started by one curious photographer, one frame at a time."
-            textSize = 13f
-            setLineSpacing(0f, 1.42f)
-            alpha = 0.94f
+            textSize = 12f
+            setLineSpacing(0f, 1.28f)
+            alpha = 0.92f
             setTextColor(Color.WHITE)
             typeface = font(R.font.poppins_regular)
             breakStrategy = android.text.Layout.BREAK_STRATEGY_BALANCED
         })
-        left.addView(TextView(this).apply {
-            text = "Read the story →"
-            textSize = 13f
+
+        val readButton = TextView(this).apply {
+            text = "Read the story  →"
+            textSize = 12.5f
             setTextColor(color(R.color.fg))
             typeface = font(R.font.montserrat_bold)
-            background = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dpf(999); setColor(Color.WHITE) }
-            setPadding(dp(18), dp(12), dp(18), dp(12))
-            setOnClickListener { startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true)) }
-            attachPress(glowable = false)
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(22) })
-
-        row.addView(left, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 0.58f))
-        row.addView(View(this), LinearLayout.LayoutParams(0, 1, 0.42f))
-        card.addView(row, FrameLayout.LayoutParams(-1, -2))
-
-        // Sparkles: first top 20dp right 64dp 16dp; second top 58dp right 170dp 11dp
-        val spark1 = ImageView(this).apply { setImageResource(R.drawable.ic_sparkle_fill) }
-        card.addView(spark1, FrameLayout.LayoutParams(dp(16), dp(16), Gravity.TOP or Gravity.END).apply {
-            topMargin = dp(20); rightMargin = dp(64)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpf(999)
+                setColor(0xF5FFFFFF.toInt())
+                setStroke(dp(1), 0x55FFFFFF)
+            }
+            elevation = dpf(3)
+            setPadding(dp(16), dp(11), dp(16), dp(11))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
+            }
+            attachPress(glowable = true)
+        }
+        copy.addView(readButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(18)
         })
-        val spark2 = ImageView(this).apply { setImageResource(R.drawable.ic_sparkle_fill) }
-        card.addView(spark2, FrameLayout.LayoutParams(dp(11), dp(11), Gravity.TOP or Gravity.END).apply {
-            topMargin = dp(58); rightMargin = dp(170)
+
+        card.addView(copy, FrameLayout.LayoutParams(0, -1, Gravity.START).apply {
+            width = (resources.displayMetrics.widthPixels * 0.59f).toInt() - dp(20)
         })
 
-        // Photo block: photo 132dp, caption 8dp below it. The photo's bottom edge is 40dp above the card's bottom.
-        val photoBox = FrameLayout(this)
+        val photoBox = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+        }
         val halo = View(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 gradientType = GradientDrawable.RADIAL_GRADIENT
-                colors = intArrayOf(withAlpha(0xFFD0C79A.toInt(), 0.5f), 0x00D0C79A)
-                gradientRadius = dpf(80)
+                colors = intArrayOf(withAlpha(0xFFD0C79A.toInt(), 0.34f), 0x00D0C79A)
+                gradientRadius = dpf(86)
             }
+            alpha = 0.88f
         }
-        // Halo reaches 14dp left, right and top of the photo, and not below it.
-        photoBox.addView(halo, FrameLayout.LayoutParams(dp(160), dp(146), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
-            topMargin = -dp(14)
-        })
+        photoBox.addView(halo, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
+
         val photo = HubFadedCircleImage(this).apply {
             setImageResource(R.drawable.savan)
             scaleType = ImageView.ScaleType.CENTER_CROP
             contentDescription = "Savan, lead developer"
             clipToOutline = true
             outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) { outline.setOval(0, 0, view.width, view.height) }
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setOval(0, 0, view.width, view.height)
+                }
             }
+            elevation = dpf(5)
         }
-        photoBox.addView(photo, FrameLayout.LayoutParams(dp(132), dp(132), Gravity.TOP or Gravity.CENTER_HORIZONTAL))
+        photoBox.addView(photo, FrameLayout.LayoutParams(dp(124), dp(124), Gravity.CENTER))
+
         photoBox.addView(TextView(this).apply {
             text = "LEAD DEVELOPER"
-            textSize = 8.5f
-            letterSpacing = 0.08f
+            textSize = 8f
+            letterSpacing = 0.06f
             setTextColor(color(R.color.fg))
             typeface = font(R.font.montserrat_bold)
-            background = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dpf(999); setColor(Color.WHITE) }
-            setPadding(dp(9), dp(4), dp(9), dp(4))
-        }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL))
-        card.addView(photoBox, FrameLayout.LayoutParams(dp(132), dp(160), Gravity.END or Gravity.BOTTOM).apply {
-            rightMargin = -dp(8)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpf(999)
+                setColor(0xF5FFFFFF.toInt())
+                setStroke(dp(1), 0x55FFFFFF)
+            }
+            elevation = dpf(6)
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+        }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             bottomMargin = dp(12)
+        })
+
+        card.addView(photoBox, FrameLayout.LayoutParams(dp(150), dp(184), Gravity.END or Gravity.CENTER_VERTICAL).apply {
+            rightMargin = dp(8)
         })
 
         if (animate) {
             startFlow(flowBg)
-            startSheen(sheen, card)
-            startTwinkle(spark1, 0L)
-            startTwinkle(spark2, 1200L)
             startBob(photo)
             startHaloPulse(halo)
-            startNudge(left.getChildAt(3))
+            startBob(readButton)
         }
         return card
     }
