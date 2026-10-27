@@ -112,6 +112,7 @@ class MainActivity : AppCompatActivity() {
     private var lowFxAtCreate = false
     private var lastTopPad = -1
     private var lastBottomPad = -1
+    private var statusBarInsetTop = 0
     private var transientStatus: String? = null
     private var statusGeneration = 0
 
@@ -158,6 +159,8 @@ class MainActivity : AppCompatActivity() {
         // No translucent strip is placed over the top of the screen.
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            statusBarInsetTop = bars.top
+            applyInsets()
             (glassTop.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
                 val desired = bars.top + 8.dp()
                 if (lp.topMargin != desired) { lp.topMargin = desired; glassTop.layoutParams = lp }
@@ -311,12 +314,18 @@ class MainActivity : AppCompatActivity() {
     private fun applyInsets() {
         val top = glassTop.bottom + 8.dp()
         val bottom = if (navShown && glassNav.visibility == View.VISIBLE) (overlay.height - glassNav.top) + 8.dp() else 20.dp()
-        if (top == lastTopPad && bottom == lastBottomPad) return
-        lastTopPad = top
-        lastBottomPad = bottom
-        rv.setPadding(14.dp(), top, 14.dp(), bottom)
-        aboutScroll.setPadding(0, top, 0, 12.dp())
-        swipe.setProgressViewOffset(false, top, top + 60.dp())
+        if (top != lastTopPad || bottom != lastBottomPad) {
+            lastTopPad = top
+            lastBottomPad = bottom
+            rv.setPadding(14.dp(), top, 14.dp(), bottom)
+            swipe.setProgressViewOffset(false, top, top + 60.dp())
+        }
+        // Our Story hides the floating header, so its top gap must come from the actual
+        // system-bar inset rather than the stale position of that hidden header.
+        val storyTop = statusBarInsetTop + 18.dp()
+        if (aboutScroll.paddingTop != storyTop) {
+            aboutScroll.setPadding(0, storyTop, 0, 12.dp())
+        }
     }
 
     private var navShown = true
