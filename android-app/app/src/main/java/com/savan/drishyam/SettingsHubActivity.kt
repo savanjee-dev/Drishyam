@@ -1,4 +1,3 @@
-``kotlin
 package com.savan.drishyam
 
 import android.animation.Keyframe
