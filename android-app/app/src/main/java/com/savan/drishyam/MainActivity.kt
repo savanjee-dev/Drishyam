@@ -155,23 +155,8 @@ class MainActivity : AppCompatActivity() {
         // Keep the glass header below status-bar icons while the animated page background
         // remains visible behind the transparent system bar.
         val root = findViewById<View>(R.id.root)
-        // Fade ambient colour into the actual page surface; never use a black translucent bar.
-        (root as? android.widget.FrameLayout)?.addView(
-            View(this).apply {
-                background = android.graphics.drawable.GradientDrawable(
-                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf(
-                        android.graphics.Color.TRANSPARENT,
-                        androidx.core.content.ContextCompat.getColor(this@MainActivity, R.color.bg)
-                    )
-                )
-                isClickable = false
-                isFocusable = false
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            },
-            1,
-            android.widget.FrameLayout.LayoutParams(-1, 148.dp(), android.view.Gravity.TOP)
-        )
+        // No foreground fade overlay: keep the portrait and story content unobscured.
+        // The transparent status bar shows the real page background beneath system icons.
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             statusBarInsetTop = bars.top
