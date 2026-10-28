@@ -73,6 +73,8 @@ class AppearanceActivity : AppCompatActivity() {
     private val themeNames = listOf("System", "Dark", "Light")
     private val ambientGlows = mutableListOf<View>()
     private var ambientStarfield: AppearanceStarfieldView? = null
+    private val reflectionTargets = mutableListOf<Pair<View, Boolean>>()
+    private var reflectionOverlay: AppearanceReflectionOverlay? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -147,6 +149,10 @@ class AppearanceActivity : AppCompatActivity() {
             leftMargin = dp(20)
             topMargin = dp(36)
         })
+        registerReflection(backButton, circular = true)
+        reflectionOverlay = AppearanceReflectionOverlay(this, this)
+        root.addView(reflectionOverlay, FrameLayout.LayoutParams(-1, -1))
+        addLoop { reflectionOverlay?.invalidate() }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
             backButton.alpha = 1f - progress
@@ -446,6 +452,7 @@ class AppearanceActivity : AppCompatActivity() {
             isFocusable = true
             attachPress(glowable = false)
         }
+        registerReflection(test)
         test.setOnClickListener {
             vibrate(18)
             test.text = if (haptics) "Buzz!" else "Off"
@@ -472,6 +479,7 @@ class AppearanceActivity : AppCompatActivity() {
             translationX = if (haptics) dpf(22) else 0f
         }
         sw.addView(thumb, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
+        registerReflection(sw)
         sw.layoutParams = LinearLayout.LayoutParams(dp(52), dp(30))
         sw.setOnClickListener {
             haptics = !haptics
@@ -522,6 +530,7 @@ class AppearanceActivity : AppCompatActivity() {
             background = glassPill()
             clipChildren = false
         }
+        registerReflection(seg)
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(dp(4), dp(4), dp(4), dp(4))
@@ -646,6 +655,10 @@ class AppearanceActivity : AppCompatActivity() {
             setLayerInset(0, 0, 0, 0, 0)
             setLayerInset(1, dp(3), dp(3), dp(3), dp(3))
         }
+    }
+
+    private fun registerReflection(view: View, circular: Boolean = false) {
+        reflectionTargets += view to circular
     }
 
     private fun glassPill(): Drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -819,6 +832,8 @@ class AppearanceActivity : AppCompatActivity() {
             glow.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
         }
         ambientStarfield?.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
+        reflectionOverlay?.alpha = factor
+        reflectionOverlay?.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
     }
 
     private val loops = mutableListOf<(Long) -> Unit>()
@@ -829,6 +844,7 @@ class AppearanceActivity : AppCompatActivity() {
             if (!loopRunning) return
             val t = SystemClock.uptimeMillis() - loopStart
             for (l in loops) l(t)
+            reflectionOverlay?.setElapsed(t)
             Choreographer.getInstance().postFrameCallback(this)
         }
     }
@@ -865,6 +881,81 @@ class AppearanceActivity : AppCompatActivity() {
         private val EASE_OUT = PathInterpolator(0f, 0f, 0.58f, 1f)
         private val EASE_IN_OUT = PathInterpolator(0.42f, 0f, 0.58f, 1f)
         private val EASE = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
+    }
+}
+
+/**
+ * Shared moving reflection layer for registered glass controls.
+ * Uses the page clock, avoiding separate animators for each control.
+ */
+private class AppearanceReflectionOverlay(context: Context, private val activity: AppearanceActivity) : View(context) {
+    private val reflectionPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val path = android.graphics.Path()
+    private val rect = android.graphics.RectF()
+    private val location = IntArray(2)
+    private val overlayLocation = IntArray(2)
+    private val density = resources.displayMetrics.density
+    private val lightMode = Color.luminance(activity.color(R.color.bg)) > 0.5f
+    private var elapsed = 0L
+
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        setWillNotDraw(false)
+    }
+
+    fun setElapsed(time: Long) { elapsed = time; invalidate() }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        if (activity.glassLevel == "off" || activity.reduced || !isShown) return
+        getLocationOnScreen(overlayLocation)
+        val phase = (elapsed % 7600L).toFloat() / 7600f
+        val sweep = 0.5f - 0.5f * kotlin.math.cos(phase * 2f * PI.toFloat())
+        val baseAlpha = if (activity.glassLevel == "subtle") 0.46f else 0.82f
+        val glowColor = if (lightMode) Color.rgb(255, 251, 229) else Color.rgb(229, 235, 218)
+        val edgeColor = if (lightMode) Color.rgb(255, 255, 246) else Color.rgb(196, 207, 174)
+
+        activity.reflectionTargets.forEach { (target, circular) ->
+            if (!target.isShown || target.width <= 0 || target.height <= 0) return@forEach
+            target.getLocationOnScreen(location)
+            val left = (location[0] - overlayLocation[0]).toFloat()
+            val top = (location[1] - overlayLocation[1]).toFloat()
+            rect.set(left, top, left + target.width, top + target.height)
+            val radius = if (circular) minOf(rect.width(), rect.height()) / 2f else rect.height() / 2f
+            path.reset()
+            path.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW)
+            val save = canvas.save()
+            canvas.clipPath(path)
+
+            val bandWidth = rect.width() * 0.46f
+            val bandLeft = rect.left - bandWidth + (rect.width() + bandWidth * 2f) * sweep
+            reflectionPaint.shader = android.graphics.LinearGradient(
+                bandLeft, rect.top, bandLeft + bandWidth, rect.top + rect.height() * 0.62f,
+                intArrayOf(activity.withAlpha(glowColor, 0f), activity.withAlpha(glowColor, 0.42f * baseAlpha),
+                    activity.withAlpha(glowColor, 0.14f * baseAlpha), activity.withAlpha(glowColor, 0f)),
+                floatArrayOf(0f, 0.46f, 0.72f, 1f), Shader.TileMode.CLAMP
+            )
+            canvas.drawRoundRect(rect.left, rect.top, rect.right, rect.top + rect.height() * 0.58f,
+                radius, radius, reflectionPaint)
+            reflectionPaint.shader = null
+
+            edgePaint.color = activity.withAlpha(edgeColor, 0.52f * baseAlpha)
+            edgePaint.style = Paint.Style.STROKE
+            edgePaint.strokeWidth = maxOf(0.7f * density, 1f)
+            rect.inset(edgePaint.strokeWidth / 2f, edgePaint.strokeWidth / 2f)
+            canvas.drawRoundRect(rect, radius, radius, edgePaint)
+            edgePaint.color = activity.withAlpha(if (lightMode) 0xFF8B9468.toInt() else Color.BLACK,
+                (if (lightMode) 0.16f else 0.30f) * baseAlpha)
+            edgePaint.strokeWidth = 0.8f * density
+            canvas.drawLine(rect.left + radius * 0.35f, rect.bottom - edgePaint.strokeWidth,
+                rect.right - radius * 0.35f, rect.bottom - edgePaint.strokeWidth, edgePaint)
+            rect.inset(-edgePaint.strokeWidth / 2f, -edgePaint.strokeWidth / 2f)
+            edgePaint.style = Paint.Style.FILL
+            canvas.restoreToCount(save)
+        }
     }
 }
 
