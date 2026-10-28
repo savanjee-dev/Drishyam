@@ -306,7 +306,7 @@ class AppearanceActivity : AppCompatActivity() {
         }
         // Resolve the device's effective system appearance, not the Activity's
         // current AppCompat appearance (which may still be explicitly Light or Dark).
-        val systemDark = (resources.configuration.uiMode and
+        val systemDark = (android.content.res.Resources.getSystem().configuration.uiMode and
             android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
         val targetDark = when (name) {
