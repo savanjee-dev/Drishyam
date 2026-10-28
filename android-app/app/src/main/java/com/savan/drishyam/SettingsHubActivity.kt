@@ -86,9 +86,10 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
-        if (!lowFx) {
-            addGlows(backgroundSurface, animate)
-            backgroundSurface.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
+        if (visualEffectsEnabled(this)) {
+            val animateVisuals = animate && motionEnabled(this)
+            addGlows(backgroundSurface, animateVisuals)
+            backgroundSurface.addView(SettingsAmbientLayer(this, animateVisuals), FrameLayout.LayoutParams(-1, -1))
         }
         root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
