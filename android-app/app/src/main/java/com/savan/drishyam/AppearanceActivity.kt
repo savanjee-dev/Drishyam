@@ -66,10 +66,10 @@ class AppearanceActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
     private lateinit var appearanceScroll: ScrollView
-    private lateinit var backButton: ImageView
+    internal lateinit var backButton: ImageView
     private var themeRevealOverlay: View? = null
     private var themeTransitionInProgress = false
-    private val themeCards = mutableListOf<LinearLayout>()
+    internal val themeCards = mutableListOf<LinearLayout>()
     private val themeNames = listOf("System", "Dark", "Light")
     internal val ambientGlows = mutableListOf<View>()
     private var ambientStarfield: AppearanceStarfieldView? = null
