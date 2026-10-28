@@ -71,7 +71,7 @@ class AppearanceActivity : AppCompatActivity() {
     private var themeTransitionInProgress = false
     private val themeCards = mutableListOf<LinearLayout>()
     private val themeNames = listOf("System", "Dark", "Light")
-    private val ambientGlows = mutableListOf<View>()
+    internal val ambientGlows = mutableListOf<View>()
     private var ambientStarfield: AppearanceStarfieldView? = null
     internal val reflectionTargets = mutableListOf<Pair<View, Boolean>>()
     private var reflectionOverlay: AppearanceReflectionOverlay? = null
