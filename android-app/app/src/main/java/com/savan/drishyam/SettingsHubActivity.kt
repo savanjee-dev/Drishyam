@@ -60,6 +60,7 @@ class SettingsHubActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
 
