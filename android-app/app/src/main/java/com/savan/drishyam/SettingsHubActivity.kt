@@ -93,6 +93,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
+        UniversalBackgroundView.attach(backgroundSurface)
         if (visualEffectsEnabled(this)) {
             val animateVisuals = animate && motionEnabled(this)
             addGlows(backgroundSurface, animateVisuals)
