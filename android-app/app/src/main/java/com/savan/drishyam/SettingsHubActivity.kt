@@ -232,7 +232,7 @@ class SettingsHubActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_card)
             isClickable = true
             isFocusable = true
-            attachPress(glowable = true)
+            // No touch-wash foreground on Quick Actions; preserve the click action.
             setOnClickListener { onTap() }
             addView(iconSquare(icon))
             addView(FrameLayout(this@SettingsHubActivity).apply { addView(preview) },
@@ -469,17 +469,6 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
             clipToPadding = false
         }
-        val halo = View(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                gradientType = GradientDrawable.RADIAL_GRADIENT
-                colors = intArrayOf(withAlpha(0xFFD0C79A.toInt(), 0.34f), 0x00D0C79A)
-                gradientRadius = dpf(86)
-            }
-            alpha = 0.88f
-        }
-        photoBox.addView(halo, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
-
         val photo = HubFadedCircleImage(this).apply {
             setImageResource(R.drawable.savan)
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -520,12 +509,6 @@ class SettingsHubActivity : AppCompatActivity() {
         // It always draws stars; motion is optional so reduced-motion/Glass Off never hides them.
         card.addView(StoryGalaxyView(this, animate && !lowFx), FrameLayout.LayoutParams(-1, -1))
 
-        if (animate) {
-            startFlow(flowBg)
-            startBob(photo)
-            startHaloPulse(halo)
-            startArrowNudge(readArrow)
-        }
         return card
     }
 
@@ -543,10 +526,11 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private fun installScrollBounce(scroll: ScrollView) {
         scroll.overScrollMode = View.OVER_SCROLL_NEVER
-        val boundary = BoundaryStretchOverlay(this, reduced || lowFx)
+        val boundary = BoundaryStretchOverlay(this, reduced)
         (scroll.parent as? ViewGroup)?.let { parent ->
-            val index = parent.indexOfChild(scroll)
-            parent.addView(boundary, index + 1, FrameLayout.LayoutParams(-1, -1))
+            // Keep the pull feedback above the fixed edge-feather layers so it remains visible.
+            parent.addView(boundary, FrameLayout.LayoutParams(-1, -1))
+            boundary.elevation = dpf(2)
         }
         var lastY = 0f
         scroll.setOnTouchListener { view, event ->
@@ -558,9 +542,9 @@ class SettingsHubActivity : AppCompatActivity() {
                     val child = scroll.getChildAt(0)
                     val maxScroll = ((child?.height ?: 0) - scroll.height).coerceAtLeast(0)
                     if (scroll.scrollY <= 0 && dy > 0f) {
-                        boundary.pull(top = true, amount = dy * 0.48f)
+                        boundary.pull(top = true, amount = dy * 0.92f)
                     } else if (scroll.scrollY >= maxScroll && dy < 0f) {
-                        boundary.pull(top = false, amount = -dy * 0.48f)
+                        boundary.pull(top = false, amount = -dy * 0.92f)
                     } else {
                         boundary.relax()
                     }
@@ -839,7 +823,7 @@ private class BoundaryStretchOverlay(context: Context, private val reducedMotion
         if (reducedMotion) return
         relaxAnimator?.cancel()
         val next = (if (top) topPull else bottomPull) + amount
-        val value = next.coerceIn(0f, 34f * density)
+        val value = next.coerceIn(0f, 72f * density)
         if (top) {
             topPull = value
             bottomPull = 0f
@@ -878,41 +862,31 @@ private class BoundaryStretchOverlay(context: Context, private val reducedMotion
     }
 
     private fun drawEdge(canvas: Canvas, w: Float, edgeY: Float, top: Boolean) {
-        val pull = if (top) topPull else bottomPull
-        val depth = pull.coerceAtMost(34f * density)
-        val extent = (42f * density + depth * 0.8f)
+        val depth = (if (top) topPull else bottomPull).coerceAtMost(72f * density)
+        // A broad surface flexes inward from the boundary; no glowing stroke or halo.
         val path = Path().apply {
             if (top) {
                 moveTo(0f, 0f)
                 lineTo(w, 0f)
-                quadTo(w * 0.5f, depth * 1.45f, 0f, 0f)
+                quadTo(w * 0.5f, depth * 1.55f, 0f, 0f)
                 close()
             } else {
                 moveTo(0f, height.toFloat())
                 lineTo(w, height.toFloat())
-                quadTo(w * 0.5f, height - depth * 1.45f, 0f, height.toFloat())
+                quadTo(w * 0.5f, height - depth * 1.55f, 0f, height.toFloat())
                 close()
             }
         }
-        paint.shader = LinearGradient(0f, if (top) 0f else height.toFloat() - extent,
-            0f, if (top) extent else height.toFloat(),
-            intArrayOf(0x6689945A, 0x2289945A, 0x0089945A), null, Shader.TileMode.CLAMP)
+        paint.shader = LinearGradient(
+            0f, if (top) 0f else height.toFloat() - (58f * density + depth),
+            0f, if (top) (58f * density + depth) else height.toFloat(),
+            intArrayOf(0xB01F2A16.toInt(), 0x8C414D2D.toInt(), 0x00414D2D),
+            null, Shader.TileMode.CLAMP
+        )
+        paint.style = Paint.Style.FILL
+        paint.strokeWidth = 0f
         canvas.drawPath(path, paint)
         paint.shader = null
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 1.1f * density
-        paint.color = 0x6689945A
-        val curve = Path().apply {
-            if (top) {
-                moveTo(0f, 0f)
-                quadTo(w * 0.5f, depth * 1.45f, w, 0f)
-            } else {
-                moveTo(0f, height.toFloat())
-                quadTo(w * 0.5f, height - depth * 1.45f, w, height.toFloat())
-            }
-        }
-        canvas.drawPath(curve, paint)
-        paint.style = Paint.Style.FILL
     }
 }
 
@@ -1231,46 +1205,6 @@ private class StoryGalaxyView(
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
 
-        // Four card edges flex outward in a clear stretch-relax-pause rhythm.
-        val cycle = if (animateStars) (phase / (2f * 3.14159265f)) % 1f else 0f
-        val wave = if (animateStars) ((kotlin.math.sin(phase.toDouble()) + 1.0) / 2.0).toFloat() else 0f
-        val stretch = if (animateStars) {
-            when {
-                cycle < 0.22f -> kotlin.math.sin((cycle / 0.22f * 3.14159265f).toDouble()).toFloat()
-                cycle < 0.42f -> 0f
-                cycle < 0.64f -> kotlin.math.sin(((cycle - 0.42f) / 0.22f * 3.14159265f).toDouble()).toFloat()
-                cycle < 0.82f -> 0f
-                else -> kotlin.math.sin(((cycle - 0.82f) / 0.18f * 3.14159265f).toDouble()).toFloat()
-            }.coerceAtLeast(0f)
-        } else 0f
-        val inset = 4f * density
-        val corner = 30f * density
-        // The four border edges bow outward slightly; the card bounds and content never scale.
-        val bulge = -stretch * 3.2f * density
-        val left = inset
-        val top = inset
-        val right = w - inset
-        val bottom = h - inset
-
-        val edgePath = Path().apply {
-            moveTo(left + corner, top)
-            cubicTo(w * .36f, top + bulge, w * .64f, top + bulge, right - corner, top)
-            cubicTo(right - bulge, h * .34f, right - bulge, h * .66f, right, bottom - corner)
-            cubicTo(w * .64f, bottom - bulge, w * .36f, bottom - bulge, left + corner, bottom)
-            cubicTo(left + bulge, h * .66f, left + bulge, h * .34f, left, top + corner)
-            quadTo(left, top, left + corner, top)
-            close()
-        }
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = density * (1.35f + stretch * 1.8f)
-        paint.color = Color.argb((65f + stretch * 125f).toInt(), 255, 232, 174)
-        paint.clearShadowLayer()
-        canvas.drawPath(edgePath, paint)
-        // A broader, brighter halo makes the edge flex readable without moving card content.
-        paint.strokeWidth = density * (5.5f + stretch * 7f)
-        paint.color = Color.argb((10f + stretch * 40f + wave * 8f).toInt(), 255, 220, 145)
-        canvas.drawPath(edgePath, paint)
-
         paint.style = Paint.Style.FILL
         stars.forEach { star ->
             val twinkle = if (animateStars) kotlin.math.sin(phase * .5f + star.phase).toFloat() else 0f
@@ -1279,8 +1213,11 @@ private class StoryGalaxyView(
         highlightStars.forEachIndexed { index, star ->
             if (animateStars && index == highlightIndex) {
                 val pulse = ((kotlin.math.sin(phase * 1.7f + star.phase) + 1f) / 2f).toFloat()
-                val alpha = (135f + pulse * 120f).toInt().coerceAtMost(255)
+                val alpha = (205f + pulse * 50f).toInt().coerceAtMost(255)
                 drawStar(canvas, star, alpha, true, w, h)
+            } else {
+                // All five remain visible; one at a time flashes brighter in a random-looking order.
+                drawStar(canvas, star, 118, false, w, h)
             }
         }
     }
