@@ -53,6 +53,11 @@ fun motionEnabled(c: Context): Boolean {
         (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
 }
 
+/** Apply the app's Motion preference to system-level Activity transitions as well. */
+fun applyActivityTransitionPreference(activity: Activity) {
+    if (!motionEnabled(activity)) activity.window.setWindowAnimations(0)
+}
+
 /** Crisp press feedback with no spring, bounce, or elastic overshoot. */
 fun View.pressFx() {
     setOnTouchListener { v, e ->
