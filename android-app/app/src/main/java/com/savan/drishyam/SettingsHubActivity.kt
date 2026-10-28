@@ -232,7 +232,7 @@ class SettingsHubActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_card)
             isClickable = true
             isFocusable = true
-            // No touch-wash foreground on Quick Actions; preserve the click action.
+            attachPress(glowable = true)
             setOnClickListener { onTap() }
             addView(iconSquare(icon))
             addView(FrameLayout(this@SettingsHubActivity).apply { addView(preview) },
@@ -331,7 +331,7 @@ class SettingsHubActivity : AppCompatActivity() {
             background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_row)
             isClickable = true
             isFocusable = true
-            attachPress(glowable = true)
+            // No touch-wash foreground on Quick Actions; preserve the click action.
             setOnClickListener { onTap() }
             layoutParams = matchWrap(0).apply { bottomMargin = dp(10) }
             addView(iconSquare(icon))
@@ -368,7 +368,6 @@ class SettingsHubActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             setPadding(0, 0, 0, 0)
-            attachPress(glowable = true)
             setOnClickListener {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
@@ -455,7 +454,6 @@ class SettingsHubActivity : AppCompatActivity() {
             setOnClickListener {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
-            attachPress(glowable = true)
         }
         copy.addView(readButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(18)
