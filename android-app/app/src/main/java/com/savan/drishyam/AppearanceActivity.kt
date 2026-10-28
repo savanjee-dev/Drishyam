@@ -156,7 +156,10 @@ class AppearanceActivity : AppCompatActivity() {
         addLoop { reflectionOverlay?.setElapsed(it) }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
-            backButton.alpha = 1f - progress
+            val visible = 1f - progress
+            backButton.alpha = visible
+            backButton.isClickable = visible > 0.05f
+            backButton.isFocusable = visible > 0.05f
             backButton.scaleX = 1f - 0.08f * progress
             backButton.scaleY = 1f - 0.08f * progress
         }
@@ -317,6 +320,7 @@ class AppearanceActivity : AppCompatActivity() {
         holder.addView(content, FrameLayout.LayoutParams(-1, -2))
         holder.addView(check)
         card.addView(holder, LinearLayout.LayoutParams(-1, -2))
+        registerReflection(card)
         return card
     }
 
@@ -913,13 +917,12 @@ private class AppearanceReflectionOverlay(context: Context, private val activity
         if (activity.glassLevel == "off" || activity.reduced || !isShown) return
         getLocationOnScreen(overlayLocation)
         val phase = (elapsed % 7600L).toFloat() / 7600f
-        val sweep = 0.5f - 0.5f * kotlin.math.cos(phase * 2f * PI.toFloat())
-        val baseAlpha = if (activity.glassLevel == "subtle") 0.46f else 0.82f
+        val baseAlpha = if (activity.glassLevel == "subtle") 0.50f else 0.88f
         val glowColor = if (lightMode) Color.rgb(255, 251, 229) else Color.rgb(229, 235, 218)
         val edgeColor = if (lightMode) Color.rgb(255, 255, 246) else Color.rgb(196, 207, 174)
 
         activity.reflectionTargets.forEach { (target, circular) ->
-            if (!target.isShown || target.width <= 0 || target.height <= 0) return@forEach
+            if (!target.isShown || target.width <= 0 || target.height <= 0 || target.alpha <= 0.01f) return@forEach
             target.getLocationOnScreen(location)
             val left = (location[0] - overlayLocation[0]).toFloat()
             val top = (location[1] - overlayLocation[1]).toFloat()
@@ -930,25 +933,68 @@ private class AppearanceReflectionOverlay(context: Context, private val activity
             val save = canvas.save()
             canvas.clipPath(path)
 
-            val bandWidth = rect.width() * 0.46f
-            val bandLeft = rect.left - bandWidth + (rect.width() + bandWidth * 2f) * sweep
-            reflectionPaint.shader = android.graphics.LinearGradient(
-                bandLeft, rect.top, bandLeft + bandWidth, rect.top + rect.height() * 0.62f,
-                intArrayOf(activity.withAlpha(glowColor, 0f), activity.withAlpha(glowColor, 0.42f * baseAlpha),
-                    activity.withAlpha(glowColor, 0.14f * baseAlpha), activity.withAlpha(glowColor, 0f)),
-                floatArrayOf(0f, 0.46f, 0.72f, 1f), Shader.TileMode.CLAMP
+            // Follow the nearest moving ambient gradient; its position determines
+            // where the reflection is brightest on this control.
+            val targetCx = location[0] + target.width / 2f
+            val targetCy = location[1] + target.height / 2f
+            var nearestGlow: View? = null
+            var nearestDistance = Float.MAX_VALUE
+            var lightX = 0.5f
+            var lightY = 0.18f
+            activity.ambientGlows.forEach { glow ->
+                if (glow.visibility != View.VISIBLE || glow.alpha <= 0.01f) return@forEach
+                val glowLoc = IntArray(2)
+                glow.getLocationOnScreen(glowLoc)
+                val gx = glowLoc[0] + glow.width / 2f
+                val gy = glowLoc[1] + glow.height / 2f
+                val dx = gx - targetCx
+                val dy = gy - targetCy
+                val dist = dx * dx + dy * dy
+                if (dist < nearestDistance) {
+                    nearestDistance = dist
+                    nearestGlow = glow
+                    // Project the source direction across the control surface.
+                    lightX = (0.5f + dx / maxOf(target.width.toFloat() * 1.6f, 1f)).coerceIn(-0.15f, 1.15f)
+                    lightY = (0.5f + dy / maxOf(target.height.toFloat() * 2.2f, 1f)).coerceIn(-0.20f, 1.20f)
+                }
+            }
+            // The page clock adds a very slow drift to the light position so the
+            // reflection remains alive even while a gradient is near its turning point.
+            val drift = 0.08f * kotlin.math.sin(phase * 2f * PI.toFloat())
+            lightX = (lightX + drift).coerceIn(-0.15f, 1.15f)
+            val effectiveAlpha = baseAlpha * target.alpha * (nearestGlow?.alpha ?: 1f).coerceIn(0f, 1f)
+
+            // Broad radial bloom covers the whole surface and fades in both axes.
+            reflectionPaint.shader = RadialGradient(
+                rect.left + rect.width() * lightX,
+                rect.top + rect.height() * lightY,
+                maxOf(rect.width(), rect.height()) * 0.95f,
+                intArrayOf(activity.withAlpha(glowColor, 0.48f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0.22f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0f)),
+                floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP
             )
-            canvas.drawRoundRect(rect.left, rect.top, rect.right, rect.top + rect.height() * 0.58f,
-                radius, radius, reflectionPaint)
+            canvas.drawRoundRect(rect, radius, radius, reflectionPaint)
+
+            // A gentle full-surface vertical falloff prevents a hard upper-half band.
+            reflectionPaint.shader = android.graphics.LinearGradient(
+                rect.left, rect.top, rect.left + rect.width() * 0.22f, rect.bottom,
+                intArrayOf(activity.withAlpha(glowColor, 0.16f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0.06f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0f)),
+                floatArrayOf(0f, 0.52f, 1f), Shader.TileMode.CLAMP
+            )
+            canvas.drawRoundRect(rect, radius, radius, reflectionPaint)
             reflectionPaint.shader = null
 
-            edgePaint.color = activity.withAlpha(edgeColor, 0.52f * baseAlpha)
+            // Edge light follows the same intensity and the target's own fade.
             edgePaint.style = Paint.Style.STROKE
-            edgePaint.strokeWidth = maxOf(0.7f * density, 1f)
+            edgePaint.color = activity.withAlpha(edgeColor, 0.62f * effectiveAlpha)
+            edgePaint.strokeWidth = maxOf(0.8f * density, 1f)
             rect.inset(edgePaint.strokeWidth / 2f, edgePaint.strokeWidth / 2f)
             canvas.drawRoundRect(rect, radius, radius, edgePaint)
             edgePaint.color = activity.withAlpha(if (lightMode) 0xFF8B9468.toInt() else Color.BLACK,
-                (if (lightMode) 0.16f else 0.30f) * baseAlpha)
+                (if (lightMode) 0.12f else 0.24f) * effectiveAlpha)
             edgePaint.strokeWidth = 0.8f * density
             canvas.drawLine(rect.left + radius * 0.35f, rect.bottom - edgePaint.strokeWidth,
                 rect.right - radius * 0.35f, rect.bottom - edgePaint.strokeWidth, edgePaint)
