@@ -63,7 +63,6 @@ class AppearanceActivity : AppCompatActivity() {
     private var theme = "System"
     internal var glassLevel = "full"
     private var motion = "standard"
-    private var visualEffectsEnabled = true
 
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
@@ -86,7 +85,6 @@ class AppearanceActivity : AppCompatActivity() {
         haptics = prefs.getBoolean("haptics", true)
         glassLevel = prefs.getString("glass_level", null) ?: if (prefs.getBoolean("low_fx", false)) "off" else "full"
         motion = prefs.getString("motion", null) ?: if (prefs.getBoolean("motion_reduced", systemReduceMotion())) "reduced" else "standard"
-        visualEffectsEnabled = prefs.getBoolean("visual_effects_enabled", true)
         lowFx = glassLevel == "off"
         reduced = motion == "reduced"
 
@@ -155,7 +153,7 @@ class AppearanceActivity : AppCompatActivity() {
         registerReflection(backButton, circular = true)
         val reflections = AppearanceReflectionOverlay(this, this)
         reflectionOverlay = reflections
-        reflections.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
+        reflections.visibility = if (glassLevel != "off") View.VISIBLE else View.INVISIBLE
         root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
         applyGlassLevel()
         addLoop { reflectionOverlay?.setElapsed(it) }
@@ -221,8 +219,6 @@ class AppearanceActivity : AppCompatActivity() {
         effectsCard.addView(glassItem())
         effectsCard.addView(divider())
         effectsCard.addView(motionItem())
-        effectsCard.addView(divider())
-        effectsCard.addView(visualEffectsItem())
         page.addView(effectsCard, matchWrap(0))
 
         page.addView(label("Haptics"))
@@ -444,25 +440,6 @@ class AppearanceActivity : AppCompatActivity() {
             lowFx = value == "off"
             applyGlassLevel()
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
-        return item
-    }
-
-    // ---------- Visual effects: ambient gradients and glow ---------- 
-    private fun visualEffectsItem(): LinearLayout {
-        val item = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(14), 0, dp(14))
-        }
-        val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        copy.addView(tv("Visual Effects", 14f, R.color.fg, R.font.poppins_semibold))
-        copy.addView(tv("Ambient gradients, glow and decorative atmosphere.", 12f, R.color.mute, R.font.poppins_regular, 2, 0))
-        item.addView(copy, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(12) })
-        item.addView(effectToggle(visualEffectsEnabled) { enabled ->
-            visualEffectsEnabled = enabled
-            prefs.edit().putBoolean("visual_effects_enabled", enabled).apply()
-            applyGlassLevel()
-        }, LinearLayout.LayoutParams(dp(52), dp(30)))
         return item
     }
 
@@ -883,7 +860,7 @@ class AppearanceActivity : AppCompatActivity() {
                 tag = g.alpha
             }
             ambientGlows.add(v)
-            v.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
+            v.visibility = if (glassLevel != "off") View.VISIBLE else View.GONE
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
                 if ((g.gravity and Gravity.END) == Gravity.END) rightMargin = dp(g.end) else leftMargin = dp(g.start)
@@ -916,10 +893,11 @@ class AppearanceActivity : AppCompatActivity() {
         lowFx = glassLevel == "off"
         ambientGlows.forEach { glow ->
             val baseAlpha = glow.tag as? Float ?: 1f
-            glow.alpha = baseAlpha
-            glow.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
+            glow.alpha = baseAlpha * factor
+            glow.visibility = if (factor > 0f) View.VISIBLE else View.GONE
         }
-        ambientStarfield?.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
+        ambientStarfield?.alpha = factor
+        ambientStarfield?.visibility = if (factor > 0f) View.VISIBLE else View.GONE
         reflectionOverlay?.alpha = factor
         // Glass reflections belong to Glass Effects, not the separate ambient Visual Effects toggle.
         reflectionOverlay?.visibility = if (factor > 0f) View.VISIBLE else View.INVISIBLE
