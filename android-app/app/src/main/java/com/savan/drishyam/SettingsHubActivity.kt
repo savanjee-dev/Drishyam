@@ -80,28 +80,32 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
-        if (!lowFx) {
-            addGlows(root, animate)
-            root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
+        // Isolate every decorative background layer so the shader warps pixels behind
+        // the foreground ScrollView only; cards, text and controls stay sharp.
+        val backgroundSurface = FrameLayout(this).apply {
+            setBackgroundColor(color(R.color.bg))
+            clipChildren = false
         }
-        // Keep the edge deformation above the fixed feather overlays so the pull remains visible.
-        // It stays behind the scroll content, so cards and controls are never painted over.
-        // Fixed feathered edges fade scrolling content into the page surface, without a solid bar.
-        root.addView(View(this).apply {
+        if (!lowFx) {
+            addGlows(backgroundSurface, animate)
+            backgroundSurface.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
+        }
+        backgroundSurface.addView(View(this).apply {
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
-        root.addView(View(this).apply {
+        backgroundSurface.addView(View(this).apply {
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(132), Gravity.BOTTOM))
-        val edgeStretch = EdgeStretchLayer(this)
+        root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
+        val edgeStretch = EdgeStretchLayer(this, backgroundSurface)
         root.addView(edgeStretch, FrameLayout.LayoutParams(-1, -1))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
@@ -660,8 +664,27 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    /** Visible edge-focused elastic surface deformation; foreground controls remain undistorted. */
-    private inner class EdgeStretchLayer(context: Context) : View(context) {
+    /** GPU pixel-space background warp, isolated from crisp foreground controls. */
+    private inner class EdgeStretchLayer(context: Context, private val backgroundSurface: View) : View(context) {
+        private val runtimeShader: android.graphics.RuntimeShader? =
+            if (Build.VERSION.SDK_INT >= 33) runCatching {
+                android.graphics.RuntimeShader("""
+                    uniform shader content;
+                    uniform float pull;
+                    uniform float edge;
+                    uniform float height;
+                    half4 main(float2 p) {
+                        float h = max(height, 1.0);
+                        float fromEdge = edge < 1.5 ? p.y : h - p.y;
+                        float reach = max(1.0, min(pull * 3.0, h * 0.52));
+                        float influence = 1.0 - smoothstep(0.0, reach, max(0.0, fromEdge));
+                        float displacement = pull * 0.72 * influence * influence;
+                        float sourceY = edge < 1.5 ? p.y - displacement : p.y + displacement;
+                        sourceY = clamp(sourceY, 0.0, h - 1.0);
+                        return content.eval(float2(p.x, sourceY));
+                    }
+                """.trimIndent())
+            }.getOrNull() else null
         private val stretchPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -685,11 +708,24 @@ class SettingsHubActivity : AppCompatActivity() {
         fun setStretch(edge: Int, amount: Float) {
             this.edge = edge
             this.amount = amount.coerceAtLeast(0f)
+            if (Build.VERSION.SDK_INT >= 33 && runtimeShader != null) {
+                if (edge == 0 || this.amount <= 0.5f) {
+                    backgroundSurface.setRenderEffect(null)
+                } else {
+                    runtimeShader.setFloatUniform("pull", this.amount)
+                    runtimeShader.setFloatUniform("edge", edge.toFloat())
+                    runtimeShader.setFloatUniform("height", backgroundSurface.height.toFloat().coerceAtLeast(1f))
+                    backgroundSurface.setRenderEffect(RenderEffect.createRuntimeShaderEffect(runtimeShader, "content"))
+                }
+            }
             invalidate()
         }
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
+            // API 33+ performs actual pixel displacement in the background shader.
+            // Retain the previous restrained edge surface as a compatible fallback.
+            if (Build.VERSION.SDK_INT >= 33 && runtimeShader != null) return
             if (edge == 0 || amount <= 0.5f || width == 0 || height == 0) return
             // The edge follows the finger farther than before; deformation is local to the edge.
             val depth = amount.coerceAtMost(height * 0.20f)
