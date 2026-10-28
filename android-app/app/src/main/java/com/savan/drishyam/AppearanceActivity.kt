@@ -706,9 +706,11 @@ class AppearanceActivity : AppCompatActivity() {
             setStroke(dp(1), withAlpha(color(R.color.accent2), 0.26f))
         }
         val surface = glassPill()
-        return LayerDrawable(arrayOf(light, surface)).apply {
+        val texture = FineGlassTextureDrawable(density)
+        return LayerDrawable(arrayOf(light, surface, texture)).apply {
             setLayerInset(0, 0, 0, 0, 0)
             setLayerInset(1, 0, 0, 0, dp(3))
+            setLayerInset(2, dp(1), dp(1), dp(1), dp(4))
         }
     }
 
@@ -1136,6 +1138,58 @@ private class AppearanceTouchGlow(
         canvas.restoreToCount(save)
     }
     override fun setAlpha(alpha: Int) { glowAlpha = alpha }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/**
+ * Deterministic satin-glass microtexture for elevated Light Mode pills.
+ * Sparse, low-contrast grains catch the moving reflection without a fixed band,
+ * image asset, random generation, or continuous texture animation.
+ */
+private class FineGlassTextureDrawable(private val density: Float) : Drawable() {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val rect = android.graphics.RectF()
+    private val path = android.graphics.Path()
+
+    override fun draw(canvas: Canvas) {
+        val b = bounds
+        if (b.width() <= 0 || b.height() <= 0) return
+        rect.set(b.left.toFloat(), b.top.toFloat(), b.right.toFloat(), b.bottom.toFloat())
+        path.reset()
+        path.addRoundRect(rect, rect.height() / 2f, rect.height() / 2f, android.graphics.Path.Direction.CW)
+        val save = canvas.save()
+        canvas.clipPath(path)
+
+        val stepX = (6.5f * density).coerceAtLeast(4f)
+        val stepY = (5.5f * density).coerceAtLeast(4f)
+        var row = 0
+        var y = rect.top + stepY * 0.5f
+        while (y < rect.bottom) {
+            var col = 0
+            var x = rect.left + stepX * 0.5f + if (row % 2 == 0) 0f else stepX * 0.42f
+            while (x < rect.right) {
+                // Stable pseudo-random pattern: naturally irregular, but never flickers.
+                val seed = kotlin.math.abs(kotlin.math.sin((col * 12.9898 + row * 78.233) * 0.73)).toFloat()
+                if (seed > 0.38f) {
+                    val alpha = (3f + seed * 9f).toInt().coerceIn(3, 12)
+                    paint.color = Color.argb(alpha, if ((row + col) % 3 == 0) 255 else 91,
+                        if ((row + col) % 3 == 0) 255 else 103, if ((row + col) % 3 == 0) 246 else 61)
+                    paint.style = Paint.Style.FILL
+                    val radius = (0.35f + seed * 0.42f) * density
+                    canvas.drawCircle(x, y, radius, paint)
+                }
+                col++
+                x += stepX
+            }
+            row++
+            y += stepY
+        }
+        canvas.restoreToCount(save)
+    }
+
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha }
     override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
