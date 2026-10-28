@@ -921,7 +921,8 @@ class AppearanceActivity : AppCompatActivity() {
         }
         ambientStarfield?.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
         reflectionOverlay?.alpha = factor
-        reflectionOverlay?.visibility = if (factor > 0f && visualEffectsEnabled) View.VISIBLE else View.INVISIBLE
+        // Glass reflections belong to Glass Effects, not the separate ambient Visual Effects toggle.
+        reflectionOverlay?.visibility = if (factor > 0f) View.VISIBLE else View.INVISIBLE
     }
 
     private val loops = mutableListOf<(Long) -> Unit>()
