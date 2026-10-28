@@ -101,7 +101,7 @@ class WhatsNewActivity : AppCompatActivity() {
         page.addView(loading)
         val screen = android.widget.FrameLayout(this).apply {
             setBackgroundColor(surface)
-            addView(UniversalBackgroundView(this), android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(UniversalBackgroundView(this@WhatsNewActivity), android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(page, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         setContentView(screen)
