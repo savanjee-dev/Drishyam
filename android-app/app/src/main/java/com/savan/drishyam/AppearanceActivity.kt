@@ -52,15 +52,15 @@ class AppearanceActivity : AppCompatActivity() {
     private val density by lazy { resources.displayMetrics.density }
     private fun dp(v: Number): Int = (v.toFloat() * density).toInt()
     private fun dpf(v: Number): Float = v.toFloat() * density
-    private fun color(id: Int): Int = ContextCompat.getColor(this, id)
+    internal fun color(id: Int): Int = ContextCompat.getColor(this, id)
     private fun font(id: Int) = ResourcesCompat.getFont(this, id)
     private val prefs by lazy { getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE) }
 
     private var lowFx = false
-    private var reduced = false
+    internal var reduced = false
     private var haptics = true
     private var theme = "System"
-    private var glassLevel = "full"
+    internal var glassLevel = "full"
     private var motion = "standard"
 
     private lateinit var root: FrameLayout
@@ -73,7 +73,7 @@ class AppearanceActivity : AppCompatActivity() {
     private val themeNames = listOf("System", "Dark", "Light")
     private val ambientGlows = mutableListOf<View>()
     private var ambientStarfield: AppearanceStarfieldView? = null
-    private val reflectionTargets = mutableListOf<Pair<View, Boolean>>()
+    internal val reflectionTargets = mutableListOf<Pair<View, Boolean>>()
     private var reflectionOverlay: AppearanceReflectionOverlay? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -150,8 +150,9 @@ class AppearanceActivity : AppCompatActivity() {
             topMargin = dp(36)
         })
         registerReflection(backButton, circular = true)
-        reflectionOverlay = AppearanceReflectionOverlay(this, this)
-        root.addView(reflectionOverlay, FrameLayout.LayoutParams(-1, -1))
+        val reflections = AppearanceReflectionOverlay(this, this)
+        reflectionOverlay = reflections
+        root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
         addLoop { reflectionOverlay?.invalidate() }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
@@ -676,7 +677,7 @@ class AppearanceActivity : AppCompatActivity() {
     private fun pill(c: Int): Drawable = GradientDrawable().apply { cornerRadius = dpf(999); setColor(c) }
     private fun rounded(c: Int, r: Float): Drawable = GradientDrawable().apply { cornerRadius = dpf(r); setColor(c) }
 
-    private fun withAlpha(c: Int, alpha: Float): Int =
+    internal fun withAlpha(c: Int, alpha: Float): Int =
         Color.argb((255 * alpha).toInt(), Color.red(c), Color.green(c), Color.blue(c))
 
     private fun buzz(ms: Long) {
