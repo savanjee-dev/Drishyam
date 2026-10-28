@@ -290,24 +290,38 @@ class AppearanceActivity : AppCompatActivity() {
         }
     }
 
-    // Circular reveal from the tapped card (prototype revealTheme, 460 ms).
+    // Reveal the target surface fully before changing AppCompat's night mode.
+    // If the mode changes, keep the opaque target-colour overlay attached until this
+    // Activity is destroyed, so the old-themed page is never exposed during recreation.
     private fun chooseTheme(name: String, card: View) {
-        // Theme changes must be serialized. Multiple taps during a reveal can create
-        // overlapping full-screen overlays and race multiple AppCompat recreations.
         if (themeTransitionInProgress || name == theme) return
         themeTransitionInProgress = true
         themeCards.forEach { it.isEnabled = false }
         buzz(8)
+
+        val targetMode = when (name) {
+            "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "Light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        val targetDark = when (name) {
+            "Dark" -> true
+            "Light" -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        val currentDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val appearanceWillChange = currentDark != targetDark
+
         theme = name
         prefs.edit().putString("theme", name).apply()
         refreshThemeCards()
-        val dark = name == "Dark" || (name == "System" && (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES)
-        // Keep a reference so the reveal layer can be cleaned up even if Android
-        // cancels the animator while the window/activity is transitioning.
+
         themeRevealOverlay?.let { root.removeView(it) }
-        val overlay = View(this).apply { setBackgroundColor(if (dark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()) }
+        val targetColor = if (targetDark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
+        val overlay = View(this).apply { setBackgroundColor(targetColor) }
         themeRevealOverlay = overlay
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+
         val loc = IntArray(2)
         card.getLocationOnScreen(loc)
         val rootLoc = IntArray(2)
@@ -318,40 +332,31 @@ class AppearanceActivity : AppCompatActivity() {
         val anim = ViewAnimationUtils.createCircularReveal(overlay, cx.toInt(), cy.toInt(), 0f, r)
         anim.duration = 380L
         anim.interpolator = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
-        val targetMode = when (name) {
-            "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
-            "Light" -> AppCompatDelegate.MODE_NIGHT_NO
-            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-        }
-        var themeChangeApplied = false
-        var revealFinished = false
-        fun finishReveal(applyTheme: Boolean) {
-            // Android calls onAnimationEnd after onAnimationCancel, so cleanup must be idempotent.
-            if (revealFinished) return
-            revealFinished = true
-            // Remove the full-screen layer before changing night mode/recreating this Activity.
-            if (overlay.parent === root) root.removeView(overlay)
-            if (themeRevealOverlay === overlay) themeRevealOverlay = null
-            themeTransitionInProgress = false
-            themeCards.forEach { it.isEnabled = true }
-            if (applyTheme && !themeChangeApplied) {
-                themeChangeApplied = true
-                root.post {
-                    if (!isFinishing && !isDestroyed) {
-                        AppCompatDelegate.setDefaultNightMode(targetMode)
-                    }
-                }
+
+        var finished = false
+        fun applyThemeBehindCover() {
+            if (finished) return
+            finished = true
+            // The reveal has reached full coverage. Apply night mode while the opaque
+            // cover still hides the old UI; onDestroy removes it as recreation completes.
+            AppCompatDelegate.setDefaultNightMode(targetMode)
+            if (!appearanceWillChange || isFinishing || isDestroyed) {
+                if (overlay.parent === root) root.removeView(overlay)
+                if (themeRevealOverlay === overlay) themeRevealOverlay = null
+                themeTransitionInProgress = false
+                themeCards.forEach { it.isEnabled = true }
             }
         }
         anim.addListener(object : android.animation.AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: android.animation.Animator) {
-                finishReveal(true)
+                applyThemeBehindCover()
             }
 
             override fun onAnimationCancel(animation: android.animation.Animator) {
-                // A cancelled reveal must still apply the user's chosen theme, or the
-                // persisted preference and active AppCompat mode can get out of sync.
-                finishReveal(true)
+                // A cancelled reveal must not uncover the old theme before switching.
+                overlay.visibility = View.VISIBLE
+                overlay.setBackgroundColor(targetColor)
+                applyThemeBehindCover()
             }
         })
         anim.start()
