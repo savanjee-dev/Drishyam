@@ -24,6 +24,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".SettingsHubActivity" android:exported="false" />
+    <activity android:name=".AppearanceActivity" android:exported="false" />
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".UpdatesActivity" android:exported="false" />
         <activity android:name=".WhatsNewActivity" android:exported="false" />
