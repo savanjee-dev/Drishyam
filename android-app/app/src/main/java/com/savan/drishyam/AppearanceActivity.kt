@@ -863,6 +863,7 @@ class AppearanceActivity : AppCompatActivity() {
         private val SPRING = PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
         private val OUT = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
         private val EASE_OUT = PathInterpolator(0f, 0f, 0.58f, 1f)
+        private val EASE_IN_OUT = PathInterpolator(0.42f, 0f, 0.58f, 1f)
         private val EASE = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
     }
 }
