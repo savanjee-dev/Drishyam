@@ -228,11 +228,15 @@ class AppearanceActivity : AppCompatActivity() {
         mock.background = GradientDrawable().apply {
             cornerRadius = dpf(16)
             setStroke(dp(1), withAlpha(0xFF89945A.toInt(), 0.25f))
-            when (name) {
-                "System" -> orientation = GradientDrawable.Orientation.LEFT_RIGHT
-                else -> setColor(fillColor)
+            setColor(if (name == "System") 0xFF0A0D08.toInt() else fillColor)
+        }
+        if (name == "System") {
+            // Set the 50/50 split after layout so the left half has a real measured width.
+            val leftHalf = View(this).apply { setBackgroundColor(0xFFF3F1E7.toInt()) }
+            mock.addView(leftHalf, FrameLayout.LayoutParams(0, -1, Gravity.START))
+            mock.post {
+                leftHalf.layoutParams = FrameLayout.LayoutParams(mock.width / 2, -1, Gravity.START)
             }
-            if (name == "System") colors = intArrayOf(0xFFF3F1E7.toInt(), 0xFFF3F1E7.toInt(), 0xFF0A0D08.toInt(), 0xFF0A0D08.toInt())
         }
         val accent = 0xFF414D2D.toInt()
         val accent2 = 0xFF89945A.toInt()
