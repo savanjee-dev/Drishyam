@@ -142,7 +142,7 @@ class SettingsHubActivity : AppCompatActivity() {
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true)
-            setOnClickListener { PortalTransition.close(this@SettingsHubActivity, this) }
+            setOnClickListener { view -> PortalTransition.close(this@SettingsHubActivity, view) }
         }
         content.addView(back)
 
