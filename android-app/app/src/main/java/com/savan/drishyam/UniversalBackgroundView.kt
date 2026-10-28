@@ -84,8 +84,8 @@ class UniversalBackgroundView @JvmOverloads constructor(context: Context, attrs:
         )
         for (i in colors.indices) {
             val a = (phase * (0.22 + i * 0.035) + i * 2.1).toFloat()
-            val cx = w * (0.5f + 0.36f * cos(a))
-            val cy = h * (0.48f + 0.28f * sin(a * 0.82f + i))
+            val cx = w * (0.5f + 0.36f * cos(a.toDouble()).toFloat())
+            val cy = h * (0.48f + 0.28f * sin((a * 0.82f + i).toDouble()).toFloat())
             val base = colors[i]
             val alpha = (((base ushr 24) and 0xff) * subtle).toInt().coerceIn(0, 255)
             val color = (base and 0x00ffffff) or (alpha shl 24)
@@ -100,9 +100,9 @@ class UniversalBackgroundView @JvmOverloads constructor(context: Context, attrs:
             val alpha = (30f * factor).toInt()
             paint.color = (alpha shl 24) or 0x00D0C79A
             for (i in 0 until 18) {
-                val seed = i * 1.618f
+                val seed = i * 1.618
                 val x = ((0.5 + 0.43 * sin(seed + phase * 0.035)).toFloat() * w)
-                val y = ((i / 18f) * h + 0.035f * h * sin(seed + phase * 0.06)).coerceIn(0f, h)
+                val y = ((i / 18f) * h + 0.035f * h * sin(seed + phase * 0.06).toFloat()).coerceIn(0f, h)
                 canvas.drawCircle(x, y, (1.1f + (i % 3) * 0.35f) * density, paint)
             }
         }
