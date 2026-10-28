@@ -8,7 +8,7 @@
         android:id="@+id/glassSource"
         android:layout_width="match_parent" android:layout_height="match_parent">
 
-    <com.savan.drishyam.GlowBackground
+    <com.savan.drishyam.UniversalBackgroundView
         android:layout_width="match_parent" android:layout_height="match_parent" />
 
     <ScrollView
