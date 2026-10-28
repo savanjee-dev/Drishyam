@@ -7,6 +7,7 @@ import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.os.SystemClock
 import android.view.View
+import android.util.AttributeSet
 import android.view.ViewGroup
 import android.view.Choreographer
 import kotlin.math.cos
@@ -17,7 +18,7 @@ import kotlin.math.sin
  * so a detached/recreated view resumes the same timeline instead of starting over.
  * Screens may layer their own foreground-specific reflections above this backdrop.
  */
-class UniversalBackgroundView(context: Context) : View(context), Choreographer.FrameCallback {
+class UniversalBackgroundView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs), Choreographer.FrameCallback {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val density = resources.displayMetrics.density
     private var attached = false
