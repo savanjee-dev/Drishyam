@@ -547,8 +547,12 @@ class AppearanceActivity : AppCompatActivity() {
         }
         registerReflection(test)
         test.setOnClickListener {
-            vibrate(18)
-            test.text = if (haptics) "Buzz!" else "Off"
+            if (haptics) {
+                vibrate(18)
+                test.text = "Buzz!"
+            } else {
+                test.text = "Off"
+            }
             test.postDelayed({ test.text = "Test" }, 900L)
         }
         item.addView(test, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(10) })
