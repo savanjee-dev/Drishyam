@@ -131,6 +131,7 @@ class AppearanceActivity : AppCompatActivity() {
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(88), Gravity.BOTTOM))
         setContentView(root)
+        PortalTransition.enter(this)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             // Move the complete header group down by 24dp and keep a further 16dp
@@ -184,7 +185,7 @@ class AppearanceActivity : AppCompatActivity() {
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true)
-            setOnClickListener { finish() }
+            setOnClickListener { PortalTransition.close(this@AppearanceActivity, this) }
         }
         // Keep the header below the anchored back control with the agreed 16dp gap.
         page.addView(View(this), LinearLayout.LayoutParams(dp(48), dp(64)))
