@@ -675,16 +675,17 @@ class SettingsHubActivity : AppCompatActivity() {
                     uniform float pull;
                     uniform float edge;
                     uniform float height;
+                    uniform float ripplePhase;
                     half4 main(float2 p) {
                         float h = max(height, 1.0);
                         float fromEdge = edge < 1.5 ? p.y : h - p.y;
-                        // Carry the deformation well into the screen instead of confining it to a thin edge band.
-                        // Let the warp reach well beyond halfway, with a soft spatial falloff.
+                        // Broad liquid deformation with a gradual falloff beyond halfway.
                         float reach = max(1.0, min(pull * 5.8, h * 0.78));
                         float influence = 1.0 - smoothstep(0.0, reach, max(0.0, fromEdge));
-                        // Strong displacement across the active region creates a genuine stretch,
-                        // not just a shaded edge. Sample inward from the edge to avoid clamping/smearing.
-                        float displacement = pull * 2.5 * influence * influence;
+                        // A restrained travelling ripple rides on the main warp; it fades with the pull.
+                        float wave = sin((fromEdge / max(reach, 1.0)) * 8.0 - ripplePhase) *
+                                     pull * 0.10 * influence;
+                        float displacement = pull * 2.5 * influence * influence + wave;
                         float sourceY = edge < 1.5 ? p.y + displacement : p.y - displacement;
                         sourceY = clamp(sourceY, 0.0, h - 1.0);
                         return content.eval(float2(p.x, sourceY));
@@ -704,6 +705,7 @@ class SettingsHubActivity : AppCompatActivity() {
             private set
         var amount: Float = 0f
             private set
+        private var ripplePhase = 0f
 
         init {
             isClickable = false
@@ -721,6 +723,8 @@ class SettingsHubActivity : AppCompatActivity() {
                     runtimeShader.setFloatUniform("pull", this.amount)
                     runtimeShader.setFloatUniform("edge", edge.toFloat())
                     runtimeShader.setFloatUniform("height", backgroundSurface.height.toFloat().coerceAtLeast(1f))
+                    ripplePhase = (this.amount * 0.055f) % (Math.PI.toFloat() * 2f)
+                    runtimeShader.setFloatUniform("ripplePhase", ripplePhase)
                     backgroundSurface.setRenderEffect(RenderEffect.createRuntimeShaderEffect(runtimeShader, "content"))
                 }
             }
