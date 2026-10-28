@@ -283,6 +283,9 @@ class AppearanceActivity : AppCompatActivity() {
         anim.interpolator = OUT
         anim.addListener(object : android.animation.AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: android.animation.Animator) {
+                // Remove the reveal layer before applying night mode. AppCompat may recreate
+                // this Activity, and the overlay must never survive as a full-screen cover.
+                root.removeView(overlay)
                 AppCompatDelegate.setDefaultNightMode(
                     when (name) {
                         "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
@@ -290,6 +293,10 @@ class AppearanceActivity : AppCompatActivity() {
                         else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                     }
                 )
+            }
+
+            override fun onAnimationCancel(animation: android.animation.Animator) {
+                root.removeView(overlay)
             }
         })
         anim.start()
