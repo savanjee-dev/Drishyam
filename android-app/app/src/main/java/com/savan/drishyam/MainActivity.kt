@@ -379,7 +379,7 @@ class MainActivity : AppCompatActivity() {
         val blur = findViewById<ImageView>(R.id.aboutBlur)
         blur.setImageResource(R.drawable.savan_background)
         // Real background blur needs Android 12+; low-effects mode skips it.
-        if (Build.VERSION.SDK_INT >= 31 && !lowFx(this)) {
+        if (Build.VERSION.SDK_INT >= 31 && visualEffectsEnabled(this)) {
             blur.setRenderEffect(RenderEffect.createBlurEffect(90f, 90f, Shader.TileMode.CLAMP))
         }
         findViewById<View>(R.id.ig).apply {
@@ -389,7 +389,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun animateAbout() {
-        if (lowFx(this)) return
+        if (!visualEffectsEnabled(this) || !motionEnabled(this)) return
         val revealIds = listOf(
             R.id.aboutPhoto, R.id.aboutAkshatPhoto,
             R.id.aboutPhoto2, R.id.aboutPhoto3, R.id.aboutPhoto4, R.id.ig
@@ -411,7 +411,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun animateTitle() {
-        if (lowFx(this)) return
+        if (!visualEffectsEnabled(this) || !motionEnabled(this)) return
         val t = findViewById<TextView>(R.id.title)
         t.post {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
