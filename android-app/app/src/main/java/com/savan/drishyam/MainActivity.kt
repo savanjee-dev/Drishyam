@@ -110,6 +110,8 @@ class MainActivity : AppCompatActivity() {
     private var savedMode = 0      // 0 = likes, 1 = bookmarks
     private var shownSort = "hot"
     private var lowFxAtCreate = false
+    private var visualFxAtCreate = true
+    private var motionAtCreate = true
     private var lastTopPad = -1
     private var lastBottomPad = -1
     private var statusBarInsetTop = 0
@@ -133,6 +135,8 @@ class MainActivity : AppCompatActivity() {
             systemUi or View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         }
         lowFxAtCreate = lowFx(this)
+        visualFxAtCreate = visualEffectsEnabled(this)
+        motionAtCreate = motionEnabled(this)
 
         rv = findViewById(R.id.rv)
         rv.isVerticalScrollBarEnabled = false
@@ -291,7 +295,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (lowFx(this) != lowFxAtCreate) { recreate(); return }
+        if (lowFx(this) != lowFxAtCreate ||
+            visualEffectsEnabled(this) != visualFxAtCreate ||
+            motionEnabled(this) != motionAtCreate) { recreate(); return }
         // Settings may have changed the default sort while this screen was paused.
         val s = currentSort()
         if (s != shownSort) { shownSort = s; styleSort(); resetAll() }
@@ -850,7 +856,7 @@ class MainActivity : AppCompatActivity() {
             h.img.setBackgroundColor(p.color)
             // Animate each photo only on its first bind. RecyclerView rebinds happen during
             // scrolling and state updates; replaying the entrance there causes distracting flicker.
-            if (!lowFx(this@MainActivity) && animatedPhotoIds.add(p.id)) {
+            if (visualEffectsEnabled(this@MainActivity) && motionEnabled(this@MainActivity) && animatedPhotoIds.add(p.id)) {
                 h.root.animate().cancel()
                 h.root.alpha = 0.78f
                 h.root.translationY = 18.dp().toFloat()
