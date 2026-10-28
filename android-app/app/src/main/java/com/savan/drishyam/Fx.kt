@@ -41,10 +41,8 @@ fun glassLevel(c: Context): String {
 /** Glass Off only controls glass rendering. */
 fun lowFx(c: Context): Boolean = glassLevel(c) == "off"
 
-/** Decorative visual effects have their own independent preference. */
-fun visualEffectsEnabled(c: Context): Boolean =
-    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
-        .getBoolean("visual_effects_enabled", true)
+/** Visual atmosphere follows the Glass Effects level; Off disables it everywhere. */
+fun visualEffectsEnabled(c: Context): Boolean = glassLevel(c) != "off"
 
 /** One motion gate shared by page and component transitions, accepting both preference generations. */
 fun motionEnabled(c: Context): Boolean {
