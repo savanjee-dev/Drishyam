@@ -17,6 +17,7 @@ class SettingsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
         setContentView(R.layout.activity_settings)
         installScrollBounce(findViewById(R.id.settingsScroll))
         if (!getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(findViewById(android.R.id.content))
