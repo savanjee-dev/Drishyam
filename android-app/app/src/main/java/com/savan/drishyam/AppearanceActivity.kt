@@ -94,6 +94,7 @@ class AppearanceActivity : AppCompatActivity() {
         window.navigationBarColor = Color.TRANSPARENT
 
         root = FrameLayout(this).apply { setBackgroundColor(color(R.color.bg)); clipChildren = false }
+        UniversalBackgroundView.attach(root)
         addGlows()
 
         page = LinearLayout(this).apply {
