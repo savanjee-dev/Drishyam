@@ -40,6 +40,7 @@ class UpdatesActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
         DynamicColors.applyToActivityIfAvailable(this)
 
         val surface = themeColor(com.google.android.material.R.attr.colorSurface, R.color.bg)
