@@ -119,6 +119,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(88), Gravity.BOTTOM))
         setContentView(root)
+        PortalTransition.enter(this)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
@@ -141,7 +142,7 @@ class SettingsHubActivity : AppCompatActivity() {
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true)
-            setOnClickListener { finish() }
+            setOnClickListener { PortalTransition.close(this@SettingsHubActivity, this) }
         }
         content.addView(back)
 
@@ -181,7 +182,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val themeName = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("theme", "System") ?: "System"
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         row1.addView(tile(R.drawable.ic_tile_appearance, "Appearance", themeName, appearancePreview()) {
-            startActivity(Intent(this, AppearanceActivity::class.java))
+            PortalTransition.launch(this@SettingsHubActivity, row1.getChildAt(0), Intent(this@SettingsHubActivity, AppearanceActivity::class.java))
         }, tileParams(left = true))
         row1.addView(tile(R.drawable.ic_tile_browsing, "Browsing", "Hot · India on", browsingPreview()) {
             toast("Browsing page: next prototype step")
@@ -200,10 +201,10 @@ class SettingsHubActivity : AppCompatActivity() {
         // ---- Quick actions (unchanged behaviour) ----
         content.addView(label("Quick actions"))
         content.addView(actionRow(R.drawable.ic_row_download, "Check for updates", "Find the latest verified release") {
-            startActivity(Intent(this, UpdatesActivity::class.java))
+            PortalTransition.launch(this@SettingsHubActivity, content, Intent(this@SettingsHubActivity, UpdatesActivity::class.java))
         })
         content.addView(actionRow(R.drawable.ic_row_sparkle, "What's new", "Release notes, release by release") {
-            startActivity(Intent(this, WhatsNewActivity::class.java))
+            PortalTransition.launch(this@SettingsHubActivity, content, Intent(this@SettingsHubActivity, WhatsNewActivity::class.java))
         })
 
         // ---- More: Our story card ----
