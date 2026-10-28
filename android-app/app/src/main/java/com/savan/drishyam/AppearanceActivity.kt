@@ -299,10 +299,10 @@ class AppearanceActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             tag = name
-            // Avoid the clipped touch-glow foreground that can expose a pale rectangular edge.
-            // Keep the existing scale press feedback and rounded glass card surface.
+            // The touch glow clips itself to this rounded card outline, preventing
+            // rectangular foreground artefacts while preserving the radial touch feedback.
             clipToOutline = true
-            attachPress(glowable = false)
+            attachPress(glowable = true)
             setOnClickListener { chooseTheme(name, this) }
         }
         val holder = FrameLayout(this)
@@ -669,7 +669,7 @@ class AppearanceActivity : AppCompatActivity() {
     // ============================ Press (prototype .press, .glowable) ============================
 
     private fun View.attachPress(glowable: Boolean) {
-        val glow = AppearanceTouchGlow(density)
+        val glow = AppearanceTouchGlow(density, dpf(24f))
         fun useGlow() = glowable && glassLevel != "off" && !reduced
         if (glowable) foreground = glow
         var anim: ValueAnimator? = null
@@ -756,9 +756,9 @@ class AppearanceActivity : AppCompatActivity() {
     private fun addGlows() {
         data class G(val colorRes: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int)
         val list = listOf(
-            G(R.color.accent2, 0.66f, 10000, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
-            G(R.color.hero, 0.58f, 12000, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
-            G(R.color.accent, 0.38f, 14000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
+            G(R.color.accent2, 0.78f, 9000, Gravity.TOP or Gravity.START, -90, 0, -120, 0),
+            G(R.color.hero, 0.70f, 11000, Gravity.TOP or Gravity.END, 220, 0, 0, -145),
+            G(R.color.accent, 0.54f, 13000, Gravity.BOTTOM or Gravity.START, 0, 70, -20, 0)
         )
         for (g in list) {
             val c = color(g.colorRes)
@@ -767,13 +767,13 @@ class AppearanceActivity : AppCompatActivity() {
                     shape = GradientDrawable.OVAL
                     gradientType = GradientDrawable.RADIAL_GRADIENT
                     colors = intArrayOf(c, withAlpha(c, 0f))
-                    gradientRadius = dpf(140)
+                    gradientRadius = dpf(220)
                 }
                 alpha = g.alpha
                 tag = g.alpha
             }
             ambientGlows.add(v)
-            val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
+            val lp = FrameLayout.LayoutParams(dp(440), dp(440), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
                 if ((g.gravity and Gravity.END) == Gravity.END) rightMargin = dp(g.end) else leftMargin = dp(g.start)
             }
@@ -782,10 +782,10 @@ class AppearanceActivity : AppCompatActivity() {
                 // Phase S2 ambient background: offset axes create slow organic drift rather than a diagonal loop.
                 val px = pingPong(t, g.dur)
                 val py = pingPong(t, (g.dur * 1.37f).toLong(), g.dur / 4)
-                v.translationX = dpf(104) * (px - 0.5f)
-                v.translationY = dpf(78) * (py - 0.5f)
-                v.scaleX = 1f + 0.18f * px
-                v.scaleY = 1f + 0.20f * py
+                v.translationX = dpf(150) * (px - 0.5f)
+                v.translationY = dpf(112) * (py - 0.5f)
+                v.scaleX = 1f + 0.24f * px
+                v.scaleY = 1f + 0.27f * py
                 // Explicitly invalidate the glow drawable on every frame so its
                 // radial gradient stays visibly animated across device renderers.
                 v.invalidate()
@@ -855,7 +855,10 @@ class AppearanceActivity : AppCompatActivity() {
 }
 
 /** Touch light for the Appearance page: 180dp radial glow from rgba(137,148,90,0.5) to transparent at 70%. */
-private class AppearanceTouchGlow(private val density: Float) : Drawable() {
+private class AppearanceTouchGlow(
+    private val density: Float,
+    private val cornerRadius: Float
+) : Drawable() {
     var centreX = 0f
     var centreY = 0f
     var radiusScale = 1f
@@ -863,13 +866,22 @@ private class AppearanceTouchGlow(private val density: Float) : Drawable() {
     var glowAlpha = 0
         set(value) { field = value; invalidateSelf() }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val clipPath = android.graphics.Path()
+    private val clipRect = android.graphics.RectF()
     override fun draw(canvas: Canvas) {
         if (glowAlpha <= 0) return
+        val bounds = bounds
+        clipRect.set(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat())
+        clipPath.reset()
+        clipPath.addRoundRect(clipRect, cornerRadius, cornerRadius, android.graphics.Path.Direction.CW)
+        val save = canvas.save()
+        canvas.clipPath(clipPath)
         val r = 90f * density * radiusScale
         paint.shader = RadialGradient(centreX, centreY, r,
             intArrayOf(0x8089945A.toInt(), 0x0089945A), floatArrayOf(0f, 0.7f), Shader.TileMode.CLAMP)
         paint.alpha = glowAlpha
         canvas.drawCircle(centreX, centreY, r, paint)
+        canvas.restoreToCount(save)
     }
     override fun setAlpha(alpha: Int) { glowAlpha = alpha }
     override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
