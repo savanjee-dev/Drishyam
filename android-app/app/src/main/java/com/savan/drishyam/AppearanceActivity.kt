@@ -35,6 +35,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
@@ -63,6 +64,10 @@ class AppearanceActivity : AppCompatActivity() {
     private var theme = "System"
     internal var glassLevel = "full"
     private var motion = "standard"
+    private var appEffectsEnabled = true
+    private var visualEffectsEnabled = true
+    private var effectsDetails: LinearLayout? = null
+    private var effectsMasterSwitch: SwitchCompat? = null
 
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
@@ -84,7 +89,9 @@ class AppearanceActivity : AppCompatActivity() {
         theme = prefs.getString("theme", "System") ?: "System"
         haptics = prefs.getBoolean("haptics", true)
         glassLevel = prefs.getString("glass_level", null) ?: if (prefs.getBoolean("low_fx", false)) "off" else "full"
-        motion = prefs.getString("motion", null) ?: if (systemReduceMotion()) "reduced" else "standard"
+        motion = prefs.getString("motion", null) ?: if (prefs.getBoolean("motion_reduced", systemReduceMotion())) "reduced" else "standard"
+        appEffectsEnabled = prefs.getBoolean("app_effects_enabled", true)
+        visualEffectsEnabled = prefs.getBoolean("visual_effects_enabled", true)
         lowFx = glassLevel == "off"
         reduced = motion == "reduced"
 
@@ -207,19 +214,76 @@ class AppearanceActivity : AppCompatActivity() {
         page.addView(themes, matchWrap(0))
         refreshThemeCards()
 
-        // ---- Effects ----
-        page.addView(label("Effects"))
-        val card = LinearLayout(this).apply {
+        // ---- App-wide effects master and expandable category controls ----
+        page.addView(label("App-wide Effects"))
+        val effectsCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = glassCard()
+        }
+        val masterRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val masterCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        masterCopy.addView(tv("App-wide Effects", 15f, R.color.fg, R.font.poppins_semibold))
+        masterCopy.addView(tv("Control decorative effects across Drishyam.", 12f, R.color.mute, R.font.poppins_regular, 2, 0))
+        masterRow.addView(masterCopy, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(10) })
+        val masterSwitch = SwitchCompat(this).apply {
+            isChecked = appEffectsEnabled
+            contentDescription = "Enable app-wide effects"
+        }
+        effectsMasterSwitch = masterSwitch
+        masterRow.addView(masterSwitch)
+        effectsCard.addView(masterRow)
+        val expandLabel = TextView(this).apply {
+            text = if (appEffectsEnabled) "Customise effects  ▴" else "Customise effects  ▾"
+            textSize = 12f
+            typeface = font(R.font.poppins_semibold)
+            setTextColor(color(R.color.accent))
+            setPadding(0, dp(14), 0, dp(4))
+            isClickable = true
+            isFocusable = true
+        }
+        effectsCard.addView(expandLabel)
+        val details = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = if (appEffectsEnabled) View.VISIBLE else View.GONE
+        }
+        effectsDetails = details
+        details.addView(glassItem())
+        details.addView(divider())
+        details.addView(motionItem())
+        details.addView(divider())
+        details.addView(visualEffectsItem())
+        effectsCard.addView(details)
+        page.addView(effectsCard, matchWrap(0))
+        expandLabel.setOnClickListener {
+            details.visibility = if (details.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+            expandLabel.text = if (details.visibility == View.VISIBLE) "Customise effects  ▴" else "Customise effects  ▾"
+        }
+        masterSwitch.setOnCheckedChangeListener { _, enabled ->
+            appEffectsEnabled = enabled
+            prefs.edit().putBoolean("app_effects_enabled", enabled).apply()
+            details.visibility = if (enabled) View.VISIBLE else View.GONE
+            expandLabel.text = if (enabled) "Customise effects  ▴" else "Customise effects  ▾"
+            lowFx = !enabled || glassLevel == "off"
+            reduced = !enabled || motion == "reduced"
+            reflectionOverlay?.visibility = if (enabled) View.VISIBLE else View.GONE
+            if (!enabled) {
+                reflectionOverlay?.alpha = 0f
+            } else {
+                reflectionOverlay?.alpha = 1f
+            }
+        }
+        page.addView(label("Haptics"))
+        val hapticsCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(6), dp(16), dp(6))
             background = glassCard()
         }
-        card.addView(glassItem())
-        card.addView(divider())
-        card.addView(hapticsItem())
-        card.addView(divider())
-        card.addView(motionItem())
-        page.addView(card, matchWrap(0))
+        hapticsCard.addView(hapticsItem())
+        page.addView(hapticsCard, matchWrap(0))
 
         page.addView(tv("Changes apply straight away.", 12f, R.color.mute, R.font.poppins_regular, 24, 0).apply {
             gravity = Gravity.CENTER
@@ -428,9 +492,32 @@ class AppearanceActivity : AppCompatActivity() {
         item.addView(segment(listOf("Off" to "off", "Subtle" to "subtle", "Full" to "full"), glassLevel) { value ->
             glassLevel = value
             prefs.edit().putString("glass_level", value).putBoolean("low_fx", value == "off").apply()
-            lowFx = value == "off"
+            lowFx = !appEffectsEnabled || value == "off"
             applyGlassLevel()
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+        return item
+    }
+
+    // ---------- Visual effects: ambient gradients and glow ---------- 
+    private fun visualEffectsItem(): LinearLayout {
+        val item = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(14), 0, dp(14))
+        }
+        val copy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        copy.addView(tv("Visual Effects", 14f, R.color.fg, R.font.poppins_semibold))
+        copy.addView(tv("Ambient gradients, glow and decorative atmosphere.", 12f, R.color.mute, R.font.poppins_regular, 2, 0))
+        item.addView(copy, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(12) })
+        val sw = SwitchCompat(this).apply {
+            isChecked = visualEffectsEnabled
+            contentDescription = "Enable visual effects"
+            setOnCheckedChangeListener { _, enabled ->
+                visualEffectsEnabled = enabled
+                prefs.edit().putBoolean("visual_effects_enabled", enabled).apply()
+            }
+        }
+        item.addView(sw)
         return item
     }
 
@@ -532,8 +619,8 @@ class AppearanceActivity : AppCompatActivity() {
         item.addView(itemTitle("Motion", "Reduced replaces bouncy motion with simple fades."))
         item.addView(segment(listOf("Standard" to "standard", "Reduced" to "reduced"), motion) { value ->
             motion = value
-            prefs.edit().putString("motion", value).apply()
-            reduced = value == "reduced"
+            prefs.edit().putString("motion", value).putBoolean("motion_reduced", value == "reduced").apply()
+            reduced = !appEffectsEnabled || value == "reduced"
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         return item
     }
