@@ -453,6 +453,10 @@ class AppearanceActivity : AppCompatActivity() {
             setPadding(dp(14), dp(8), dp(14), dp(8))
             minWidth = dp(64)
             background = glassPill()
+            if (Color.luminance(color(R.color.bg)) > 0.5f) {
+                elevation = dpf(3)
+                translationZ = dpf(1)
+            }
             isClickable = true
             isFocusable = true
             attachPress(glowable = false)
@@ -538,6 +542,12 @@ class AppearanceActivity : AppCompatActivity() {
         val seg = FrameLayout(this).apply {
             background = glassPill()
             clipChildren = false
+            // In Light Mode, a small warm elevation separates the cream glass
+            // surface from the page without changing the existing control design.
+            if (Color.luminance(color(R.color.bg)) > 0.5f) {
+                elevation = dpf(3)
+                translationZ = dpf(1)
+            }
         }
         registerReflection(seg)
         val row = LinearLayout(this).apply {
