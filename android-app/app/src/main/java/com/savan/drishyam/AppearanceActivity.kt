@@ -466,7 +466,7 @@ class AppearanceActivity : AppCompatActivity() {
             setPadding(dp(4), dp(4), dp(4), dp(4))
         }
         val indicator = View(this).apply {
-            background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(color(R.color.accent2)) }
+            background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(color(R.color.accent)) }
         }
         val buttons = mutableListOf<TextView>()
         for ((label, value) in options) {
@@ -488,7 +488,7 @@ class AppearanceActivity : AppCompatActivity() {
 
         fun paintLabels(animate: Boolean) {
             buttons.forEach { b ->
-                val to = if (b.tag == selected) Color.WHITE else color(R.color.mute)
+                val to = if (b.tag == selected) color(R.color.bg) else color(R.color.mute)
                 b.setTextColor(to)
                 b.setTypeface(font(R.font.montserrat_semibold), if (b.tag == selected) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
             }
