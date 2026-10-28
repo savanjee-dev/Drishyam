@@ -54,6 +54,7 @@ class SettingsHubActivity : AppCompatActivity() {
     private var lightMode = false
     private var visualFxAtCreate = true
     private var motionAtCreate = true
+    private var glassLevelAtCreate = "full"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -65,6 +66,7 @@ class SettingsHubActivity : AppCompatActivity() {
         reduced = !motionEnabled(this)
         visualFxAtCreate = visualEffectsEnabled(this)
         motionAtCreate = motionEnabled(this)
+        glassLevelAtCreate = glassLevel(this)
         lightMode = Color.luminance(color(R.color.bg)) > 0.5f
         val animate = !reduced && visualEffectsEnabled(this)
 
@@ -557,6 +559,7 @@ class SettingsHubActivity : AppCompatActivity() {
         super.onResume()
         if (visualEffectsEnabled(this) != visualFxAtCreate ||
             motionEnabled(this) != motionAtCreate ||
+            glassLevel(this) != glassLevelAtCreate ||
             lowFx(this) != lowFx) {
             recreate()
         }
