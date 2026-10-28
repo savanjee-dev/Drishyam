@@ -329,9 +329,16 @@ class SettingsHubActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(16), dp(16), dp(16), dp(16))
             background = ContextCompat.getDrawable(this@SettingsHubActivity, R.drawable.glass_row)
+            // Clip the touch foreground to the same 30dp rounded silhouette as glass_row.
+            clipToOutline = true
+            outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dpf(30f))
+                }
+            }
             isClickable = true
             isFocusable = true
-            // No touch-wash foreground on Quick Actions; preserve the click action.
+            attachPress(glowable = true)
             setOnClickListener { onTap() }
             layoutParams = matchWrap(0).apply { bottomMargin = dp(10) }
             addView(iconSquare(icon))
@@ -368,6 +375,7 @@ class SettingsHubActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             setPadding(0, 0, 0, 0)
+            attachPress(glowable = true)
             setOnClickListener {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
@@ -454,6 +462,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setOnClickListener {
                 startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
+            attachPress(glowable = true)
         }
         copy.addView(readButton, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(18)
@@ -467,6 +476,17 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
             clipToPadding = false
         }
+        val halo = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                gradientType = GradientDrawable.RADIAL_GRADIENT
+                colors = intArrayOf(withAlpha(0xFFD0C79A.toInt(), 0.34f), 0x00D0C79A)
+                gradientRadius = dpf(86)
+            }
+            alpha = 0.88f
+        }
+        photoBox.addView(halo, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
+
         val photo = HubFadedCircleImage(this).apply {
             setImageResource(R.drawable.savan)
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -507,6 +527,12 @@ class SettingsHubActivity : AppCompatActivity() {
         // It always draws stars; motion is optional so reduced-motion/Glass Off never hides them.
         card.addView(StoryGalaxyView(this, animate && !lowFx), FrameLayout.LayoutParams(-1, -1))
 
+        if (animate) {
+            startFlow(flowBg)
+            startBob(photo)
+            startHaloPulse(halo)
+            startArrowNudge(readArrow)
+        }
         return card
     }
 
@@ -523,34 +549,7 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun installScrollBounce(scroll: ScrollView) {
-        scroll.overScrollMode = View.OVER_SCROLL_NEVER
-        val boundary = BoundaryStretchOverlay(this, reduced)
-        (scroll.parent as? ViewGroup)?.let { parent ->
-            // Keep the pull feedback above the fixed edge-feather layers so it remains visible.
-            parent.addView(boundary, FrameLayout.LayoutParams(-1, -1))
-            boundary.elevation = dpf(2)
-        }
-        var lastY = 0f
-        scroll.setOnTouchListener { view, event ->
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> lastY = event.y
-                MotionEvent.ACTION_MOVE -> {
-                    val dy = event.y - lastY
-                    lastY = event.y
-                    val child = scroll.getChildAt(0)
-                    val maxScroll = ((child?.height ?: 0) - scroll.height).coerceAtLeast(0)
-                    if (scroll.scrollY <= 0 && dy > 0f) {
-                        boundary.pull(top = true, amount = dy * 0.92f)
-                    } else if (scroll.scrollY >= maxScroll && dy < 0f) {
-                        boundary.pull(top = false, amount = -dy * 0.92f)
-                    } else {
-                        boundary.relax()
-                    }
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> boundary.relax()
-            }
-            false
-        }
+        scroll.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
     }
 
     private fun addGlows(root: FrameLayout, animate: Boolean) {
@@ -802,92 +801,6 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 }
 
-/** Boundary-only elastic edge: stretches the surrounding edge glow, never the page content. */
-private class BoundaryStretchOverlay(context: Context, private val reducedMotion: Boolean) : View(context) {
-    private val density = resources.displayMetrics.density
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var topPull = 0f
-    private var bottomPull = 0f
-    private var relaxAnimator: ValueAnimator? = null
-
-    init {
-        isClickable = false
-        isFocusable = false
-        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-        setLayerType(View.LAYER_TYPE_HARDWARE, null)
-    }
-
-    fun pull(top: Boolean, amount: Float) {
-        if (reducedMotion) return
-        relaxAnimator?.cancel()
-        val next = (if (top) topPull else bottomPull) + amount
-        val value = next.coerceIn(0f, 72f * density)
-        if (top) {
-            topPull = value
-            bottomPull = 0f
-        } else {
-            bottomPull = value
-            topPull = 0f
-        }
-        invalidate()
-    }
-
-    fun relax() {
-        relaxAnimator?.cancel()
-        val startTop = topPull
-        val startBottom = bottomPull
-        if (startTop == 0f && startBottom == 0f) return
-        relaxAnimator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = if (reducedMotion) 0L else 320L
-            interpolator = PathInterpolator(0.18f, 0.75f, 0.25f, 1f)
-            addUpdateListener {
-                val t = it.animatedValue as Float
-                topPull = startTop * t
-                bottomPull = startBottom * t
-                invalidate()
-            }
-            start()
-        }
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val w = width.toFloat()
-        val h = height.toFloat()
-        if (w <= 0f || h <= 0f) return
-        if (topPull > 0f) drawEdge(canvas, w, topPull, true)
-        if (bottomPull > 0f) drawEdge(canvas, w, h - bottomPull, false)
-    }
-
-    private fun drawEdge(canvas: Canvas, w: Float, edgeY: Float, top: Boolean) {
-        val depth = (if (top) topPull else bottomPull).coerceAtMost(72f * density)
-        // A broad surface flexes inward from the boundary; no glowing stroke or halo.
-        val path = Path().apply {
-            if (top) {
-                moveTo(0f, 0f)
-                lineTo(w, 0f)
-                quadTo(w * 0.5f, depth * 1.55f, 0f, 0f)
-                close()
-            } else {
-                moveTo(0f, height.toFloat())
-                lineTo(w, height.toFloat())
-                quadTo(w * 0.5f, height - depth * 1.55f, 0f, height.toFloat())
-                close()
-            }
-        }
-        paint.shader = LinearGradient(
-            0f, if (top) 0f else height.toFloat() - (58f * density + depth),
-            0f, if (top) (58f * density + depth) else height.toFloat(),
-            intArrayOf(0xB01F2A16.toInt(), 0x8C414D2D.toInt(), 0x00414D2D),
-            null, Shader.TileMode.CLAMP
-        )
-        paint.style = Paint.Style.FILL
-        paint.strokeWidth = 0f
-        canvas.drawPath(path, paint)
-        paint.shader = null
-    }
-}
-
 /** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
 private class TouchRippleGlowDrawable(private val density: Float, private val lightMode: Boolean) : Drawable() {
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -926,8 +839,7 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         val w = bounds.width().toFloat()
         val h = bounds.height().toFloat()
         // Clip the complete interaction to the control's rounded silhouette.
-        // Match the actual pill/rounded-row silhouette instead of using a square-ish fixed ratio.
-        val corner = (h * 0.27f).coerceAtMost(kotlin.math.min(w, h) * 0.5f).coerceAtLeast(1f)
+        val corner = (kotlin.math.min(w, h) * 0.16f).coerceAtLeast(1f)
         val clip = Path().apply {
             addRoundRect(0f, 0f, w, h, corner, corner, Path.Direction.CW)
         }
@@ -1142,40 +1054,23 @@ private class StoryGalaxyView(
     private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float)
 
     private val density = resources.displayMetrics.density
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    // Six restrained perimeter stars; keep the card copy and portrait free of decoration.
     private val stars = listOf(
-        Star(.055f, .12f, 1.7f, .3f),
+        Star(.055f, .12f, 1.7f, 0.3f),
         Star(.34f, .055f, 1.45f, 2.0f),
         Star(.91f, .16f, 1.65f, 4.1f),
         Star(.95f, .78f, 1.55f, 1.1f),
         Star(.63f, .94f, 1.7f, 3.3f),
         Star(.055f, .69f, 1.55f, 5.0f)
     )
-    // Five highlight locations stay in the clear text-side lane, away from the portrait.
-    private val highlightStars = listOf(
-        Star(.19f, .13f, 2.0f, .4f),
-        Star(.46f, .11f, 2.15f, 2.6f),
-        Star(.12f, .48f, 2.1f, 1.7f),
-        Star(.36f, .70f, 2.0f, 3.9f),
-        Star(.27f, .34f, 2.25f, 5.2f)
-    )
     private var phase = 0f
-    private var highlightIndex = -1
-    private var nextHighlightAt = 0L
-    private val random = java.util.Random()
+    // A slow, low-amplitude brightness shift—not continuous glitter or movement.
     private val ticker = if (animateStars) ValueAnimator.ofFloat(0f, (Math.PI * 2).toFloat()).apply {
-        duration = 18000L
+        duration = 14000L
         repeatCount = ValueAnimator.INFINITE
         addUpdateListener {
             phase = it.animatedValue as Float
-            if (System.currentTimeMillis() >= nextHighlightAt) {
-                var next = random.nextInt(highlightStars.size)
-                if (highlightStars.size > 1) {
-                    while (next == highlightIndex) next = random.nextInt(highlightStars.size)
-                }
-                highlightIndex = next
-                nextHighlightAt = System.currentTimeMillis() + 1800L + random.nextInt(3200)
-            }
             postInvalidateOnAnimation()
         }
     } else null
@@ -1188,7 +1083,6 @@ private class StoryGalaxyView(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        nextHighlightAt = System.currentTimeMillis() + 900L
         ticker?.start()
     }
 
@@ -1202,42 +1096,25 @@ private class StoryGalaxyView(
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
-
-        paint.style = Paint.Style.FILL
         stars.forEach { star ->
-            val twinkle = if (animateStars) kotlin.math.sin(phase * .5f + star.phase).toFloat() else 0f
-            drawStar(canvas, star, (76f + twinkle * 12f).toInt().coerceIn(60, 92), false, w, h)
-        }
-        highlightStars.forEachIndexed { index, star ->
-            if (animateStars && index == highlightIndex) {
-                val pulse = ((kotlin.math.sin(phase * 1.7f + star.phase) + 1f) / 2f).toFloat()
-                val alpha = (205f + pulse * 50f).toInt().coerceAtMost(255)
-                drawStar(canvas, star, alpha, true, w, h)
-            } else {
-                // All five remain visible; one at a time flashes brighter in a random-looking order.
-                drawStar(canvas, star, 118, false, w, h)
+            val subtleWave = if (animateStars) kotlin.math.sin(phase * 0.5f + star.phase).toFloat() else 0f
+            // Keep a dim, stable base so stars never vanish; animate brightness only slightly.
+            val alpha = (76f + subtleWave * 16f).toInt().coerceIn(58, 94)
+            val cx = w * star.x
+            val cy = h * star.y
+            val r = star.radius * density
+            paint.color = if (star.phase.toInt() % 2 == 0) 0xFFE0D3A8.toInt() else 0xFFFFF5D9.toInt()
+            paint.alpha = alpha
+            paint.clearShadowLayer()
+            val path = Path().apply {
+                moveTo(cx, cy - r)
+                quadTo(cx + r * .12f, cy - r * .12f, cx + r, cy)
+                quadTo(cx + r * .12f, cy + r * .12f, cx, cy + r)
+                quadTo(cx - r * .12f, cy + r * .12f, cx - r, cy)
+                quadTo(cx - r * .12f, cy - r * .12f, cx, cy - r)
+                close()
             }
+            canvas.drawPath(path, paint)
         }
-    }
-
-    private fun drawStar(canvas: Canvas, star: Star, alpha: Int, highlight: Boolean, w: Float, h: Float) {
-        val cx = w * star.x
-        val cy = h * star.y
-        val r = star.radius * density * if (highlight) 1.35f else 1f
-        paint.style = Paint.Style.FILL
-        paint.color = if (highlight) 0xFFFFF0C3.toInt() else 0xFFE0D3A8.toInt()
-        paint.alpha = alpha.coerceIn(0, 235)
-        paint.clearShadowLayer()
-        if (highlight) paint.setShadowLayer(4.2f * density, 0f, 0f, Color.argb(alpha / 2, 255, 226, 160))
-        val path = Path().apply {
-            moveTo(cx, cy - r)
-            quadTo(cx + r * .12f, cy - r * .12f, cx + r, cy)
-            quadTo(cx + r * .12f, cy + r * .12f, cx, cy + r)
-            quadTo(cx - r * .12f, cy + r * .12f, cx - r, cy)
-            quadTo(cx - r * .12f, cy - r * .12f, cx, cy - r)
-            close()
-        }
-        canvas.drawPath(path, paint)
-        paint.clearShadowLayer()
     }
 }
