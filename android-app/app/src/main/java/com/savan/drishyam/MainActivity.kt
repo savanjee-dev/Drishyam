@@ -121,6 +121,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
         // Draw the app background beneath the status bar; keep system icons theme-aware.
