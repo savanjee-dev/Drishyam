@@ -90,24 +90,26 @@ class SettingsHubActivity : AppCompatActivity() {
             addGlows(backgroundSurface, animate)
             backgroundSurface.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
         }
-        backgroundSurface.addView(View(this).apply {
+        root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
+        val edgeStretch = EdgeStretchLayer(this, backgroundSurface)
+        root.addView(edgeStretch, FrameLayout.LayoutParams(-1, -1))
+        root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        // Keep the original fixed feather overlays above the scrolling content.
+        // They remain independent of the background warp so the stretch cannot hide them.
+        root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
-        backgroundSurface.addView(View(this).apply {
+        root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(132), Gravity.BOTTOM))
-        root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
-        val edgeStretch = EdgeStretchLayer(this, backgroundSurface)
-        root.addView(edgeStretch, FrameLayout.LayoutParams(-1, -1))
-        root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
@@ -677,12 +679,13 @@ class SettingsHubActivity : AppCompatActivity() {
                         float h = max(height, 1.0);
                         float fromEdge = edge < 1.5 ? p.y : h - p.y;
                         // Carry the deformation well into the screen instead of confining it to a thin edge band.
-                        float reach = max(1.0, min(pull * 4.5, h * 0.62));
+                        // Let the warp reach well beyond halfway, with a soft spatial falloff.
+                        float reach = max(1.0, min(pull * 5.8, h * 0.78));
                         float influence = 1.0 - smoothstep(0.0, reach, max(0.0, fromEdge));
-                        // A stronger pixel-space displacement makes the background visibly stretch,
-                        // while the influence curve fades it smoothly before reaching the opposite edge.
-                        float displacement = pull * 1.45 * influence * influence;
-                        float sourceY = edge < 1.5 ? p.y - displacement : p.y + displacement;
+                        // Strong displacement across the active region creates a genuine stretch,
+                        // not just a shaded edge. Sample inward from the edge to avoid clamping/smearing.
+                        float displacement = pull * 2.5 * influence * influence;
+                        float sourceY = edge < 1.5 ? p.y + displacement : p.y - displacement;
                         sourceY = clamp(sourceY, 0.0, h - 1.0);
                         return content.eval(float2(p.x, sourceY));
                     }
