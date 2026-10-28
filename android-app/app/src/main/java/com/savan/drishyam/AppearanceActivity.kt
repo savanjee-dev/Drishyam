@@ -69,6 +69,7 @@ class AppearanceActivity : AppCompatActivity() {
     private var themeTransitionInProgress = false
     private val themeCards = mutableListOf<LinearLayout>()
     private val themeNames = listOf("System", "Dark", "Light")
+    private val ambientGlows = mutableListOf<View>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -87,7 +88,7 @@ class AppearanceActivity : AppCompatActivity() {
         window.navigationBarColor = Color.TRANSPARENT
 
         root = FrameLayout(this).apply { setBackgroundColor(color(R.color.bg)); clipChildren = false }
-        if (!lowFx) addGlows()
+        addGlows()
 
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -103,6 +104,12 @@ class AppearanceActivity : AppCompatActivity() {
         }
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
+            page.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
         PageStretch.attach(scroll, density, reduced)
 
         buildPage()
@@ -347,6 +354,7 @@ class AppearanceActivity : AppCompatActivity() {
             glassLevel = value
             prefs.edit().putString("glass_level", value).putBoolean("low_fx", value == "off").apply()
             lowFx = value == "off"
+            applyGlassLevel()
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         return item
     }
@@ -601,8 +609,8 @@ class AppearanceActivity : AppCompatActivity() {
 
     private fun View.attachPress(glowable: Boolean) {
         val glow = AppearanceTouchGlow(density)
-        val useGlow = glowable && !lowFx && !reduced
-        if (useGlow) foreground = glow
+        fun useGlow() = glowable && glassLevel != "off" && !reduced
+        if (glowable) foreground = glow
         var anim: ValueAnimator? = null
         setOnTouchListener { v, e ->
             when (e.actionMasked) {
@@ -614,7 +622,7 @@ class AppearanceActivity : AppCompatActivity() {
                         interpolator = OUT
                         start()
                     }
-                    if (useGlow) {
+                    if (useGlow()) {
                         glow.centreX = e.x
                         glow.centreY = e.y
                         anim?.cancel()
@@ -624,14 +632,15 @@ class AppearanceActivity : AppCompatActivity() {
                             addUpdateListener { a ->
                                 val t = a.animatedValue as Float
                                 glow.radiusScale = 0.4f + 0.6f * t
-                                glow.glowAlpha = (255 * t).toInt()
+                                val intensity = if (glassLevel == "subtle") 128 else 255
+                                glow.glowAlpha = (intensity * t).toInt()
                             }
                             start()
                         }
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (useGlow) {
+                    if (useGlow()) {
                         anim?.cancel()
                         anim = ValueAnimator.ofInt(glow.glowAlpha, 0).apply {
                             duration = 450L
@@ -700,7 +709,9 @@ class AppearanceActivity : AppCompatActivity() {
                     gradientRadius = dpf(140)
                 }
                 alpha = g.alpha
+                tag = g.alpha
             }
+            ambientGlows.add(v)
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
                 if ((g.gravity and Gravity.END) == Gravity.END) rightMargin = dp(g.end) else leftMargin = dp(g.start)
@@ -713,6 +724,21 @@ class AppearanceActivity : AppCompatActivity() {
                 v.scaleX = 1f + 0.15f * p
                 v.scaleY = 1f + 0.15f * p
             }
+        }
+        applyGlassLevel()
+    }
+
+    private fun applyGlassLevel() {
+        val factor = when (glassLevel) {
+            "off" -> 0f
+            "subtle" -> 0.45f
+            else -> 1f
+        }
+        lowFx = glassLevel == "off"
+        ambientGlows.forEach { glow ->
+            val baseAlpha = glow.tag as? Float ?: 1f
+            glow.alpha = baseAlpha * factor
+            glow.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
         }
     }
 
