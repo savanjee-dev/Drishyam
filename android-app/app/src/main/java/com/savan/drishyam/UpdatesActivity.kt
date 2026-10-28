@@ -75,7 +75,7 @@ class UpdatesActivity : AppCompatActivity() {
             insetBottom = 0
             contentDescription = "Back"
             setPadding(0, 0, 0, 3.dp())
-            setOnClickListener { PortalTransition.close(this@UpdatesActivity, this) }
+            setOnClickListener { view -> PortalTransition.close(this@UpdatesActivity, view) }
         }
         root.addView(back, LinearLayout.LayoutParams(52.dp(), 52.dp()))
         root.addView(TextView(this).apply {
