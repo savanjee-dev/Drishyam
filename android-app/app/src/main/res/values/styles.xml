@@ -5,9 +5,21 @@
         <item name="android:fontFamily">@font/poppins_regular</item>
         <item name="colorSecondary">@color/accent2</item>
         <item name="android:windowBackground">@color/bg</item>
+        <item name="android:windowAnimationStyle">@style/DrishyamActivityTransition</item>
         <item name="android:statusBarColor">@color/transparent</item>
         <item name="android:navigationBarColor">@color/transparent</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.Drishyam.Dialog</item>
+    </style>
+
+    <style name="DrishyamActivityTransition">
+        <item name="android:activityOpenEnterAnimation">@anim/page_open_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/page_open_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/page_close_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/page_close_exit</item>
+        <item name="android:taskOpenEnterAnimation">@anim/page_open_enter</item>
+        <item name="android:taskOpenExitAnimation">@anim/page_open_exit</item>
+        <item name="android:taskCloseEnterAnimation">@anim/page_close_enter</item>
+        <item name="android:taskCloseExitAnimation">@anim/page_close_exit</item>
     </style>
 
     <style name="ThemeOverlay.Drishyam.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
