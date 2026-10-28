@@ -242,7 +242,10 @@ class AppearanceActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             addView(mock)
-            addView(tv(name, 12f, R.color.fg, R.font.poppins_semibold))
+            addView(tv(name, 12f, R.color.fg, R.font.poppins_semibold).apply {
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2) }
+            })
         }
 
         val card = LinearLayout(this).apply {
@@ -486,8 +489,9 @@ class AppearanceActivity : AppCompatActivity() {
 
         fun paintLabels(animate: Boolean) {
             buttons.forEach { b ->
-                val to = if (b.tag == selected) 0xFFFFFCF4.toInt() else color(R.color.mute)
-                if (animate) fadeTextColor(b, to) else b.setTextColor(to)
+                val to = if (b.tag == selected) Color.WHITE else color(R.color.mute)
+                b.setTextColor(to)
+                b.setTypeface(font(R.font.montserrat_semibold), android.graphics.Typeface.BOLD.takeIf { b.tag == selected }?.style ?: android.graphics.Typeface.NORMAL)
             }
         }
         // Bounds of an option inside the segment (px)
@@ -507,7 +511,7 @@ class AppearanceActivity : AppCompatActivity() {
                 buzz(8)
                 selected = b.tag as String
                 onPick(selected)
-                paintLabels(true)
+                paintLabels(false)
                 SegmentStretch.animate(indicator, boundsOf(b), density, reduced)
             }
         }
