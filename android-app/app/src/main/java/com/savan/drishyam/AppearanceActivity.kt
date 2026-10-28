@@ -304,10 +304,20 @@ class AppearanceActivity : AppCompatActivity() {
             "Light" -> AppCompatDelegate.MODE_NIGHT_NO
             else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
+        // Resolve the effective target appearance independently of this Activity's
+        // current configuration. FOLLOW_SYSTEM may be different from the currently
+        // rendered theme, so use the system's night-mode setting for the reveal colour.
+        val systemDark = when (android.provider.Settings.Secure.getInt(
+            contentResolver, "ui_night_mode", -1
+        )) {
+            2 -> true
+            1 -> false
+            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
         val targetDark = when (name) {
             "Dark" -> true
             "Light" -> false
-            else -> (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            else -> systemDark
         }
         val currentDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
         val appearanceWillChange = currentDark != targetDark
