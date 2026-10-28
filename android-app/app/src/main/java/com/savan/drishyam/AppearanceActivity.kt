@@ -185,7 +185,7 @@ class AppearanceActivity : AppCompatActivity() {
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true)
-            setOnClickListener { PortalTransition.close(this@AppearanceActivity, this) }
+            setOnClickListener { view -> PortalTransition.close(this@AppearanceActivity, view) }
         }
         // Keep the header below the anchored back control with the agreed 16dp gap.
         page.addView(View(this), LinearLayout.LayoutParams(dp(48), dp(64)))
