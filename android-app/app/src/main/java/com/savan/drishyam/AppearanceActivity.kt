@@ -491,7 +491,7 @@ class AppearanceActivity : AppCompatActivity() {
             buttons.forEach { b ->
                 val to = if (b.tag == selected) Color.WHITE else color(R.color.mute)
                 b.setTextColor(to)
-                b.setTypeface(font(R.font.montserrat_semibold), android.graphics.Typeface.BOLD.takeIf { b.tag == selected }?.style ?: android.graphics.Typeface.NORMAL)
+                b.setTypeface(font(R.font.montserrat_semibold), if (b.tag == selected) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
             }
         }
         // Bounds of an option inside the segment (px)
