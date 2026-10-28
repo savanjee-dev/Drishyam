@@ -75,7 +75,7 @@ class UpdatesActivity : AppCompatActivity() {
             insetBottom = 0
             contentDescription = "Back"
             setPadding(0, 0, 0, 3.dp())
-            setOnClickListener { finish() }
+            setOnClickListener { PortalTransition.close(this@UpdatesActivity, this) }
         }
         root.addView(back, LinearLayout.LayoutParams(52.dp(), 52.dp()))
         root.addView(TextView(this).apply {
@@ -317,6 +317,7 @@ class UpdatesActivity : AppCompatActivity() {
             addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         setContentView(screen)
+        PortalTransition.enter(this)
         if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(scroll)
         if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
             val expressiveCards = listOf(statusCard, notesCard)
