@@ -1,6 +1,8 @@
 package com.savan.drishyam
 
 import android.app.Activity
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.content.Intent
 import android.os.Build
 import android.view.View
@@ -30,6 +32,7 @@ object PortalTransition {
         val y = touched?.second?.takeIf { it >= 0 } ?: (location[1] + source.height / 2)
         intent.putExtra(EXTRA_X, x)
         intent.putExtra(EXTRA_Y, y)
+        if (motionEnabled(activity)) activity.window.setWindowAnimations(0)
         activity.startActivity(intent)
     }
 
@@ -39,6 +42,9 @@ object PortalTransition {
             !activity.intent.hasExtra(EXTRA_Y)) return
 
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        activity.window.setWindowAnimations(0)
+        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        content.alpha = 0f
         content.post {
             if (activity.isFinishing || content.width <= 0 || content.height <= 0) return@post
             val rootLocation = IntArray(2)
@@ -48,6 +54,7 @@ object PortalTransition {
             val cy = (activity.intent.getIntExtra(EXTRA_Y, rootLocation[1] + content.height / 2) - rootLocation[1])
                 .coerceIn(0, content.height)
             val radius = maxRadius(content.width, content.height, cx, cy)
+            content.alpha = 1f
             runCatching {
                 ViewAnimationUtils.createCircularReveal(content, cx, cy, 0f, radius).apply {
                     duration = 420L
@@ -63,6 +70,8 @@ object PortalTransition {
             return
         }
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
+        activity.window.setWindowAnimations(0)
+        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (content == null || content.width <= 0 || content.height <= 0) {
             activity.finish()
             return
