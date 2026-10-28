@@ -467,7 +467,11 @@ class AppearanceActivity : AppCompatActivity() {
 
         val sw = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(withAlpha(Color.WHITE, 0.14f), if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f), withAlpha(color(R.color.accent), 0.92f))).apply {
+                intArrayOf(
+                    if (haptics) withAlpha(color(R.color.accent), 0.88f) else withAlpha(color(R.color.accent2), 0.28f),
+                    if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.30f),
+                    if (haptics) withAlpha(color(R.color.accent), 0.94f) else withAlpha(color(R.color.accent2), 0.32f)
+                )).apply {
                 cornerRadius = dpf(999)
                 setStroke(dp(1), withAlpha(Color.WHITE, 0.72f))
             }
@@ -542,7 +546,7 @@ class AppearanceActivity : AppCompatActivity() {
         }
         val indicator = View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(withAlpha(Color.WHITE, 0.16f), color(R.color.accent), withAlpha(color(R.color.accent), 0.92f))).apply {
+                intArrayOf(withAlpha(color(R.color.accent), 0.88f), color(R.color.accent), withAlpha(color(R.color.accent), 0.94f))).apply {
                 cornerRadius = dpf(999)
                 setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
             }
