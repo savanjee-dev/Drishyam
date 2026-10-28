@@ -31,20 +31,31 @@ fun Int.dp(): Int = (this * Resources.getSystem().displayMetrics.density).toInt(
 fun hapticsOn(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("haptics", true)
 
-/** Persisted glass level; supports the legacy low_fx preference for existing installs. */
+/** Master switch for decorative effects. Defaults on to preserve existing installs. */
+fun appEffectsEnabled(c: Context): Boolean =
+    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("app_effects_enabled", true)
+
+/** Persisted glass level; supports legacy low_fx installs. */
 fun glassLevel(c: Context): String {
     val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
     return p.getString("glass_level", null)?.lowercase()
         ?: if (p.getBoolean("low_fx", false)) "off" else "full"
 }
 
-/** Off disables live blur; Subtle and Full retain live glass at different strengths. */
-fun lowFx(c: Context): Boolean = glassLevel(c) == "off"
+/** Off disables live blur; master-off also temporarily disables decorative glass. */
+fun lowFx(c: Context): Boolean = !appEffectsEnabled(c) || glassLevel(c) == "off"
 
-/** Single motion gate shared by page and component transitions. */
+/** Visual effects are independently configurable but remain subordinate to the master switch. */
+fun visualEffectsEnabled(c: Context): Boolean =
+    appEffectsEnabled(c) && c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+        .getBoolean("visual_effects_enabled", true)
+
+/** One motion gate shared by page and component transitions, accepting both preference generations. */
 fun motionEnabled(c: Context): Boolean {
     val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
-    return !lowFx(c) && !p.getBoolean("motion_reduced", false) &&
+    val reduced = if (p.contains("motion")) p.getString("motion", "standard") == "reduced"
+        else p.getBoolean("motion_reduced", false)
+    return appEffectsEnabled(c) && !lowFx(c) && !reduced &&
         (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
 }
 
