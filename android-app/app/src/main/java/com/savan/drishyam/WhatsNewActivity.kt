@@ -54,7 +54,7 @@ class WhatsNewActivity : AppCompatActivity() {
             insetTop = 0
             insetBottom = 0
             contentDescription = "Back"
-            setOnClickListener { finish() }
+            setOnClickListener { PortalTransition.close(this@WhatsNewActivity, this) }
         }, LinearLayout.LayoutParams(52.dp(), 52.dp()))
         header.addView(TextView(this).apply {
             text = "Release notes"
@@ -105,6 +105,7 @@ class WhatsNewActivity : AppCompatActivity() {
             addView(page, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         setContentView(screen)
+        PortalTransition.enter(this)
         if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(page)
 
         // Render local data immediately, without waiting for GitHub.
