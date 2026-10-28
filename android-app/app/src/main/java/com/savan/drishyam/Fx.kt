@@ -67,6 +67,7 @@ fun View.pressFx() {
         if (!motionEnabled(v.context)) return@setOnTouchListener false
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                PortalTransition.recordTouch(v, e.rawX, e.rawY)
                 v.animate().cancel()
                 v.animate().scaleX(0.92f).scaleY(0.92f).alpha(0.84f).setDuration(105).setInterpolator(android.view.animation.DecelerateInterpolator()).start()
                 if (hapticsOn(v.context)) v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
