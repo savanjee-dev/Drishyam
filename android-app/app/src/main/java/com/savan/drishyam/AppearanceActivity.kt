@@ -35,7 +35,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
@@ -64,10 +63,7 @@ class AppearanceActivity : AppCompatActivity() {
     private var theme = "System"
     internal var glassLevel = "full"
     private var motion = "standard"
-    private var appEffectsEnabled = true
     private var visualEffectsEnabled = true
-    private var effectsDetails: LinearLayout? = null
-    private var effectsMasterSwitch: SwitchCompat? = null
 
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
@@ -90,7 +86,6 @@ class AppearanceActivity : AppCompatActivity() {
         haptics = prefs.getBoolean("haptics", true)
         glassLevel = prefs.getString("glass_level", null) ?: if (prefs.getBoolean("low_fx", false)) "off" else "full"
         motion = prefs.getString("motion", null) ?: if (prefs.getBoolean("motion_reduced", systemReduceMotion())) "reduced" else "standard"
-        appEffectsEnabled = prefs.getBoolean("app_effects_enabled", true)
         visualEffectsEnabled = prefs.getBoolean("visual_effects_enabled", true)
         lowFx = glassLevel == "off"
         reduced = motion == "reduced"
@@ -160,6 +155,7 @@ class AppearanceActivity : AppCompatActivity() {
         registerReflection(backButton, circular = true)
         val reflections = AppearanceReflectionOverlay(this, this)
         reflectionOverlay = reflections
+        reflections.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
         root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
         addLoop { reflectionOverlay?.setElapsed(it) }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
@@ -214,68 +210,20 @@ class AppearanceActivity : AppCompatActivity() {
         page.addView(themes, matchWrap(0))
         refreshThemeCards()
 
-        // ---- App-wide effects master and expandable category controls ----
-        page.addView(label("App-wide Effects"))
+        // ---- Independent effect controls ----
+        page.addView(label("Effects"))
         val effectsCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            setPadding(dp(16), dp(6), dp(16), dp(6))
             background = glassCard()
         }
-        val masterRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val masterCopy = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        masterCopy.addView(tv("App-wide Effects", 15f, R.color.fg, R.font.poppins_semibold))
-        masterCopy.addView(tv("Control decorative effects across Drishyam.", 12f, R.color.mute, R.font.poppins_regular, 2, 0))
-        masterRow.addView(masterCopy, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(10) })
-        val masterSwitch = SwitchCompat(this).apply {
-            isChecked = appEffectsEnabled
-            contentDescription = "Enable app-wide effects"
-        }
-        effectsMasterSwitch = masterSwitch
-        masterRow.addView(masterSwitch)
-        effectsCard.addView(masterRow)
-        val expandLabel = TextView(this).apply {
-            text = if (appEffectsEnabled) "Customise effects  ▴" else "Customise effects  ▾"
-            textSize = 12f
-            typeface = font(R.font.poppins_semibold)
-            setTextColor(color(R.color.accent))
-            setPadding(0, dp(14), 0, dp(4))
-            isClickable = true
-            isFocusable = true
-        }
-        effectsCard.addView(expandLabel)
-        val details = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = if (appEffectsEnabled) View.VISIBLE else View.GONE
-        }
-        effectsDetails = details
-        details.addView(glassItem())
-        details.addView(divider())
-        details.addView(motionItem())
-        details.addView(divider())
-        details.addView(visualEffectsItem())
-        effectsCard.addView(details)
+        effectsCard.addView(glassItem())
+        effectsCard.addView(divider())
+        effectsCard.addView(motionItem())
+        effectsCard.addView(divider())
+        effectsCard.addView(visualEffectsItem())
         page.addView(effectsCard, matchWrap(0))
-        expandLabel.setOnClickListener {
-            details.visibility = if (details.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-            expandLabel.text = if (details.visibility == View.VISIBLE) "Customise effects  ▴" else "Customise effects  ▾"
-        }
-        masterSwitch.setOnCheckedChangeListener { _, enabled ->
-            appEffectsEnabled = enabled
-            prefs.edit().putBoolean("app_effects_enabled", enabled).apply()
-            details.visibility = if (enabled) View.VISIBLE else View.GONE
-            expandLabel.text = if (enabled) "Customise effects  ▴" else "Customise effects  ▾"
-            lowFx = !enabled || glassLevel == "off"
-            reduced = !enabled || motion == "reduced"
-            reflectionOverlay?.visibility = if (enabled) View.VISIBLE else View.GONE
-            if (!enabled) {
-                reflectionOverlay?.alpha = 0f
-            } else {
-                reflectionOverlay?.alpha = 1f
-            }
-        }
+
         page.addView(label("Haptics"))
         val hapticsCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -492,7 +440,7 @@ class AppearanceActivity : AppCompatActivity() {
         item.addView(segment(listOf("Off" to "off", "Subtle" to "subtle", "Full" to "full"), glassLevel) { value ->
             glassLevel = value
             prefs.edit().putString("glass_level", value).putBoolean("low_fx", value == "off").apply()
-            lowFx = !appEffectsEnabled || value == "off"
+            lowFx = value == "off"
             applyGlassLevel()
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         return item
@@ -509,16 +457,62 @@ class AppearanceActivity : AppCompatActivity() {
         copy.addView(tv("Visual Effects", 14f, R.color.fg, R.font.poppins_semibold))
         copy.addView(tv("Ambient gradients, glow and decorative atmosphere.", 12f, R.color.mute, R.font.poppins_regular, 2, 0))
         item.addView(copy, LinearLayout.LayoutParams(0, -2, 1f).apply { rightMargin = dp(12) })
-        val sw = SwitchCompat(this).apply {
-            isChecked = visualEffectsEnabled
-            contentDescription = "Enable visual effects"
-            setOnCheckedChangeListener { _, enabled ->
-                visualEffectsEnabled = enabled
-                prefs.edit().putBoolean("visual_effects_enabled", enabled).apply()
-            }
-        }
-        item.addView(sw)
+        item.addView(effectToggle(visualEffectsEnabled) { enabled ->
+            visualEffectsEnabled = enabled
+            prefs.edit().putBoolean("visual_effects_enabled", enabled).apply()
+            ambientGlows.forEach { it.visibility = if (enabled) View.VISIBLE else View.GONE }
+            ambientStarfield?.visibility = if (enabled) View.VISIBLE else View.GONE
+            reflectionOverlay?.visibility = if (enabled) View.VISIBLE else View.GONE
+            if (!enabled) reflectionOverlay?.alpha = 0f else reflectionOverlay?.alpha = 1f
+        }, LinearLayout.LayoutParams(dp(52), dp(30)))
         return item
+    }
+
+    // ---------- Haptics: Test button and shared toggle ----------
+    // Shared custom ON/OFF control used by Visual Effects and Haptics.
+    private fun effectToggle(initial: Boolean, onChanged: (Boolean) -> Unit): FrameLayout {
+        var checked = initial
+        val track = FrameLayout(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(
+                    if (checked) withAlpha(color(R.color.accent), 0.88f) else withAlpha(color(R.color.accent2), 0.28f),
+                    if (checked) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.30f),
+                    if (checked) withAlpha(color(R.color.accent), 0.94f) else withAlpha(color(R.color.accent2), 0.32f)
+                )).apply {
+                cornerRadius = dpf(999)
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.72f))
+            }
+            isClickable = true
+            isFocusable = true
+            clipChildren = true
+            clipToPadding = true
+            contentDescription = if (checked) "On" else "Off"
+        }
+        val thumb = View(this).apply {
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.WHITE) }
+            elevation = dpf(2)
+            translationX = if (checked) dpf(22) else 0f
+        }
+        track.addView(thumb, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply {
+            leftMargin = dp(3)
+        })
+        registerReflection(track)
+        track.setOnClickListener {
+            checked = !checked
+            track.contentDescription = if (checked) "On" else "Off"
+            fadeFill(track.background as GradientDrawable,
+                if (checked) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f))
+            ObjectAnimator.ofFloat(thumb, View.TRANSLATION_X, if (checked) dpf(22) else 0f).apply {
+                duration = if (reduced) 0L else 350L
+                interpolator = SPRING
+                start()
+            }
+            track.animate().cancel()
+            track.alpha = if (checked && !reduced) 0.96f else 1f
+            if (checked && !reduced) track.animate().alpha(1f).setDuration(220L).setInterpolator(EASE_OUT).start()
+            onChanged(checked)
+        }
+        return track
     }
 
     // ---------- Haptics: Test button, switch with halo ----------
@@ -561,53 +555,10 @@ class AppearanceActivity : AppCompatActivity() {
         }
         item.addView(test, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(10) })
 
-        val sw = FrameLayout(this).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(
-                    if (haptics) withAlpha(color(R.color.accent), 0.88f) else withAlpha(color(R.color.accent2), 0.28f),
-                    if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.30f),
-                    if (haptics) withAlpha(color(R.color.accent), 0.94f) else withAlpha(color(R.color.accent2), 0.32f)
-                )).apply {
-                cornerRadius = dpf(999)
-                setStroke(dp(1), withAlpha(Color.WHITE, 0.72f))
-            }
-            isClickable = true
-            isFocusable = true
-            // Keep switch feedback contained by its rounded track; no child may spill
-            // outside the track and reveal a rectangular clipping edge.
-            clipChildren = true
-            clipToPadding = true
-        }
-        val thumb = View(this).apply {
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.WHITE) }
-            elevation = dpf(2)
-            translationX = if (haptics) dpf(22) else 0f
-        }
-        sw.addView(thumb, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
-        registerReflection(sw)
-        sw.layoutParams = LinearLayout.LayoutParams(dp(52), dp(30))
-        sw.setOnClickListener {
-            haptics = !haptics
-            prefs.edit().putBoolean("haptics", haptics).apply()
-            fadeFill(sw.background as GradientDrawable, if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f))
-            ObjectAnimator.ofFloat(thumb, View.TRANSLATION_X, if (haptics) dpf(22) else 0f).apply {
-                duration = if (reduced) 0L else 350L
-                interpolator = SPRING
-                start()
-            }
-            if (haptics) {
-                // Keep the activation feedback inside the rounded track. The thumb and
-                // track already animate; an expanding child halo was clipped by ancestors
-                // and could appear as a pale square around the whole control.
-                sw.animate().cancel()
-                sw.alpha = 0.96f
-                if (!reduced) {
-                    sw.animate().alpha(1f).setDuration(220L).setInterpolator(EASE_OUT).start()
-                } else {
-                    sw.alpha = 1f
-                }
-                vibrate(10)
-            }
+        val sw = effectToggle(haptics) { enabled ->
+            haptics = enabled
+            prefs.edit().putBoolean("haptics", enabled).apply()
+            if (enabled) vibrate(10)
         }
         item.addView(sw, LinearLayout.LayoutParams(dp(52), dp(30)))
         return item
@@ -620,7 +571,7 @@ class AppearanceActivity : AppCompatActivity() {
         item.addView(segment(listOf("Standard" to "standard", "Reduced" to "reduced"), motion) { value ->
             motion = value
             prefs.edit().putString("motion", value).putBoolean("motion_reduced", value == "reduced").apply()
-            reduced = !appEffectsEnabled || value == "reduced"
+            reduced = value == "reduced"
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         return item
     }
@@ -930,6 +881,7 @@ class AppearanceActivity : AppCompatActivity() {
                 tag = g.alpha
             }
             ambientGlows.add(v)
+            v.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
                 if ((g.gravity and Gravity.END) == Gravity.END) rightMargin = dp(g.end) else leftMargin = dp(g.start)
