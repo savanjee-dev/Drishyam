@@ -80,8 +80,8 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
-        // Isolate every decorative background layer so the shader warps pixels behind
-        // the foreground ScrollView only; cards, text and controls stay sharp.
+        // Keep ambient/background rendering on its original independent layer.
+        // Stretch is applied only to the rendered foreground page surface (content).
         val backgroundSurface = FrameLayout(this).apply {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
@@ -91,9 +91,8 @@ class SettingsHubActivity : AppCompatActivity() {
             backgroundSurface.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
         }
         root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
-        val edgeStretch = EdgeStretchLayer(this, backgroundSurface)
-        root.addView(edgeStretch, FrameLayout.LayoutParams(-1, -1))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        val edgeStretch = EdgeStretchLayer(this, content, scroll)
         // Keep the original fixed feather overlays above the scrolling content.
         // They remain independent of the background warp so the stretch cannot hide them.
         root.addView(View(this).apply {
@@ -564,7 +563,8 @@ class SettingsHubActivity : AppCompatActivity() {
         edgeLayer: EdgeStretchLayer,
         enabled: Boolean
     ) {
-        // Use our restrained background deformation instead of Android's default edge effect.
+        // The stretch is a visual deformation of the foreground page surface only.
+        // Ambient background layers continue rendering independently and are never warped.
         scroll.overScrollMode = View.OVER_SCROLL_NEVER
         if (!enabled) return
 
@@ -572,23 +572,15 @@ class SettingsHubActivity : AppCompatActivity() {
         var activeEdge = 0 // 1 = top, 2 = bottom
         var pull = 0f
         var releaseAnimator: ValueAnimator? = null
-        val maxPull = { (scroll.height * 0.14f).coerceAtLeast(dpf(36f)) }
+        val maxPull = { (scroll.height * 0.30f).coerceAtLeast(dpf(48f)) }
 
         fun renderStretch() {
             edgeLayer.setStretch(activeEdge, pull)
-            // Make the gesture perceptible while keeping the foreground nearly undistorted.
-            val displacement = (pull * 0.16f).coerceAtMost(dpf(14f))
-            content.translationY = when (activeEdge) {
-                1 -> displacement
-                2 -> -displacement
-                else -> 0f
-            }
         }
 
         fun releaseStretch() {
             if (pull <= 0f) {
                 activeEdge = 0
-                content.translationY = 0f
                 edgeLayer.setStretch(0, 0f)
                 return
             }
@@ -596,25 +588,18 @@ class SettingsHubActivity : AppCompatActivity() {
             val startEdge = activeEdge
             releaseAnimator?.cancel()
             releaseAnimator = ValueAnimator.ofFloat(startPull, 0f).apply {
-                duration = 420L
+                duration = 460L
                 interpolator = PathInterpolator(0.22f, 1f, 0.36f, 1f)
                 addUpdateListener { animator ->
                     pull = animator.animatedValue as Float
                     activeEdge = if (pull > 0.5f) startEdge else 0
                     edgeLayer.setStretch(startEdge, pull)
-                    val displacement = (pull * 0.16f).coerceAtMost(dpf(14f))
-                    content.translationY = when (startEdge) {
-                        1 -> displacement
-                        2 -> -displacement
-                        else -> 0f
-                    }
                 }
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: android.animation.Animator) {
                         if (releaseAnimator === this@apply) {
                             pull = 0f
                             activeEdge = 0
-                            content.translationY = 0f
                             edgeLayer.setStretch(0, 0f)
                         }
                     }
@@ -641,21 +626,22 @@ class SettingsHubActivity : AppCompatActivity() {
                         atTop && deltaY > 0f -> {
                             if (activeEdge != 1) pull = 0f
                             activeEdge = 1
-                            pull = (pull + deltaY * 0.48f).coerceAtMost(maxPull())
+                            // Direct finger tracking with resistance, including slow drags.
+                            pull = (pull + deltaY * 0.78f).coerceAtMost(maxPull())
                             renderStretch()
                         }
                         atBottom && deltaY < 0f -> {
                             if (activeEdge != 2) pull = 0f
                             activeEdge = 2
-                            pull = (pull - deltaY * 0.48f).coerceAtMost(maxPull())
+                            pull = (pull - deltaY * 0.78f).coerceAtMost(maxPull())
                             renderStretch()
                         }
                         activeEdge == 1 && deltaY < 0f -> {
-                            pull = (pull + deltaY * 0.48f).coerceAtLeast(0f)
+                            pull = (pull + deltaY * 0.78f).coerceAtLeast(0f)
                             renderStretch()
                         }
                         activeEdge == 2 && deltaY > 0f -> {
-                            pull = (pull - deltaY * 0.48f).coerceAtLeast(0f)
+                            pull = (pull - deltaY * 0.78f).coerceAtLeast(0f)
                             renderStretch()
                         }
                     }
@@ -666,46 +652,37 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    /** GPU pixel-space background warp, isolated from crisp foreground controls. */
-    private inner class EdgeStretchLayer(context: Context, private val backgroundSurface: View) : View(context) {
+    /**
+     * Deforms the rendered foreground page surface, including cards, text, icons and controls.
+     * The ambient background is deliberately not an input to this effect.
+     */
+    private inner class EdgeStretchLayer(
+        context: Context,
+        private val pageSurface: View,
+        private val scrollViewport: ScrollView
+    ) : View(context) {
         private val runtimeShader: android.graphics.RuntimeShader? =
             if (Build.VERSION.SDK_INT >= 33) runCatching {
                 android.graphics.RuntimeShader("""
                     uniform shader content;
                     uniform float pull;
                     uniform float edge;
-                    uniform float height;
-                    uniform float ripplePhase;
+                    uniform float contentHeight;
+                    uniform float viewportHeight;
                     half4 main(float2 p) {
-                        float h = max(height, 1.0);
+                        float h = max(contentHeight, 1.0);
+                        float viewport = max(viewportHeight, 1.0);
                         float fromEdge = edge < 1.5 ? p.y : h - p.y;
-                        // Broad liquid deformation with a gradual falloff beyond halfway.
-                        float reach = max(1.0, min(pull * 5.8, h * 0.78));
+                        float reach = max(1.0, min(pull * 6.0, viewport * 0.82));
                         float influence = 1.0 - smoothstep(0.0, reach, max(0.0, fromEdge));
-                        // A restrained travelling ripple rides on the main warp; it fades with the pull.
-                        float wave = sin((fromEdge / max(reach, 1.0)) * 8.0 - ripplePhase) *
-                                     pull * 0.10 * influence;
-                        float displacement = pull * 2.5 * influence * influence + wave;
-                        float sourceY = edge < 1.5 ? p.y + displacement : p.y - displacement;
+                        // A strong spatial warp makes the whole rendered page surface visibly stretch.
+                        float displacement = pull * 1.65 * influence * influence;
+                        float sourceY = edge < 1.5 ? p.y - displacement : p.y + displacement;
                         sourceY = clamp(sourceY, 0.0, h - 1.0);
                         return content.eval(float2(p.x, sourceY));
                     }
                 """.trimIndent())
             }.getOrNull() else null
-        private val stretchPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
-        }
-        private val stretchPath = Path()
-        private val highlightPath = Path()
-        private val surfaceColor = color(R.color.bg)
-        private val edgeTint = color(R.color.accent)
-        var edge: Int = 0
-            private set
-        var amount: Float = 0f
-            private set
-        private var ripplePhase = 0f
 
         init {
             isClickable = false
@@ -714,76 +691,27 @@ class SettingsHubActivity : AppCompatActivity() {
         }
 
         fun setStretch(edge: Int, amount: Float) {
-            this.edge = edge
-            this.amount = amount.coerceAtLeast(0f)
+            val pull = amount.coerceAtLeast(0f)
             if (Build.VERSION.SDK_INT >= 33 && runtimeShader != null) {
-                if (edge == 0 || this.amount <= 0.5f) {
-                    backgroundSurface.setRenderEffect(null)
+                if (edge == 0 || pull <= 0.5f) {
+                    pageSurface.setRenderEffect(null)
                 } else {
-                    runtimeShader.setFloatUniform("pull", this.amount)
+                    runtimeShader.setFloatUniform("pull", pull)
                     runtimeShader.setFloatUniform("edge", edge.toFloat())
-                    runtimeShader.setFloatUniform("height", backgroundSurface.height.toFloat().coerceAtLeast(1f))
-                    ripplePhase = (this.amount * 0.055f) % (Math.PI.toFloat() * 2f)
-                    runtimeShader.setFloatUniform("ripplePhase", ripplePhase)
-                    backgroundSurface.setRenderEffect(RenderEffect.createRuntimeShaderEffect(runtimeShader, "content"))
+                    runtimeShader.setFloatUniform("contentHeight", pageSurface.height.toFloat().coerceAtLeast(1f))
+                    runtimeShader.setFloatUniform("viewportHeight", scrollViewport.height.toFloat().coerceAtLeast(1f))
+                    pageSurface.setRenderEffect(RenderEffect.createRuntimeShaderEffect(runtimeShader, "content"))
+                }
+            } else {
+                // Older Android versions use a surface-wide scale around the active edge.
+                if (edge == 0 || pull <= 0.5f) {
+                    pageSurface.scaleY = 1f
+                    pageSurface.pivotY = 0f
+                } else {
+                    pageSurface.pivotY = if (edge == 1) 0f else pageSurface.height.toFloat()
+                    pageSurface.scaleY = 1f + (pull / scrollViewport.height.coerceAtLeast(1)) * 0.72f
                 }
             }
-            invalidate()
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-            // API 33+ performs actual pixel displacement in the background shader.
-            // Retain the previous restrained edge surface as a compatible fallback.
-            if (Build.VERSION.SDK_INT >= 33 && runtimeShader != null) return
-            if (edge == 0 || amount <= 0.5f || width == 0 || height == 0) return
-            // The edge follows the finger farther than before; deformation is local to the edge.
-            val depth = amount.coerceAtMost(height * 0.20f)
-            val widthF = width.toFloat()
-            val heightF = height.toFloat()
-            stretchPath.reset()
-            highlightPath.reset()
-            if (edge == 1) {
-                stretchPath.moveTo(0f, 0f)
-                stretchPath.lineTo(widthF, 0f)
-                stretchPath.quadTo(widthF * 0.5f, depth * 1.65f, 0f, 0f)
-                stretchPath.close()
-                highlightPath.moveTo(0f, 1f)
-                highlightPath.quadTo(widthF * 0.5f, depth * 1.65f, widthF, 1f)
-                stretchPaint.shader = LinearGradient(
-                    0f, 0f, 0f, depth,
-                    intArrayOf(withAlpha(surfaceColor, 0.98f), withAlpha(surfaceColor, 0.80f), withAlpha(surfaceColor, 0.18f), Color.TRANSPARENT),
-                    floatArrayOf(0f, 0.38f, 0.76f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-            } else {
-                stretchPath.moveTo(0f, heightF)
-                stretchPath.lineTo(widthF, heightF)
-                stretchPath.quadTo(widthF * 0.5f, heightF - depth * 1.65f, 0f, heightF)
-                stretchPath.close()
-                highlightPath.moveTo(0f, heightF - 1f)
-                highlightPath.quadTo(widthF * 0.5f, heightF - depth * 1.65f, widthF, heightF - 1f)
-                stretchPaint.shader = LinearGradient(
-                    0f, heightF, 0f, heightF - depth,
-                    intArrayOf(withAlpha(surfaceColor, 0.98f), withAlpha(surfaceColor, 0.80f), withAlpha(surfaceColor, 0.18f), Color.TRANSPARENT),
-                    floatArrayOf(0f, 0.38f, 0.76f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-            }
-            canvas.drawPath(stretchPath, stretchPaint)
-            stretchPaint.shader = null
-
-            // A soft, warm curved rim makes the physical pull legible against the page surface.
-            highlightPaint.shader = LinearGradient(
-                0f, if (edge == 1) 0f else heightF,
-                0f, if (edge == 1) depth * 1.65f else heightF - depth * 1.65f,
-                intArrayOf(withAlpha(edgeTint, 0.48f), withAlpha(edgeTint, 0.22f), Color.TRANSPARENT),
-                floatArrayOf(0f, 0.55f, 1f),
-                Shader.TileMode.CLAMP
-            )
-            highlightPaint.strokeWidth = dpf(2.2f)
-            canvas.drawPath(highlightPath, highlightPaint)
-            highlightPaint.shader = null
         }
     }
 
