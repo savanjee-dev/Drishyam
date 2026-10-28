@@ -115,19 +115,19 @@ class AppearanceActivity : AppCompatActivity() {
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
+                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
         }
         root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
         // Keep the top fade above scrolling content so it remains visible while scrolling.
         // The floating back control is inserted above this fade below.
-        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
+        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(76), Gravity.TOP))
         root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
-                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
-        }, FrameLayout.LayoutParams(-1, dp(132), Gravity.BOTTOM))
+                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
+        }, FrameLayout.LayoutParams(-1, dp(88), Gravity.BOTTOM))
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
