@@ -153,7 +153,7 @@ class AppearanceActivity : AppCompatActivity() {
         val reflections = AppearanceReflectionOverlay(this, this)
         reflectionOverlay = reflections
         root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
-        addLoop { reflectionOverlay?.invalidate() }
+        addLoop { reflectionOverlay?.setElapsed(it) }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
             backButton.alpha = 1f - progress
@@ -845,7 +845,6 @@ class AppearanceActivity : AppCompatActivity() {
             if (!loopRunning) return
             val t = SystemClock.uptimeMillis() - loopStart
             for (l in loops) l(t)
-            reflectionOverlay?.setElapsed(t)
             Choreographer.getInstance().postFrameCallback(this)
         }
     }
