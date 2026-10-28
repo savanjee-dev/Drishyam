@@ -55,7 +55,7 @@ class UpdatesActivity : AppCompatActivity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surface)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         val scroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = false
@@ -310,7 +310,12 @@ class UpdatesActivity : AppCompatActivity() {
             bottomMargin = 12.dp()
         })
 
-        setContentView(scroll)
+        val screen = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(surface)
+            addView(UniversalBackgroundView(this), android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
+        }
+        setContentView(screen)
         if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(scroll)
         if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
             val expressiveCards = listOf(statusCard, notesCard)
