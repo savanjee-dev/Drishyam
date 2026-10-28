@@ -453,11 +453,12 @@ class AppearanceActivity : AppCompatActivity() {
             setTextColor(color(R.color.fg))
             setPadding(dp(14), dp(8), dp(14), dp(8))
             minWidth = dp(64)
-            background = glassPill()
+            background = if (Color.luminance(color(R.color.bg)) > 0.5f) elevatedGlassPill() else glassPill()
             if (Color.luminance(color(R.color.bg)) > 0.5f) {
-                // Make the Light Mode pill visibly lift from the cream surface.
-                elevation = dpf(7)
-                translationZ = dpf(2)
+                // Use a real, visible lower rim as well as elevation; elevation alone
+                // was too subtle against the cream page background.
+                elevation = dpf(5)
+                translationZ = dpf(1)
                 outlineProvider = ViewOutlineProvider.BACKGROUND
                 clipToOutline = false
             }
@@ -544,14 +545,14 @@ class AppearanceActivity : AppCompatActivity() {
     private fun segment(options: List<Pair<String, String>>, current: String, onPick: (String) -> Unit): FrameLayout {
         var selected = current
         val seg = FrameLayout(this).apply {
-            background = glassPill()
+            val lightMode = Color.luminance(color(R.color.bg)) > 0.5f
+            background = if (lightMode) elevatedGlassPill() else glassPill()
             clipChildren = false
-            // In Light Mode, a small warm elevation separates the cream glass
-            // surface from the page without changing the existing control design.
-            if (Color.luminance(color(R.color.bg)) > 0.5f) {
-                // The selector's rounded background supplies the shadow outline.
-                elevation = dpf(7)
-                translationZ = dpf(2)
+            // Pair restrained elevation with a visible warm lower rim for
+            // intentional depth on Light Mode's low-contrast cream surface.
+            if (lightMode) {
+                elevation = dpf(5)
+                translationZ = dpf(1)
                 outlineProvider = ViewOutlineProvider.BACKGROUND
                 clipToOutline = false
             }
@@ -691,6 +692,24 @@ class AppearanceActivity : AppCompatActivity() {
         intArrayOf(withAlpha(Color.WHITE, 0.10f), color(R.color.glassFill), withAlpha(color(R.color.accent2), 0.10f))).apply {
         cornerRadius = dpf(999)
         setStroke(dp(1), withAlpha(Color.WHITE, 0.52f))
+    }
+
+    /**
+     * Light Mode only: a restrained warm-olive rim sits just below the glass
+     * surface, creating visible physical separation without a fixed white stripe.
+     * The moving reflection overlay remains responsible for the animated shine.
+     */
+    private fun elevatedGlassPill(): Drawable {
+        val light = GradientDrawable().apply {
+            cornerRadius = dpf(999)
+            setColor(withAlpha(color(R.color.accent), 0.16f))
+            setStroke(dp(1), withAlpha(color(R.color.accent2), 0.26f))
+        }
+        val surface = glassPill()
+        return LayerDrawable(arrayOf(light, surface)).apply {
+            setLayerInset(0, 0, 0, 0, 0)
+            setLayerInset(1, 0, 0, 0, dp(3))
+        }
     }
 
     private fun glassCircle(withBorder: Boolean): Drawable = GradientDrawable().apply {
