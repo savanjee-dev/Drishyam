@@ -8,20 +8,31 @@ import android.view.ViewAnimationUtils
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import kotlin.math.hypot
+import java.util.WeakHashMap
 
 /**
  * Circular Portal page transitions. The launch origin is recorded in screen coordinates
  * and converted into the destination content's coordinate space after layout.
  */
 object PortalTransition {
+    private val touchOrigins = WeakHashMap<View, Pair<Int, Int>>()
+
+    fun recordTouch(view: View, rawX: Float, rawY: Float) {
+        touchOrigins[view] = rawX.toInt() to rawY.toInt()
+    }
     private const val EXTRA_X = "drishyam.portal.origin_x"
     private const val EXTRA_Y = "drishyam.portal.origin_y"
 
     fun launch(activity: Activity, source: View, intent: Intent) {
         val location = IntArray(2)
         source.getLocationOnScreen(location)
-        intent.putExtra(EXTRA_X, location[0] + source.width / 2)
-        intent.putExtra(EXTRA_Y, location[1] + source.height / 2)
+        val touched = touchOrigins.remove(source)
+        val x = touched?.first?.takeIf { it in location[0]..(location[0] + source.width) }
+            ?: (location[0] + source.width / 2)
+        val y = touched?.second?.takeIf { it in location[1]..(location[1] + source.height) }
+            ?: (location[1] + source.height / 2)
+        intent.putExtra(EXTRA_X, x)
+        intent.putExtra(EXTRA_Y, y)
         activity.startActivity(intent)
     }
 
