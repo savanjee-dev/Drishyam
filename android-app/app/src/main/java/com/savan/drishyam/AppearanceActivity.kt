@@ -781,11 +781,13 @@ class AppearanceActivity : AppCompatActivity() {
             }
             root.addView(v, 0, lp)
             addLoop { t ->
-                val p = pingPong(t, g.dur)
-                v.translationX = dpf(40) * p
-                v.translationY = dpf(30) * p
-                v.scaleX = 1f + 0.15f * p
-                v.scaleY = 1f + 0.15f * p
+                // Independent, offset axes create slow organic drift rather than a diagonal loop.
+                val px = pingPong(t, g.dur)
+                val py = pingPong(t, (g.dur * 1.37f).toLong(), g.dur / 4)
+                v.translationX = dpf(44) * (px - 0.5f)
+                v.translationY = dpf(34) * (py - 0.5f)
+                v.scaleX = 1f + 0.10f * px
+                v.scaleY = 1f + 0.13f * py
             }
         }
         applyGlassLevel()
