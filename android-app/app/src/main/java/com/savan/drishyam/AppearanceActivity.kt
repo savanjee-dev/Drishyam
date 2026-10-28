@@ -454,8 +454,11 @@ class AppearanceActivity : AppCompatActivity() {
             minWidth = dp(64)
             background = glassPill()
             if (Color.luminance(color(R.color.bg)) > 0.5f) {
-                elevation = dpf(3)
-                translationZ = dpf(1)
+                // Make the Light Mode pill visibly lift from the cream surface.
+                elevation = dpf(7)
+                translationZ = dpf(2)
+                outlineProvider = ViewOutlineProvider.BACKGROUND
+                clipToOutline = false
             }
             isClickable = true
             isFocusable = true
@@ -545,8 +548,11 @@ class AppearanceActivity : AppCompatActivity() {
             // In Light Mode, a small warm elevation separates the cream glass
             // surface from the page without changing the existing control design.
             if (Color.luminance(color(R.color.bg)) > 0.5f) {
-                elevation = dpf(3)
-                translationZ = dpf(1)
+                // The selector's rounded background supplies the shadow outline.
+                elevation = dpf(7)
+                translationZ = dpf(2)
+                outlineProvider = ViewOutlineProvider.BACKGROUND
+                clipToOutline = false
             }
         }
         registerReflection(seg)
