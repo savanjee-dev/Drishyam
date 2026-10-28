@@ -124,6 +124,7 @@ class MainActivity : AppCompatActivity() {
         applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
+        PortalTransition.enter(this)
         // Draw the app background beneath the status bar; keep system icons theme-aware.
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
@@ -243,7 +244,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
         findViewById<View>(R.id.navItem3).apply {
             pressFx()
-            setOnClickListener { startActivity(Intent(this@MainActivity, SettingsHubActivity::class.java)) }
+            setOnClickListener { PortalTransition.launch(this@MainActivity, this, Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
         segBook.apply { pressFx(); setOnClickListener { setSaved(1) } }
