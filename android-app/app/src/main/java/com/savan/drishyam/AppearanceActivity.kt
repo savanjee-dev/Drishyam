@@ -106,7 +106,7 @@ class AppearanceActivity : AppCompatActivity() {
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-            page.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
+            page.setPadding(dp(20), topInset + dp(8), dp(20), dp(150))
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
@@ -120,12 +120,10 @@ class AppearanceActivity : AppCompatActivity() {
 
     private fun buildPage() {
         // Back button (48 circle, glass, no border)
-        val back = TextView(this).apply {
-            text = "‹"
-            textSize = 30f
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dp(4))
-            setTextColor(color(R.color.fg))
+        val back = ImageView(this).apply {
+            setImageResource(R.drawable.ic_back)
+            imageTintList = android.content.res.ColorStateList.valueOf(color(R.color.fg))
+            scaleType = ImageView.ScaleType.CENTER
             background = glassCircle(withBorder = false)
             layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
             isClickable = true
@@ -137,8 +135,8 @@ class AppearanceActivity : AppCompatActivity() {
         page.addView(back)
 
         // Eyebrow, title, lead
-        page.addView(tv("Settings", 11f, R.color.accent, R.font.poppins_semibold, 22, 0).apply { letterSpacing = 0.16f; text = "SETTINGS" })
-        page.addView(tv("Appearance", 38f, R.color.fg, R.font.poppins_extrabold, 6, 4).apply { letterSpacing = -0.02f })
+        page.addView(tv("Settings", 11f, R.color.accent, R.font.poppins_semibold, 16, 0).apply { letterSpacing = 0.16f; text = "SETTINGS" })
+        page.addView(tv("Appearance", 38f, R.color.fg, R.font.poppins_extrabold, 4, 2).apply { letterSpacing = -0.02f })
         page.addView(tv("Theme, haptics and visual effects.", 14f, R.color.mute, R.font.poppins_regular, 0, 6))
 
         // ---- Theme ----
@@ -148,7 +146,11 @@ class AppearanceActivity : AppCompatActivity() {
             val card = themeCard(name)
             themeCards.add(card)
             themes.addView(card, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                if (name != "System") leftMargin = dp(10)
+                when (name) {
+                    "System" -> rightMargin = dp(5)
+                    "Dark" -> { leftMargin = dp(5); rightMargin = dp(5) }
+                    else -> leftMargin = dp(5)
+                }
             })
         }
         page.addView(themes, matchWrap(0))
@@ -461,7 +463,7 @@ class AppearanceActivity : AppCompatActivity() {
             setPadding(dp(4), dp(4), dp(4), dp(4))
         }
         val indicator = View(this).apply {
-            background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(color(R.color.accent)) }
+            background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(0xFF414D2D.toInt()) }
             elevation = dpf(4)
         }
         val buttons = mutableListOf<TextView>()
@@ -471,7 +473,7 @@ class AppearanceActivity : AppCompatActivity() {
                 textSize = 13f
                 gravity = Gravity.CENTER
                 typeface = font(R.font.montserrat_semibold)
-                setPadding(dp(8), dp(11), dp(8), dp(11))
+                setPadding(dp(6), dp(10), dp(6), dp(10))
                 tag = value
                 isClickable = true
                 isFocusable = true
@@ -484,7 +486,7 @@ class AppearanceActivity : AppCompatActivity() {
 
         fun paintLabels(animate: Boolean) {
             buttons.forEach { b ->
-                val to = if (b.tag == selected) color(R.color.bg) else color(R.color.mute)
+                val to = if (b.tag == selected) 0xFFFFFCF4.toInt() else color(R.color.mute)
                 if (animate) fadeTextColor(b, to) else b.setTextColor(to)
             }
         }
