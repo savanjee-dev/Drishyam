@@ -313,7 +313,7 @@ class UpdatesActivity : AppCompatActivity() {
 
         val screen = android.widget.FrameLayout(this).apply {
             setBackgroundColor(surface)
-            addView(UniversalBackgroundView(this), android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(UniversalBackgroundView(this@UpdatesActivity), android.widget.FrameLayout.LayoutParams(-1, -1))
             addView(scroll, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         setContentView(screen)
