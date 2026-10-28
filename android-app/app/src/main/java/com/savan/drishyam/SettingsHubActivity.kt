@@ -84,10 +84,8 @@ class SettingsHubActivity : AppCompatActivity() {
             addGlows(root, animate)
             root.addView(SettingsAmbientLayer(this, animate), FrameLayout.LayoutParams(-1, -1))
         }
-        // Edge-focused stretch layer sits behind scrolling content and above ambient background.
-        val edgeStretch = EdgeStretchLayer(this)
-        root.addView(edgeStretch, FrameLayout.LayoutParams(-1, -1))
-        root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        // Keep the edge deformation above the fixed feather overlays so the pull remains visible.
+        // It stays behind the scroll content, so cards and controls are never painted over.
         // Fixed feathered edges fade scrolling content into the page surface, without a solid bar.
         root.addView(View(this).apply {
             isClickable = false
@@ -103,6 +101,9 @@ class SettingsHubActivity : AppCompatActivity() {
             background = GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(132), Gravity.BOTTOM))
+        val edgeStretch = EdgeStretchLayer(this)
+        root.addView(edgeStretch, FrameLayout.LayoutParams(-1, -1))
+        root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
@@ -569,7 +570,8 @@ class SettingsHubActivity : AppCompatActivity() {
 
         fun renderStretch() {
             edgeLayer.setStretch(activeEdge, pull)
-            val displacement = (pull * 0.10f).coerceAtMost(dpf(7f))
+            // Make the gesture perceptible while keeping the foreground nearly undistorted.
+            val displacement = (pull * 0.16f).coerceAtMost(dpf(14f))
             content.translationY = when (activeEdge) {
                 1 -> displacement
                 2 -> -displacement
@@ -594,7 +596,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     pull = animator.animatedValue as Float
                     activeEdge = if (pull > 0.5f) startEdge else 0
                     edgeLayer.setStretch(startEdge, pull)
-                    val displacement = (pull * 0.10f).coerceAtMost(dpf(7f))
+                    val displacement = (pull * 0.16f).coerceAtMost(dpf(14f))
                     content.translationY = when (startEdge) {
                         1 -> displacement
                         2 -> -displacement
@@ -658,15 +660,27 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    /** Draws a restrained, edge-focused surface bulge without scaling or distorting cards. */
+    /** Visible edge-focused elastic surface deformation; foreground controls remain undistorted. */
     private inner class EdgeStretchLayer(context: Context) : View(context) {
         private val stretchPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        private val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
         private val stretchPath = Path()
+        private val highlightPath = Path()
         private val surfaceColor = color(R.color.bg)
+        private val edgeTint = color(R.color.accent)
         var edge: Int = 0
             private set
         var amount: Float = 0f
             private set
+
+        init {
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
 
         fun setStretch(edge: Int, amount: Float) {
             this.edge = edge
@@ -677,33 +691,53 @@ class SettingsHubActivity : AppCompatActivity() {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             if (edge == 0 || amount <= 0.5f || width == 0 || height == 0) return
-            val depth = amount.coerceAtMost(height * 0.14f)
+            // The edge follows the finger farther than before; deformation is local to the edge.
+            val depth = amount.coerceAtMost(height * 0.20f)
+            val widthF = width.toFloat()
+            val heightF = height.toFloat()
             stretchPath.reset()
+            highlightPath.reset()
             if (edge == 1) {
                 stretchPath.moveTo(0f, 0f)
-                stretchPath.lineTo(width.toFloat(), 0f)
-                stretchPath.quadTo(width * 0.5f, depth * 1.42f, 0f, 0f)
+                stretchPath.lineTo(widthF, 0f)
+                stretchPath.quadTo(widthF * 0.5f, depth * 1.65f, 0f, 0f)
                 stretchPath.close()
+                highlightPath.moveTo(0f, 1f)
+                highlightPath.quadTo(widthF * 0.5f, depth * 1.65f, widthF, 1f)
                 stretchPaint.shader = LinearGradient(
                     0f, 0f, 0f, depth,
-                    intArrayOf(withAlpha(surfaceColor, 0.96f), withAlpha(surfaceColor, 0.72f), Color.TRANSPARENT),
-                    floatArrayOf(0f, 0.62f, 1f),
+                    intArrayOf(withAlpha(surfaceColor, 0.98f), withAlpha(surfaceColor, 0.80f), withAlpha(surfaceColor, 0.18f), Color.TRANSPARENT),
+                    floatArrayOf(0f, 0.38f, 0.76f, 1f),
                     Shader.TileMode.CLAMP
                 )
             } else {
-                stretchPath.moveTo(0f, height.toFloat())
-                stretchPath.lineTo(width.toFloat(), height.toFloat())
-                stretchPath.quadTo(width * 0.5f, height - depth * 1.42f, 0f, height.toFloat())
+                stretchPath.moveTo(0f, heightF)
+                stretchPath.lineTo(widthF, heightF)
+                stretchPath.quadTo(widthF * 0.5f, heightF - depth * 1.65f, 0f, heightF)
                 stretchPath.close()
+                highlightPath.moveTo(0f, heightF - 1f)
+                highlightPath.quadTo(widthF * 0.5f, heightF - depth * 1.65f, widthF, heightF - 1f)
                 stretchPaint.shader = LinearGradient(
-                    0f, height.toFloat(), 0f, height - depth,
-                    intArrayOf(withAlpha(surfaceColor, 0.96f), withAlpha(surfaceColor, 0.72f), Color.TRANSPARENT),
-                    floatArrayOf(0f, 0.62f, 1f),
+                    0f, heightF, 0f, heightF - depth,
+                    intArrayOf(withAlpha(surfaceColor, 0.98f), withAlpha(surfaceColor, 0.80f), withAlpha(surfaceColor, 0.18f), Color.TRANSPARENT),
+                    floatArrayOf(0f, 0.38f, 0.76f, 1f),
                     Shader.TileMode.CLAMP
                 )
             }
             canvas.drawPath(stretchPath, stretchPaint)
             stretchPaint.shader = null
+
+            // A soft, warm curved rim makes the physical pull legible against the page surface.
+            highlightPaint.shader = LinearGradient(
+                0f, if (edge == 1) 0f else heightF,
+                0f, if (edge == 1) depth * 1.65f else heightF - depth * 1.65f,
+                intArrayOf(withAlpha(edgeTint, 0.48f), withAlpha(edgeTint, 0.22f), Color.TRANSPARENT),
+                floatArrayOf(0f, 0.55f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            highlightPaint.strokeWidth = dpf(2.2f)
+            canvas.drawPath(highlightPath, highlightPaint)
+            highlightPaint.shader = null
         }
     }
 
