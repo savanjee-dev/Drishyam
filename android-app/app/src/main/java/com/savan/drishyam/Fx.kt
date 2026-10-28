@@ -55,7 +55,7 @@ fun motionEnabled(c: Context): Boolean {
     val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
     val reduced = if (p.contains("motion")) p.getString("motion", "standard") == "reduced"
         else p.getBoolean("motion_reduced", false)
-    return appEffectsEnabled(c) && !lowFx(c) && !reduced &&
+    return appEffectsEnabled(c) && !reduced &&
         (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
 }
 
