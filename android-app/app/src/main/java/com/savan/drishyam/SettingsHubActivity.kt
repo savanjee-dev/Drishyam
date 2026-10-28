@@ -116,7 +116,7 @@ class SettingsHubActivity : AppCompatActivity() {
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
-        installScrollBounce(scroll, content, edgeStretch, animate)
+        installScrollBounce(scroll, content, edgeStretch)
 
         // ---- Back button: shared cream/olive circular style used on every Settings page ----
         val back = ImageView(this).apply {
@@ -560,13 +560,11 @@ class SettingsHubActivity : AppCompatActivity() {
     private fun installScrollBounce(
         scroll: ScrollView,
         content: View,
-        edgeLayer: EdgeStretchLayer,
-        enabled: Boolean
+        edgeLayer: EdgeStretchLayer
     ) {
         // The stretch is a visual deformation of the foreground page surface only.
         // Ambient background layers continue rendering independently and are never warped.
         scroll.overScrollMode = View.OVER_SCROLL_NEVER
-        if (!enabled) return
 
         var lastY = 0f
         var activeEdge = 0 // 1 = top, 2 = bottom
