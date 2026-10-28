@@ -632,6 +632,7 @@ class SettingsHubActivity : AppCompatActivity() {
         setOnTouchListener { v, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    PortalTransition.recordTouch(v, e.rawX, e.rawY)
                     ObjectAnimator.ofPropertyValuesHolder(v,
                         PropertyValuesHolder.ofFloat(View.SCALE_X, 0.92f),
                         PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.92f)).apply {
