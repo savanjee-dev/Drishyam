@@ -80,6 +80,7 @@ class AppearanceActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
 
         theme = prefs.getString("theme", "System") ?: "System"
         haptics = prefs.getBoolean("haptics", true)
