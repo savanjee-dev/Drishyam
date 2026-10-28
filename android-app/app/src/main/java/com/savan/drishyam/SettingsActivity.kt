@@ -289,7 +289,7 @@ class SettingsActivity : AppCompatActivity() {
         effectsCard.addView(hapticsRow, LinearLayout.LayoutParams(-1, -2))
         val motionChoice = if (prefs.getBoolean("motion_reduced", false)) "Reduced" else "Standard"
         effectsCard.addView(segmentRow("Motion", "Reduced replaces bouncy motion with simple fades.", listOf("Standard", "Reduced"), motionChoice) { choice ->
-            prefs.edit().putBoolean("motion_reduced", choice == "Reduced").apply()
+            prefs.edit().putBoolean("motion_reduced", choice == "Reduced").putString("motion", if (choice == "Reduced") "reduced" else "standard").apply()
             // Apply reduced motion without restarting the Activity.
             if (choice == "Reduced") {
                 fun stopMotion(view: View) {
