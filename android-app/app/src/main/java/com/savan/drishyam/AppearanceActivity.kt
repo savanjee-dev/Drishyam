@@ -215,10 +215,9 @@ class AppearanceActivity : AppCompatActivity() {
         if (name == "System") {
             // Prototype: linear-gradient(90deg, #F3F1E7 50%, #0A0D08 50%)
             val right = View(this).apply { setBackgroundColor(0xFF0A0D08.toInt()) }
-            mock.addView(right, FrameLayout.LayoutParams(-1, -1).apply { leftMargin = 0 })
+            mock.addView(right, FrameLayout.LayoutParams(-1, -1))
             val left = View(this).apply { setBackgroundColor(0xFFF3F1E7.toInt()) }
-            mock.addView(left, FrameLayout.LayoutParams(-1, -1))
-            left.post { left.layoutParams = FrameLayout.LayoutParams(mock.width / 2, -1) }
+            mock.addView(left, FrameLayout.LayoutParams(mock.width / 2, -1, Gravity.START))
         }
         val accent = color(R.color.accent)
         val accent2 = color(R.color.accent2)
@@ -239,7 +238,8 @@ class AppearanceActivity : AppCompatActivity() {
         mock.addView(pillView, FrameLayout.LayoutParams(-1, dp(12), Gravity.BOTTOM).apply { bottomMargin = dp(8); leftMargin = dp(8); rightMargin = dp(8) })
         mock.post {
             val w = mock.width.toFloat()
-            bar.layoutParams = FrameLayout.LayoutParams((w - dp(8) - 0.4f * w).toInt(), dp(7), Gravity.TOP or Gravity.START).apply { topMargin = dp(9); leftMargin = dp(8) }
+            val rightFraction = if (name == "System") 0.44f else 0.40f
+            bar.layoutParams = FrameLayout.LayoutParams((w - dp(8) - rightFraction * w).toInt(), dp(7), Gravity.TOP or Gravity.START).apply { topMargin = dp(9); leftMargin = dp(8) }
             sqA.layoutParams = FrameLayout.LayoutParams((0.36f * w).toInt(), dp(44), Gravity.TOP or Gravity.START).apply { topMargin = dp(24); leftMargin = dp(8) }
             sqB.layoutParams = FrameLayout.LayoutParams((0.36f * w).toInt(), dp(44), Gravity.TOP or Gravity.START).apply { topMargin = dp(24); leftMargin = (0.5f * w).toInt() }
         }
@@ -316,8 +316,8 @@ class AppearanceActivity : AppCompatActivity() {
         val cy = (loc[1] - rootLoc[1] + card.height / 2).toFloat()
         val r = hypot(maxOf(cx, root.width - cx), maxOf(cy, root.height - cy))
         val anim = ViewAnimationUtils.createCircularReveal(overlay, cx.toInt(), cy.toInt(), 0f, r)
-        anim.duration = 460L
-        anim.interpolator = OUT
+        anim.duration = 380L
+        anim.interpolator = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
         val targetMode = when (name) {
             "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
             "Light" -> AppCompatDelegate.MODE_NIGHT_NO
