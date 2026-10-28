@@ -803,7 +803,7 @@ class AppearanceActivity : AppCompatActivity() {
             }
         }
         ambientStarfield = AppearanceStarfieldView(this, reduced, lightMode)
-        root.addView(ambientStarfield, 1, FrameLayout.LayoutParams(-1, -1))
+        root.addView(ambientStarfield, 0, FrameLayout.LayoutParams(-1, -1))
         applyGlassLevel()
     }
     private fun applyGlassLevel() {
