@@ -299,7 +299,10 @@ class AppearanceActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             tag = name
-            attachPress(glowable = true)
+            // Avoid the clipped touch-glow foreground that can expose a pale rectangular edge.
+            // Keep the existing scale press feedback and rounded glass card surface.
+            clipToOutline = true
+            attachPress(glowable = false)
             setOnClickListener { chooseTheme(name, this) }
         }
         val holder = FrameLayout(this)
@@ -453,9 +456,10 @@ class AppearanceActivity : AppCompatActivity() {
             background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f)) }
             isClickable = true
             isFocusable = true
-            // Let the animated halo draw beyond the switch bounds instead of clipping into a square.
-            clipChildren = false
-            clipToPadding = false
+            // Keep switch feedback contained by its rounded track; no child may spill
+            // outside the track and reveal a rectangular clipping edge.
+            clipChildren = true
+            clipToPadding = true
         }
         val thumb = View(this).apply {
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.WHITE) }
@@ -474,21 +478,15 @@ class AppearanceActivity : AppCompatActivity() {
                 start()
             }
             if (haptics) {
-                // Halo: scale 1 to 2.8 and opacity .9 to 0 over 260 ms, ease-out
-                val halo = View(this).apply {
-                    background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(withAlpha(Color.WHITE, 0.9f)) }
-                }
-                sw.addView(halo, 0, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
-                ObjectAnimator.ofPropertyValuesHolder(halo,
-                    PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 2.8f),
-                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 2.8f),
-                    PropertyValuesHolder.ofFloat(View.ALPHA, 0.9f, 0f)).apply {
-                    duration = if (reduced) 0L else 260L
-                    interpolator = EASE_OUT
-                    addListener(object : android.animation.AnimatorListenerAdapter() {
-                        override fun onAnimationEnd(animation: android.animation.Animator) { sw.removeView(halo) }
-                    })
-                    start()
+                // Keep the activation feedback inside the rounded track. The thumb and
+                // track already animate; an expanding child halo was clipped by ancestors
+                // and could appear as a pale square around the whole control.
+                sw.animate().cancel()
+                sw.alpha = 0.96f
+                if (!reduced) {
+                    sw.animate().alpha(1f).setDuration(220L).setInterpolator(EASE_OUT).start()
+                } else {
+                    sw.alpha = 1f
                 }
                 vibrate(10)
             }
@@ -758,9 +756,9 @@ class AppearanceActivity : AppCompatActivity() {
     private fun addGlows() {
         data class G(val colorRes: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int)
         val list = listOf(
-            G(R.color.accent2, 0.42f, 12000, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
-            G(R.color.hero, 0.42f, 14000, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
-            G(R.color.accent, 0.22f, 16000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
+            G(R.color.accent2, 0.66f, 10000, Gravity.TOP or Gravity.START, -70, 0, -90, 0),
+            G(R.color.hero, 0.58f, 12000, Gravity.TOP or Gravity.END, 240, 0, 0, -110),
+            G(R.color.accent, 0.38f, 14000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0)
         )
         for (g in list) {
             val c = color(g.colorRes)
@@ -784,10 +782,13 @@ class AppearanceActivity : AppCompatActivity() {
                 // Phase S2 ambient background: offset axes create slow organic drift rather than a diagonal loop.
                 val px = pingPong(t, g.dur)
                 val py = pingPong(t, (g.dur * 1.37f).toLong(), g.dur / 4)
-                v.translationX = dpf(44) * (px - 0.5f)
-                v.translationY = dpf(34) * (py - 0.5f)
-                v.scaleX = 1f + 0.10f * px
-                v.scaleY = 1f + 0.13f * py
+                v.translationX = dpf(104) * (px - 0.5f)
+                v.translationY = dpf(78) * (py - 0.5f)
+                v.scaleX = 1f + 0.18f * px
+                v.scaleY = 1f + 0.20f * py
+                // Explicitly invalidate the glow drawable on every frame so its
+                // radial gradient stays visibly animated across device renderers.
+                v.invalidate()
             }
         }
         applyGlassLevel()
