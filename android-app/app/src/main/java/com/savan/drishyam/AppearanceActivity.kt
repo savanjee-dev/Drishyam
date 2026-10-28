@@ -877,6 +877,7 @@ class AppearanceActivity : AppCompatActivity() {
                     repeatMode = ObjectAnimator.REVERSE
                     interpolator = EASE_IN_OUT
                     start()
+                    currentPlayTime = SystemClock.uptimeMillis() % (g.dur * 2L)
                 }
             }
         }
@@ -904,12 +905,12 @@ class AppearanceActivity : AppCompatActivity() {
     }
 
     private val loops = mutableListOf<(Long) -> Unit>()
-    private var loopStart = 0L
     private var loopRunning = false
     private val loopFrame = object : Choreographer.FrameCallback {
         override fun doFrame(frameTimeNanos: Long) {
             if (!loopRunning) return
-            val t = SystemClock.uptimeMillis() - loopStart
+            // Use Android's monotonic uptime as the shared animation clock across Settings and Appearance.
+            val t = SystemClock.uptimeMillis()
             for (l in loops) l(t)
             Choreographer.getInstance().postFrameCallback(this)
         }
@@ -921,7 +922,6 @@ class AppearanceActivity : AppCompatActivity() {
         super.onResume()
         if (!loopRunning && loops.isNotEmpty() && !reduced) {
             loopRunning = true
-            loopStart = SystemClock.uptimeMillis()
             Choreographer.getInstance().postFrameCallback(loopFrame)
         }
     }
@@ -1103,6 +1103,7 @@ private class AppearanceStarfieldView(context: Context, private val reducedMotio
             interpolator = android.view.animation.LinearInterpolator()
             addUpdateListener { progress = it.animatedValue as Float; invalidate() }
             start()
+            currentPlayTime = SystemClock.uptimeMillis() % duration
         }
     }
     override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
