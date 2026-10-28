@@ -65,6 +65,7 @@ class AppearanceActivity : AppCompatActivity() {
 
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
+    private var themeRevealOverlay: View? = null
     private val themeCards = mutableListOf<LinearLayout>()
     private val themeNames = listOf("System", "Dark", "Light")
 
@@ -269,7 +270,11 @@ class AppearanceActivity : AppCompatActivity() {
         prefs.edit().putString("theme", name).apply()
         refreshThemeCards()
         val dark = name == "Dark" || (name == "System" && (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+        // Keep a reference so the reveal layer can be cleaned up even if Android
+        // cancels the animator while the window/activity is transitioning.
+        themeRevealOverlay?.let { root.removeView(it) }
         val overlay = View(this).apply { setBackgroundColor(if (dark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()) }
+        themeRevealOverlay = overlay
         root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         val loc = IntArray(2)
         card.getLocationOnScreen(loc)
@@ -281,25 +286,46 @@ class AppearanceActivity : AppCompatActivity() {
         val anim = ViewAnimationUtils.createCircularReveal(overlay, cx.toInt(), cy.toInt(), 0f, r)
         anim.duration = 460L
         anim.interpolator = OUT
+        val targetMode = when (name) {
+            "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
+            "Light" -> AppCompatDelegate.MODE_NIGHT_NO
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        var themeChangeApplied = false
+        fun finishReveal(applyTheme: Boolean) {
+            // Idempotent cleanup: cancel() is followed by onAnimationEnd() on Android.
+            // Remove the full-screen layer before changing night mode/recreating this Activity.
+            if (overlay.parent === root) root.removeView(overlay)
+            if (themeRevealOverlay === overlay) themeRevealOverlay = null
+            if (applyTheme && !themeChangeApplied) {
+                themeChangeApplied = true
+                root.post {
+                    if (!isFinishing && !isDestroyed) {
+                        AppCompatDelegate.setDefaultNightMode(targetMode)
+                    }
+                }
+            }
+        }
         anim.addListener(object : android.animation.AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: android.animation.Animator) {
-                // Remove the reveal layer before applying night mode. AppCompat may recreate
-                // this Activity, and the overlay must never survive as a full-screen cover.
-                root.removeView(overlay)
-                AppCompatDelegate.setDefaultNightMode(
-                    when (name) {
-                        "Dark" -> AppCompatDelegate.MODE_NIGHT_YES
-                        "Light" -> AppCompatDelegate.MODE_NIGHT_NO
-                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    }
-                )
+                finishReveal(true)
             }
 
             override fun onAnimationCancel(animation: android.animation.Animator) {
-                root.removeView(overlay)
+                // A cancelled reveal must still apply the user's chosen theme, or the
+                // persisted preference and active AppCompat mode can get out of sync.
+                finishReveal(true)
             }
         })
         anim.start()
+    }
+
+    override fun onDestroy() {
+        themeRevealOverlay?.let { overlay ->
+            (overlay.parent as? ViewGroup)?.removeView(overlay)
+        }
+        themeRevealOverlay = null
+        super.onDestroy()
     }
 
     // ---------- Glass effects (segmented: Off / Subtle / Full) ----------
