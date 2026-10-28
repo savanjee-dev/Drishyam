@@ -105,15 +105,16 @@ class AppearanceActivity : AppCompatActivity() {
             isVerticalScrollBarEnabled = false
             addView(page)
         }
-        root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
-        // Match the Settings hub's fixed feather fades at the top and bottom edges.
-        root.addView(View(this).apply {
+        // Keep the top feather fade behind the floating back control and scrolling content.
+        val topFeather = View(this).apply {
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
-        }, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
+        }
+        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
+        root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
         root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
@@ -124,22 +125,24 @@ class AppearanceActivity : AppCompatActivity() {
         setContentView(root)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-            page.setPadding(dp(20), topInset + dp(8), dp(20), dp(150))
-            (backButton.layoutParams as? FrameLayout.LayoutParams)?.let { lp -> lp.topMargin = topInset + dp(12); backButton.layoutParams = lp }
+            // Move the complete header group down by 24dp and keep a further 16dp
+            // of separation between the anchored back button and the SETTINGS eyebrow.
+            page.setPadding(dp(20), topInset + dp(32), dp(20), dp(150))
+            (backButton.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                lp.topMargin = topInset + dp(36)
+                backButton.layoutParams = lp
+            }
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
         PageStretch.attach(appearanceScroll, density, reduced)
 
         buildPage()
-        // Keep the glass back control above the top feather fade. It fades with scroll
-        // position, then returns naturally as the user scrolls back toward the top.
-        root.addView(backButton, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
+        // Draw the button above the feather fade but below the scrolling page, so
+        // header content passes over it instead of being tinted by its glass surface.
+        root.addView(backButton, 4, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
             leftMargin = dp(20)
-            topMargin = (window.decorView.rootWindowInsets?.let {
-                androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat(it)
-                    .getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-            } ?: 0) + dp(8)
+            topMargin = dp(36)
         })
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
@@ -165,8 +168,8 @@ class AppearanceActivity : AppCompatActivity() {
             attachPress(glowable = true)
             setOnClickListener { finish() }
         }
-        // Preserve the original header spacing while the actual back control floats above fades.
-        page.addView(View(this), LinearLayout.LayoutParams(dp(48), dp(48)))
+        // Keep the header below the anchored back control with the agreed 16dp gap.
+        page.addView(View(this), LinearLayout.LayoutParams(dp(48), dp(64)))
 
         // Eyebrow, title, lead
         page.addView(tv("Settings", 11f, R.color.accent, R.font.poppins_semibold, 10, 0).apply { letterSpacing = 0.16f; text = "SETTINGS" })
