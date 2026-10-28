@@ -66,6 +66,7 @@ class AppearanceActivity : AppCompatActivity() {
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
     private var themeRevealOverlay: View? = null
+    private var themeTransitionInProgress = false
     private val themeCards = mutableListOf<LinearLayout>()
     private val themeNames = listOf("System", "Dark", "Light")
 
@@ -264,7 +265,11 @@ class AppearanceActivity : AppCompatActivity() {
 
     // Circular reveal from the tapped card (prototype revealTheme, 460 ms).
     private fun chooseTheme(name: String, card: View) {
-        if (name == theme) return
+        // Theme changes must be serialized. Multiple taps during a reveal can create
+        // overlapping full-screen overlays and race multiple AppCompat recreations.
+        if (themeTransitionInProgress || name == theme) return
+        themeTransitionInProgress = true
+        themeCards.forEach { it.isEnabled = false }
         buzz(8)
         theme = name
         prefs.edit().putString("theme", name).apply()
@@ -292,11 +297,16 @@ class AppearanceActivity : AppCompatActivity() {
             else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
         var themeChangeApplied = false
+        var revealFinished = false
         fun finishReveal(applyTheme: Boolean) {
-            // Idempotent cleanup: cancel() is followed by onAnimationEnd() on Android.
+            // Android calls onAnimationEnd after onAnimationCancel, so cleanup must be idempotent.
+            if (revealFinished) return
+            revealFinished = true
             // Remove the full-screen layer before changing night mode/recreating this Activity.
             if (overlay.parent === root) root.removeView(overlay)
             if (themeRevealOverlay === overlay) themeRevealOverlay = null
+            themeTransitionInProgress = false
+            themeCards.forEach { it.isEnabled = true }
             if (applyTheme && !themeChangeApplied) {
                 themeChangeApplied = true
                 root.post {
@@ -325,6 +335,7 @@ class AppearanceActivity : AppCompatActivity() {
             (overlay.parent as? ViewGroup)?.removeView(overlay)
         }
         themeRevealOverlay = null
+        themeTransitionInProgress = false
         super.onDestroy()
     }
 
