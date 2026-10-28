@@ -72,6 +72,7 @@ class AppearanceActivity : AppCompatActivity() {
     private val themeCards = mutableListOf<LinearLayout>()
     private val themeNames = listOf("System", "Dark", "Light")
     private val ambientGlows = mutableListOf<View>()
+    private var ambientStarfield: AppearanceStarfieldView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -453,7 +454,11 @@ class AppearanceActivity : AppCompatActivity() {
         item.addView(test, LinearLayout.LayoutParams(-2, -2).apply { rightMargin = dp(10) })
 
         val sw = FrameLayout(this).apply {
-            background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f)) }
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(withAlpha(Color.WHITE, 0.14f), if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f), withAlpha(color(R.color.accent), 0.92f))).apply {
+                cornerRadius = dpf(999)
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.72f))
+            }
             isClickable = true
             isFocusable = true
             // Keep switch feedback contained by its rounded track; no child may spill
@@ -522,7 +527,11 @@ class AppearanceActivity : AppCompatActivity() {
             setPadding(dp(4), dp(4), dp(4), dp(4))
         }
         val indicator = View(this).apply {
-            background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(color(R.color.accent)) }
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(withAlpha(Color.WHITE, 0.16f), color(R.color.accent), withAlpha(color(R.color.accent), 0.92f))).apply {
+                cornerRadius = dpf(999)
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+            }
         }
         val buttons = mutableListOf<TextView>()
         for ((label, value) in options) {
@@ -639,10 +648,10 @@ class AppearanceActivity : AppCompatActivity() {
         }
     }
 
-    private fun glassPill(): Drawable = GradientDrawable().apply {
+    private fun glassPill(): Drawable = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+        intArrayOf(withAlpha(Color.WHITE, 0.10f), color(R.color.glassFill), withAlpha(color(R.color.accent2), 0.10f))).apply {
         cornerRadius = dpf(999)
-        setColor(color(R.color.glassFill))
-        setStroke(dp(1), color(R.color.glassStroke))
+        setStroke(dp(1), withAlpha(Color.WHITE, 0.52f))
     }
 
     private fun glassCircle(withBorder: Boolean): Drawable = GradientDrawable().apply {
@@ -754,46 +763,49 @@ class AppearanceActivity : AppCompatActivity() {
     // ============================ Background glows and loop clock ============================
 
     private fun addGlows() {
-        data class G(val colorRes: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int)
+        // Match the Settings page's three independently moving ambient gradients and starfield.
+        val lightMode = Color.luminance(color(R.color.bg)) > 0.5f
+        data class G(val c: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int, val x0: Float, val x1: Float, val y0: Float, val y1: Float)
         val list = listOf(
-            G(R.color.accent2, 0.78f, 9000, Gravity.TOP or Gravity.START, -90, 0, -120, 0),
-            G(R.color.hero, 0.70f, 11000, Gravity.TOP or Gravity.END, 220, 0, 0, -145),
-            G(R.color.accent, 0.54f, 13000, Gravity.BOTTOM or Gravity.START, 0, 70, -20, 0)
+            G(if (lightMode) 0xFF89945A.toInt() else color(R.color.accent2), if (lightMode) 0.88f else 0.52f, 5600, Gravity.TOP or Gravity.START, -70, 0, -90, 0, -74f, 96f, -28f, 118f),
+            G(if (lightMode) 0xFFB7A879.toInt() else color(R.color.hero), if (lightMode) 0.82f else 0.48f, 7200, Gravity.TOP or Gravity.END, 240, 0, 0, -110, 88f, -96f, -92f, 62f),
+            G(if (lightMode) 0xFFD5C9A5.toInt() else color(R.color.accent), if (lightMode) 0.68f else 0.32f, 9000, Gravity.BOTTOM or Gravity.START, 0, 60, 0, 0, -92f, 76f, 72f, -104f)
         )
-        for (g in list) {
-            val c = color(g.colorRes)
+        list.forEach { g ->
             val v = View(this).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     gradientType = GradientDrawable.RADIAL_GRADIENT
-                    colors = intArrayOf(c, withAlpha(c, 0f))
-                    gradientRadius = dpf(220)
+                    colors = intArrayOf(g.c, withAlpha(g.c, 0f))
+                    gradientRadius = dpf(if (lightMode) 250 else 140)
                 }
                 alpha = g.alpha
                 tag = g.alpha
             }
             ambientGlows.add(v)
-            val lp = FrameLayout.LayoutParams(dp(440), dp(440), g.gravity).apply {
+            val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
                 if ((g.gravity and Gravity.END) == Gravity.END) rightMargin = dp(g.end) else leftMargin = dp(g.start)
             }
             root.addView(v, 0, lp)
-            addLoop { t ->
-                // Phase S2 ambient background: offset axes create slow organic drift rather than a diagonal loop.
-                val px = pingPong(t, g.dur)
-                val py = pingPong(t, (g.dur * 1.37f).toLong(), g.dur / 4)
-                v.translationX = dpf(150) * (px - 0.5f)
-                v.translationY = dpf(112) * (py - 0.5f)
-                v.scaleX = 1f + 0.24f * px
-                v.scaleY = 1f + 0.27f * py
-                // Explicitly invalidate the glow drawable on every frame so its
-                // radial gradient stays visibly animated across device renderers.
-                v.invalidate()
+            if (!reduced) {
+                ObjectAnimator.ofPropertyValuesHolder(v,
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_X, dpf(g.x0), dpf(g.x1)),
+                    PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, dpf(g.y0), dpf(g.y1)),
+                    PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.24f),
+                    PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.24f)).apply {
+                    duration = g.dur
+                    repeatCount = ObjectAnimator.INFINITE
+                    repeatMode = ObjectAnimator.REVERSE
+                    interpolator = EASE_IN_OUT
+                    start()
+                }
             }
         }
+        ambientStarfield = AppearanceStarfieldView(this, reduced, lightMode)
+        root.addView(ambientStarfield, 1, FrameLayout.LayoutParams(-1, -1))
         applyGlassLevel()
     }
-
     private fun applyGlassLevel() {
         val factor = when (glassLevel) {
             "off" -> 0f
@@ -806,6 +818,7 @@ class AppearanceActivity : AppCompatActivity() {
             glow.alpha = baseAlpha * factor
             glow.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
         }
+        ambientStarfield?.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
     }
 
     private val loops = mutableListOf<(Long) -> Unit>()
@@ -851,6 +864,60 @@ class AppearanceActivity : AppCompatActivity() {
         private val OUT = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
         private val EASE_OUT = PathInterpolator(0f, 0f, 0.58f, 1f)
         private val EASE = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
+    }
+}
+
+/** Settings-matched, lightweight animated starfield. */
+private class AppearanceStarfieldView(context: Context, private val reducedMotion: Boolean, private val lightMode: Boolean) : View(context) {
+    private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val speed: Float, val alpha: Float)
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val stars = ArrayList<Star>()
+    private var animator: ValueAnimator? = null
+    private var progress = 0f
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        val random = java.util.Random(713L)
+        repeat(58) {
+            stars += Star(0.04f + random.nextFloat() * 0.92f, random.nextFloat(),
+                (0.65f + random.nextFloat() * 1.35f) * density, random.nextFloat() * 6.28318f,
+                0.12f + random.nextFloat() * 0.34f,
+                (if (lightMode) 0.62f else 0.22f) + random.nextFloat() * (if (lightMode) 0.34f else 0.48f))
+        }
+    }
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        animator?.cancel()
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = if (reducedMotion) 90000L else 26000L
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { progress = it.animatedValue as Float; invalidate() }
+            start()
+        }
+    }
+    override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        stars.forEachIndexed { index, star ->
+            val drift = progress * star.speed
+            val x = ((star.x + drift * 0.10f) % 1f) * w
+            val y = ((star.y + drift) % 1f) * h
+            val twinkle = 0.72f + 0.28f * kotlin.math.sin(progress * 6.28318f + star.phase)
+            val a = (star.alpha * twinkle * (if (reducedMotion) 0.52f else 1f) * 255f).toInt().coerceIn(0,255)
+            paint.color = if (lightMode) { if (index % 4 == 0) Color.argb(a,183,168,121) else Color.argb(a,112,126,77) } else Color.argb(a,218,222,165)
+            paint.style = Paint.Style.FILL
+            canvas.drawCircle(x,y,star.radius,paint)
+            if (star.radius > 1.55f * density) {
+                paint.alpha = (a * 0.22f).toInt(); paint.strokeWidth = 0.7f * density
+                canvas.drawLine(x-star.radius*2.2f,y,x+star.radius*2.2f,y,paint)
+                canvas.drawLine(x,y-star.radius*2.2f,x,y+star.radius*2.2f,paint)
+            }
+        }
     }
 }
 
