@@ -113,8 +113,10 @@ class AppearanceActivity : AppCompatActivity() {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.78f), Color.TRANSPARENT))
         }
-        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
         root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
+        // Keep the top fade above scrolling content so it remains visible while scrolling.
+        // The floating back control is inserted above this fade below.
+        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(104), Gravity.TOP))
         root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
@@ -431,8 +433,10 @@ class AppearanceActivity : AppCompatActivity() {
             text = "Test"
             textSize = 12f
             typeface = font(R.font.montserrat_semibold)
+            gravity = Gravity.CENTER
             setTextColor(color(R.color.fg))
             setPadding(dp(14), dp(8), dp(14), dp(8))
+            minWidth = dp(64)
             background = glassPill()
             isClickable = true
             isFocusable = true
@@ -449,6 +453,9 @@ class AppearanceActivity : AppCompatActivity() {
             background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(if (haptics) color(R.color.accent) else withAlpha(color(R.color.accent2), 0.3f)) }
             isClickable = true
             isFocusable = true
+            // Let the animated halo draw beyond the switch bounds instead of clipping into a square.
+            clipChildren = false
+            clipToPadding = false
         }
         val thumb = View(this).apply {
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(Color.WHITE) }
@@ -471,8 +478,7 @@ class AppearanceActivity : AppCompatActivity() {
                 val halo = View(this).apply {
                     background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(withAlpha(Color.WHITE, 0.9f)) }
                 }
-                sw.addView(halo, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
-                halo.bringToFront()
+                sw.addView(halo, 0, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
                 ObjectAnimator.ofPropertyValuesHolder(halo,
                     PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 2.8f),
                     PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 2.8f),
