@@ -31,10 +31,6 @@ fun Int.dp(): Int = (this * Resources.getSystem().displayMetrics.density).toInt(
 fun hapticsOn(c: Context): Boolean =
     c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("haptics", true)
 
-/** Master switch for decorative effects. Defaults on to preserve existing installs. */
-fun appEffectsEnabled(c: Context): Boolean =
-    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("app_effects_enabled", true)
-
 /** Persisted glass level; supports legacy low_fx installs. */
 fun glassLevel(c: Context): String {
     val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
@@ -42,12 +38,12 @@ fun glassLevel(c: Context): String {
         ?: if (p.getBoolean("low_fx", false)) "off" else "full"
 }
 
-/** Off disables live blur; master-off also temporarily disables decorative glass. */
-fun lowFx(c: Context): Boolean = !appEffectsEnabled(c) || glassLevel(c) == "off"
+/** Glass Off only controls glass rendering. */
+fun lowFx(c: Context): Boolean = glassLevel(c) == "off"
 
-/** Visual effects are independently configurable but remain subordinate to the master switch. */
+/** Decorative visual effects have their own independent preference. */
 fun visualEffectsEnabled(c: Context): Boolean =
-    appEffectsEnabled(c) && c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+    c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
         .getBoolean("visual_effects_enabled", true)
 
 /** One motion gate shared by page and component transitions, accepting both preference generations. */
@@ -55,7 +51,7 @@ fun motionEnabled(c: Context): Boolean {
     val p = c.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
     val reduced = if (p.contains("motion")) p.getString("motion", "standard") == "reduced"
         else p.getBoolean("motion_reduced", false)
-    return appEffectsEnabled(c) && !reduced &&
+    return !reduced &&
         (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
 }
 
