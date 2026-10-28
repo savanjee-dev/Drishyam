@@ -125,6 +125,7 @@ class AppearanceActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             page.setPadding(dp(20), topInset + dp(8), dp(20), dp(150))
+            (backButton.layoutParams as? FrameLayout.LayoutParams)?.let { lp -> lp.topMargin = topInset + dp(12); backButton.layoutParams = lp }
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
@@ -141,7 +142,10 @@ class AppearanceActivity : AppCompatActivity() {
             } ?: 0) + dp(8)
         })
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-            backButton.alpha = (1f - scrollY.toFloat() / dp(72f)).coerceIn(0f, 1f)
+            val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
+            backButton.alpha = 1f - progress
+            backButton.scaleX = 1f - 0.08f * progress
+            backButton.scaleY = 1f - 0.08f * progress
         }
         startEntrance()
     }
