@@ -55,6 +55,7 @@ class SettingsHubActivity : AppCompatActivity() {
     private var visualFxAtCreate = true
     private var motionAtCreate = true
     private var glassLevelAtCreate = "full"
+    private val glassFactor: Float get() = when (glassLevel(this)) { "off" -> 0f; "subtle" -> 0.45f; else -> 1f }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -95,7 +96,7 @@ class SettingsHubActivity : AppCompatActivity() {
         if (visualEffectsEnabled(this)) {
             val animateVisuals = animate && motionEnabled(this)
             addGlows(backgroundSurface, animateVisuals)
-            backgroundSurface.addView(SettingsAmbientLayer(this, animateVisuals), FrameLayout.LayoutParams(-1, -1))
+            backgroundSurface.addView(SettingsAmbientLayer(this, animateVisuals).apply { alpha = glassFactor }, FrameLayout.LayoutParams(-1, -1))
         }
         root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
@@ -500,7 +501,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 colors = intArrayOf(withAlpha(0xFFD0C79A.toInt(), 0.34f), 0x00D0C79A)
                 gradientRadius = dpf(86)
             }
-            alpha = 0.88f
+            alpha = 0.88f * glassFactor
         }
         photoBox.addView(halo, FrameLayout.LayoutParams(dp(154), dp(154), Gravity.CENTER))
 
@@ -543,7 +544,7 @@ class SettingsHubActivity : AppCompatActivity() {
         // A dedicated drawing layer keeps the galaxy visible above elevated card content.
         // It always draws stars; motion is optional so reduced-motion/Glass Off never hides them.
         if (visualEffectsEnabled(this)) {
-            card.addView(StoryGalaxyView(this, animate && motionEnabled(this)), FrameLayout.LayoutParams(-1, -1))
+            card.addView(StoryGalaxyView(this, animate && motionEnabled(this)).apply { alpha = glassFactor }, FrameLayout.LayoutParams(-1, -1))
         }
 
         if (animate) {
@@ -588,7 +589,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     colors = intArrayOf(c, withAlpha(c, 0f))
                     gradientRadius = dpf(if (lightMode) 250 else 140)
                 }
-                alpha = g.alpha
+                alpha = g.alpha * glassFactor
             }
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
                 topMargin = dp(g.top); bottomMargin = dp(g.bottom)
@@ -672,7 +673,7 @@ class SettingsHubActivity : AppCompatActivity() {
     private fun startFlow(bg: HubFlowGradientDrawable) {
         if (reduced) return
         ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 9000L
+            duration = if (glassLevel(this@SettingsHubActivity) == "subtle") 15000L else 9000L
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.REVERSE
             interpolator = EASE_IN_OUT
@@ -753,8 +754,9 @@ class SettingsHubActivity : AppCompatActivity() {
 
     private fun startHaloPulse(halo: View) {
         if (reduced || lowFx) return
+        val intensity = glassFactor
         ObjectAnimator.ofPropertyValuesHolder(halo,
-            PropertyValuesHolder.ofFloat(View.ALPHA, 0.35f, 1f),
+            PropertyValuesHolder.ofFloat(View.ALPHA, 0.35f * intensity, intensity),
             PropertyValuesHolder.ofFloat(View.SCALE_X, 0.94f, 1.08f),
             PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.94f, 1.08f)).apply {
             duration = 2800L
