@@ -781,7 +781,7 @@ class AppearanceActivity : AppCompatActivity() {
             }
             root.addView(v, 0, lp)
             addLoop { t ->
-                // Independent, offset axes create slow organic drift rather than a diagonal loop.
+                // Phase S2 ambient background: offset axes create slow organic drift rather than a diagonal loop.
                 val px = pingPong(t, g.dur)
                 val py = pingPong(t, (g.dur * 1.37f).toLong(), g.dur / 4)
                 v.translationX = dpf(44) * (px - 0.5f)
