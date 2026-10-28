@@ -340,16 +340,7 @@ class SettingsActivity : AppCompatActivity() {
         haptic.isChecked = hapticsOn(this)
         haptic.setOnCheckedChangeListener { _, on -> prefs.edit().putBoolean("haptics", on).apply() }
 
-        val lowFxSwitch = findViewById<MaterialSwitch>(R.id.swLowFx)
-        lowFxSwitch.isChecked = lowFx(this)
-        lowFxSwitch.setOnCheckedChangeListener { _, on ->
-            prefs.edit().putBoolean("low_fx", on).putString("glass_level", if (on) "off" else "full").apply()
-            fun refreshGlassViews(view: View) {
-                if (view is GlassLayout) view.poke()
-                if (view is ViewGroup) for (i in 0 until view.childCount) refreshGlassViews(view.getChildAt(i))
-            }
-            refreshGlassViews(findViewById(android.R.id.content))
-        }
+        // Legacy Glass Off switch is hidden; Glass effects segmented control is the sole control.
 
         // Default feed order pills
         val sorts = listOf(R.id.sortHotS to "hot", R.id.sortNewS to "new", R.id.sortTopS to "top")
