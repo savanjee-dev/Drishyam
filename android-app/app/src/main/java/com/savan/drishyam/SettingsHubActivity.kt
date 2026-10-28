@@ -676,9 +676,12 @@ class SettingsHubActivity : AppCompatActivity() {
                     half4 main(float2 p) {
                         float h = max(height, 1.0);
                         float fromEdge = edge < 1.5 ? p.y : h - p.y;
-                        float reach = max(1.0, min(pull * 3.0, h * 0.52));
+                        // Carry the deformation well into the screen instead of confining it to a thin edge band.
+                        float reach = max(1.0, min(pull * 4.5, h * 0.62));
                         float influence = 1.0 - smoothstep(0.0, reach, max(0.0, fromEdge));
-                        float displacement = pull * 0.72 * influence * influence;
+                        // A stronger pixel-space displacement makes the background visibly stretch,
+                        // while the influence curve fades it smoothly before reaching the opposite edge.
+                        float displacement = pull * 1.45 * influence * influence;
                         float sourceY = edge < 1.5 ? p.y - displacement : p.y + displacement;
                         sourceY = clamp(sourceY, 0.0, h - 1.0);
                         return content.eval(float2(p.x, sourceY));
