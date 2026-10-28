@@ -157,6 +157,7 @@ class AppearanceActivity : AppCompatActivity() {
         reflectionOverlay = reflections
         reflections.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
         root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
+        applyGlassLevel()
         addLoop { reflectionOverlay?.setElapsed(it) }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
@@ -460,10 +461,7 @@ class AppearanceActivity : AppCompatActivity() {
         item.addView(effectToggle(visualEffectsEnabled) { enabled ->
             visualEffectsEnabled = enabled
             prefs.edit().putBoolean("visual_effects_enabled", enabled).apply()
-            ambientGlows.forEach { it.visibility = if (enabled) View.VISIBLE else View.GONE }
-            ambientStarfield?.visibility = if (enabled) View.VISIBLE else View.GONE
-            reflectionOverlay?.visibility = if (enabled) View.VISIBLE else View.GONE
-            if (!enabled) reflectionOverlay?.alpha = 0f else reflectionOverlay?.alpha = 1f
+            applyGlassLevel()
         }, LinearLayout.LayoutParams(dp(52), dp(30)))
         return item
     }
@@ -914,12 +912,12 @@ class AppearanceActivity : AppCompatActivity() {
         lowFx = glassLevel == "off"
         ambientGlows.forEach { glow ->
             val baseAlpha = glow.tag as? Float ?: 1f
-            glow.alpha = baseAlpha * factor
-            glow.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
+            glow.alpha = baseAlpha
+            glow.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
         }
-        ambientStarfield?.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
+        ambientStarfield?.visibility = if (visualEffectsEnabled) View.VISIBLE else View.GONE
         reflectionOverlay?.alpha = factor
-        reflectionOverlay?.visibility = if (factor == 0f) View.INVISIBLE else View.VISIBLE
+        reflectionOverlay?.visibility = if (factor > 0f && visualEffectsEnabled) View.VISIBLE else View.INVISIBLE
     }
 
     private val loops = mutableListOf<(Long) -> Unit>()
