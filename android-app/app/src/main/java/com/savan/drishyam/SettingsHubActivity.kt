@@ -612,6 +612,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     repeatMode = ObjectAnimator.REVERSE
                     interpolator = EASE_IN_OUT
                     start()
+                    currentPlayTime = android.os.SystemClock.uptimeMillis() % (g.dur * 2L)
                 }
             }
         }
@@ -679,6 +680,7 @@ class SettingsHubActivity : AppCompatActivity() {
             interpolator = EASE_IN_OUT
             addUpdateListener { a -> bg.progress = a.animatedValue as Float }
             start()
+            currentPlayTime = android.os.SystemClock.uptimeMillis() % (duration * 2L)
         }
     }
 
@@ -933,6 +935,7 @@ private class SettingsStarfieldView(context: Context, private val reducedMotion:
             interpolator = android.view.animation.LinearInterpolator()
             addUpdateListener { progress = it.animatedValue as Float; invalidate() }
             start()
+            currentPlayTime = android.os.SystemClock.uptimeMillis() % duration
         }
     }
 
