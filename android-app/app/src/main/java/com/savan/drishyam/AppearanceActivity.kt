@@ -917,9 +917,16 @@ private class AppearanceReflectionOverlay(context: Context, private val activity
         if (activity.glassLevel == "off" || activity.reduced || !isShown) return
         getLocationOnScreen(overlayLocation)
         val phase = (elapsed % 7600L).toFloat() / 7600f
-        val baseAlpha = if (activity.glassLevel == "subtle") 0.50f else 0.88f
-        val glowColor = if (lightMode) Color.rgb(255, 251, 229) else Color.rgb(229, 235, 218)
-        val edgeColor = if (lightMode) Color.rgb(255, 255, 246) else Color.rgb(196, 207, 174)
+        // Keep the original surface colours dominant; dark mode needs a much
+        // quieter sheen so charcoal and olive never wash out to grey or pale green.
+        val baseAlpha = when {
+            lightMode && activity.glassLevel == "subtle" -> 0.36f
+            lightMode -> 0.56f
+            activity.glassLevel == "subtle" -> 0.18f
+            else -> 0.30f
+        }
+        val glowColor = if (lightMode) Color.rgb(255, 251, 229) else Color.rgb(207, 218, 185)
+        val edgeColor = if (lightMode) Color.rgb(255, 255, 246) else Color.rgb(165, 179, 139)
 
         activity.reflectionTargets.forEach { (target, circular) ->
             if (!target.isShown || target.width <= 0 || target.height <= 0 || target.alpha <= 0.01f) return@forEach
@@ -962,42 +969,42 @@ private class AppearanceReflectionOverlay(context: Context, private val activity
             // reflection remains alive even while a gradient is near its turning point.
             val drift = 0.08f * kotlin.math.sin(phase * 2f * PI.toFloat())
             lightX = (lightX + drift).coerceIn(-0.15f, 1.15f)
-            val effectiveAlpha = baseAlpha * target.alpha * (nearestGlow?.alpha ?: 1f).coerceIn(0f, 1f)
+            val isThemeCard = activity.themeCards.any { it === target }
+            val isBackControl = target === activity.backButton
+            val controlAlpha = when {
+                isThemeCard -> baseAlpha * 0.42f
+                isBackControl -> baseAlpha * 0.72f
+                else -> baseAlpha
+            }
+            val effectiveAlpha = controlAlpha * target.alpha * (nearestGlow?.alpha ?: 1f).coerceIn(0f, 1f)
 
-            // Broad radial bloom covers the whole surface and fades in both axes.
+            // Full-surface radial reflection: the light source follows the ambient
+            // gradients, with a smooth falloff in both directions and no hard band.
             reflectionPaint.shader = RadialGradient(
                 rect.left + rect.width() * lightX,
                 rect.top + rect.height() * lightY,
-                maxOf(rect.width(), rect.height()) * 0.95f,
-                intArrayOf(activity.withAlpha(glowColor, 0.48f * effectiveAlpha),
-                    activity.withAlpha(glowColor, 0.22f * effectiveAlpha),
+                maxOf(rect.width(), rect.height()) * 1.12f,
+                intArrayOf(activity.withAlpha(glowColor, 0.34f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0.13f * effectiveAlpha),
                     activity.withAlpha(glowColor, 0f)),
-                floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP
-            )
-            canvas.drawRoundRect(rect, radius, radius, reflectionPaint)
-
-            // A gentle full-surface vertical falloff prevents a hard upper-half band.
-            reflectionPaint.shader = android.graphics.LinearGradient(
-                rect.left, rect.top, rect.left + rect.width() * 0.22f, rect.bottom,
-                intArrayOf(activity.withAlpha(glowColor, 0.16f * effectiveAlpha),
-                    activity.withAlpha(glowColor, 0.06f * effectiveAlpha),
-                    activity.withAlpha(glowColor, 0f)),
-                floatArrayOf(0f, 0.52f, 1f), Shader.TileMode.CLAMP
+                floatArrayOf(0f, 0.38f, 1f), Shader.TileMode.CLAMP
             )
             canvas.drawRoundRect(rect, radius, radius, reflectionPaint)
             reflectionPaint.shader = null
 
-            // Edge light follows the same intensity and the target's own fade.
+            // Reflect the perimeter without drawing a competing second ring on cards.
             edgePaint.style = Paint.Style.STROKE
-            edgePaint.color = activity.withAlpha(edgeColor, 0.62f * effectiveAlpha)
-            edgePaint.strokeWidth = maxOf(0.8f * density, 1f)
+            edgePaint.color = activity.withAlpha(edgeColor, (if (isThemeCard) 0.24f else 0.40f) * effectiveAlpha)
+            edgePaint.strokeWidth = maxOf(0.7f * density, 1f)
             rect.inset(edgePaint.strokeWidth / 2f, edgePaint.strokeWidth / 2f)
             canvas.drawRoundRect(rect, radius, radius, edgePaint)
-            edgePaint.color = activity.withAlpha(if (lightMode) 0xFF8B9468.toInt() else Color.BLACK,
-                (if (lightMode) 0.12f else 0.24f) * effectiveAlpha)
-            edgePaint.strokeWidth = 0.8f * density
-            canvas.drawLine(rect.left + radius * 0.35f, rect.bottom - edgePaint.strokeWidth,
-                rect.right - radius * 0.35f, rect.bottom - edgePaint.strokeWidth, edgePaint)
+            if (!isThemeCard) {
+                edgePaint.color = activity.withAlpha(if (lightMode) 0xFF8B9468.toInt() else Color.BLACK,
+                    (if (lightMode) 0.08f else 0.10f) * effectiveAlpha)
+                edgePaint.strokeWidth = 0.7f * density
+                canvas.drawLine(rect.left + radius * 0.35f, rect.bottom - edgePaint.strokeWidth,
+                    rect.right - radius * 0.35f, rect.bottom - edgePaint.strokeWidth, edgePaint)
+            }
             rect.inset(-edgePaint.strokeWidth / 2f, -edgePaint.strokeWidth / 2f)
             edgePaint.style = Paint.Style.FILL
             canvas.restoreToCount(save)
