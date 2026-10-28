@@ -27,6 +27,7 @@ class WhatsNewActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
         DynamicColors.applyToActivityIfAvailable(this)
         restoreScrollY = savedInstanceState?.getInt("release_history_scroll") ?: 0
 
