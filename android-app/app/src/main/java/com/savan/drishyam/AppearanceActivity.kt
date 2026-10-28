@@ -495,7 +495,7 @@ class AppearanceActivity : AppCompatActivity() {
         }
         // Bounds of an option inside the segment (px)
         fun boundsOf(b: TextView): Pair<Float, Float> =
-            Pair((row.left + row.paddingLeft + b.left).toFloat(), b.width.toFloat())
+            Pair((row.left + b.left).toFloat(), b.width.toFloat())
 
         // Place the indicator at once, on screen open
         seg.post {
