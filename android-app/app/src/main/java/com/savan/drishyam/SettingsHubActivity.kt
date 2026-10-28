@@ -542,7 +542,33 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun installScrollBounce(scroll: ScrollView) {
-        scroll.overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        scroll.overScrollMode = View.OVER_SCROLL_NEVER
+        val boundary = BoundaryStretchOverlay(this, reduced || lowFx)
+        (scroll.parent as? ViewGroup)?.let { parent ->
+            val index = parent.indexOfChild(scroll)
+            parent.addView(boundary, index + 1, FrameLayout.LayoutParams(-1, -1))
+        }
+        var lastY = 0f
+        scroll.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> lastY = event.y
+                MotionEvent.ACTION_MOVE -> {
+                    val dy = event.y - lastY
+                    lastY = event.y
+                    val child = scroll.getChildAt(0)
+                    val maxScroll = ((child?.height ?: 0) - scroll.height).coerceAtLeast(0)
+                    if (scroll.scrollY <= 0 && dy > 0f) {
+                        boundary.pull(top = true, amount = dy * 0.48f)
+                    } else if (scroll.scrollY >= maxScroll && dy < 0f) {
+                        boundary.pull(top = false, amount = -dy * 0.48f)
+                    } else {
+                        boundary.relax()
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> boundary.relax()
+            }
+            false
+        }
     }
 
     private fun addGlows(root: FrameLayout, animate: Boolean) {
@@ -794,6 +820,102 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 }
 
+/** Boundary-only elastic edge: stretches the surrounding edge glow, never the page content. */
+private class BoundaryStretchOverlay(context: Context, private val reducedMotion: Boolean) : View(context) {
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var topPull = 0f
+    private var bottomPull = 0f
+    private var relaxAnimator: ValueAnimator? = null
+
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        setLayerType(View.LAYER_TYPE_HARDWARE, null)
+    }
+
+    fun pull(top: Boolean, amount: Float) {
+        if (reducedMotion) return
+        relaxAnimator?.cancel()
+        val next = (if (top) topPull else bottomPull) + amount
+        val value = next.coerceIn(0f, 34f * density)
+        if (top) {
+            topPull = value
+            bottomPull = 0f
+        } else {
+            bottomPull = value
+            topPull = 0f
+        }
+        invalidate()
+    }
+
+    fun relax() {
+        relaxAnimator?.cancel()
+        val startTop = topPull
+        val startBottom = bottomPull
+        if (startTop == 0f && startBottom == 0f) return
+        relaxAnimator = ValueAnimator.ofFloat(1f, 0f).apply {
+            duration = if (reducedMotion) 0L else 320L
+            interpolator = PathInterpolator(0.18f, 0.75f, 0.25f, 1f)
+            addUpdateListener {
+                val t = it.animatedValue as Float
+                topPull = startTop * t
+                bottomPull = startBottom * t
+                invalidate()
+            }
+            start()
+        }
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat()
+        val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        if (topPull > 0f) drawEdge(canvas, w, topPull, true)
+        if (bottomPull > 0f) drawEdge(canvas, w, h - bottomPull, false)
+    }
+
+    private fun drawEdge(canvas: Canvas, w: Float, edgeY: Float, top: Boolean) {
+        val pull = if (top) topPull else bottomPull
+        val depth = pull.coerceAtMost(34f * density)
+        val extent = (42f * density + depth * 0.8f)
+        val path = Path().apply {
+            if (top) {
+                moveTo(0f, 0f)
+                lineTo(w, 0f)
+                quadTo(w * 0.5f, depth * 1.45f, 0f, 0f)
+                close()
+            } else {
+                moveTo(0f, height.toFloat())
+                lineTo(w, height.toFloat())
+                quadTo(w * 0.5f, height - depth * 1.45f, 0f, height.toFloat())
+                close()
+            }
+        }
+        paint.shader = LinearGradient(0f, if (top) 0f else height.toFloat() - extent,
+            0f, if (top) extent else height.toFloat(),
+            intArrayOf(0x6689945A, 0x2289945A, 0x0089945A), null, Shader.TileMode.CLAMP)
+        canvas.drawPath(path, paint)
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1.1f * density
+        paint.color = 0x6689945A
+        val curve = Path().apply {
+            if (top) {
+                moveTo(0f, 0f)
+                quadTo(w * 0.5f, depth * 1.45f, w, 0f)
+            } else {
+                moveTo(0f, height.toFloat())
+                quadTo(w * 0.5f, height - depth * 1.45f, w, height.toFloat())
+            }
+        }
+        canvas.drawPath(curve, paint)
+        paint.style = Paint.Style.FILL
+    }
+}
+
 /** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
 private class TouchRippleGlowDrawable(private val density: Float, private val lightMode: Boolean) : Drawable() {
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -832,7 +954,8 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         val w = bounds.width().toFloat()
         val h = bounds.height().toFloat()
         // Clip the complete interaction to the control's rounded silhouette.
-        val corner = (kotlin.math.min(w, h) * 0.16f).coerceAtLeast(1f)
+        // Match the actual pill/rounded-row silhouette instead of using a square-ish fixed ratio.
+        val corner = (h * 0.27f).coerceAtMost(kotlin.math.min(w, h) * 0.5f).coerceAtLeast(1f)
         val clip = Path().apply {
             addRoundRect(0f, 0f, w, h, corner, corner, Path.Direction.CW)
         }
@@ -1056,15 +1179,13 @@ private class StoryGalaxyView(
         Star(.63f, .94f, 1.7f, 3.3f),
         Star(.055f, .69f, 1.55f, 5.0f)
     )
-    // Seven highlight locations stay in the text-side/centre lane, away from the portrait.
+    // Five highlight locations stay in the clear text-side lane, away from the portrait.
     private val highlightStars = listOf(
         Star(.19f, .13f, 2.0f, .4f),
         Star(.46f, .11f, 2.15f, 2.6f),
-        Star(.49f, .88f, 1.95f, 4.8f),
         Star(.12f, .48f, 2.1f, 1.7f),
         Star(.36f, .70f, 2.0f, 3.9f),
-        Star(.27f, .34f, 2.25f, 5.2f),
-        Star(.53f, .63f, 2.2f, 0.9f)
+        Star(.27f, .34f, 2.25f, 5.2f)
     )
     private var phase = 0f
     private var highlightIndex = -1
@@ -1122,11 +1243,10 @@ private class StoryGalaxyView(
                 else -> kotlin.math.sin(((cycle - 0.82f) / 0.18f * 3.14159265f).toDouble()).toFloat()
             }.coerceAtLeast(0f)
         } else 0f
-        val inset = 2.5f * density
+        val inset = 4f * density
         val corner = 30f * density
-        // Keep the animated path inside the card's rounded clip, so its movement is visible.
-        // The four sides flex toward the centre together, then relax and pause.
-        val bulge = stretch * 10f * density
+        // The four border edges bow outward slightly; the card bounds and content never scale.
+        val bulge = -stretch * 3.2f * density
         val left = inset
         val top = inset
         val right = w - inset
