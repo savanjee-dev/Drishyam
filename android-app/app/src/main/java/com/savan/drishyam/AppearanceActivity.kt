@@ -65,6 +65,8 @@ class AppearanceActivity : AppCompatActivity() {
 
     private lateinit var root: FrameLayout
     private lateinit var page: LinearLayout
+    private lateinit var appearanceScroll: ScrollView
+    private lateinit var backButton: ImageView
     private var themeRevealOverlay: View? = null
     private var themeTransitionInProgress = false
     private val themeCards = mutableListOf<LinearLayout>()
@@ -96,13 +98,13 @@ class AppearanceActivity : AppCompatActivity() {
             clipChildren = false
             clipToPadding = false
         }
-        val scroll = ScrollView(this).apply {
+        appearanceScroll = ScrollView(this).apply {
             isFillViewport = true
             clipChildren = false
             clipToPadding = false
             addView(page)
         }
-        root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
         // Match the Settings hub's fixed feather fades at the top and bottom edges.
         root.addView(View(this).apply {
             isClickable = false
@@ -125,9 +127,21 @@ class AppearanceActivity : AppCompatActivity() {
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
-        PageStretch.attach(scroll, density, reduced)
+        PageStretch.attach(appearanceScroll, density, reduced)
 
         buildPage()
+        // Keep the glass back control above the top feather fade. It fades with scroll
+        // position, then returns naturally as the user scrolls back toward the top.
+        root.addView(backButton, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
+            leftMargin = dp(20)
+            topMargin = (window.decorView.rootWindowInsets?.let {
+                androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat(it)
+                    .getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
+            } ?: 0) + dp(8)
+        })
+        appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            backButton.alpha = (1f - scrollY.toFloat() / dp(72f)).coerceIn(0f, 1f)
+        }
         startEntrance()
     }
 
@@ -135,19 +149,19 @@ class AppearanceActivity : AppCompatActivity() {
 
     private fun buildPage() {
         // Back button (48 circle, glass, no border)
-        val back = ImageView(this).apply {
+        backButton = ImageView(this).apply {
             setImageResource(R.drawable.ic_back)
             imageTintList = android.content.res.ColorStateList.valueOf(color(R.color.fg))
             scaleType = ImageView.ScaleType.CENTER
             background = glassCircle(withBorder = false)
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
             isClickable = true
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true)
             setOnClickListener { finish() }
         }
-        page.addView(back)
+        // Preserve the original header spacing while the actual back control floats above fades.
+        page.addView(View(this), LinearLayout.LayoutParams(dp(48), dp(48)))
 
         // Eyebrow, title, lead
         page.addView(tv("Settings", 11f, R.color.accent, R.font.poppins_semibold, 16, 0).apply { letterSpacing = 0.16f; text = "SETTINGS" })
@@ -211,20 +225,21 @@ class AppearanceActivity : AppCompatActivity() {
             "Light" -> 0xFFF3F1E7.toInt()
             else -> 0xFFF3F1E7.toInt()
         }
-        mock.setBackgroundColor(fillColor)
-        if (name == "System") {
-            // Prototype: linear-gradient(90deg, #F3F1E7 50%, #0A0D08 50%)
-            val right = View(this).apply { setBackgroundColor(0xFF0A0D08.toInt()) }
-            mock.addView(right, FrameLayout.LayoutParams(-1, -1))
-            val left = View(this).apply { setBackgroundColor(0xFFF3F1E7.toInt()) }
-            mock.addView(left, FrameLayout.LayoutParams(mock.width / 2, -1, Gravity.START))
+        mock.background = GradientDrawable().apply {
+            cornerRadius = dpf(16)
+            setStroke(dp(1), withAlpha(0xFF89945A.toInt(), 0.25f))
+            when (name) {
+                "System" -> orientation = GradientDrawable.Orientation.LEFT_RIGHT
+                else -> setColor(fillColor)
+            }
+            if (name == "System") colors = intArrayOf(0xFFF3F1E7.toInt(), 0xFFF3F1E7.toInt(), 0xFF0A0D08.toInt(), 0xFF0A0D08.toInt())
         }
-        val accent = color(R.color.accent)
-        val accent2 = color(R.color.accent2)
-        val squareLight = if (name == "Light") 0xFFFFFCF4.toInt() else if (name == "Dark") 0xFF1B2117.toInt() else 0xFFFFFCF4.toInt()
+        val accent = 0xFF414D2D.toInt()
+        val accent2 = 0xFF89945A.toInt()
+        val squareLight = if (name == "Dark") 0xFF1B2117.toInt() else 0xFFFFFCF4.toInt()
         val squareRight = if (name == "Light") 0xFFFFFCF4.toInt() else 0xFF1B2117.toInt()
 
-        // Bar: left 8, right 40%, top 9, height 7
+        // Exact prototype colours and dimensions: m-bar #89945A; m-pill #89945A only in Dark.
         val bar = View(this).apply { background = pill(accent2) }
         // Squares: top 24, width 36%, height 44, radius 10; left 8 and left 50%
         val sqA = View(this).apply { background = rounded(squareLight, 10f) }
