@@ -467,7 +467,6 @@ class AppearanceActivity : AppCompatActivity() {
         }
         val indicator = View(this).apply {
             background = GradientDrawable().apply { cornerRadius = dpf(999); setColor(0xFF414D2D.toInt()) }
-            elevation = dpf(4)
         }
         val buttons = mutableListOf<TextView>()
         for ((label, value) in options) {
