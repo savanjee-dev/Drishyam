@@ -54,7 +54,7 @@ class WhatsNewActivity : AppCompatActivity() {
             insetTop = 0
             insetBottom = 0
             contentDescription = "Back"
-            setOnClickListener { PortalTransition.close(this@WhatsNewActivity, this) }
+            setOnClickListener { view -> PortalTransition.close(this@WhatsNewActivity, view) }
         }, LinearLayout.LayoutParams(52.dp(), 52.dp()))
         header.addView(TextView(this).apply {
             text = "Release notes"
