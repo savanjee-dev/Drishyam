@@ -92,7 +92,6 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
-        val edgeStretch = EdgeStretchLayer(this, content, scroll)
         // Keep the original fixed feather overlays above the scrolling content.
         // They remain independent of the background warp so the stretch cannot hide them.
         root.addView(View(this).apply {
@@ -116,7 +115,6 @@ class SettingsHubActivity : AppCompatActivity() {
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
-        installScrollBounce(scroll, content, edgeStretch)
 
         // ---- Back button: shared cream/olive circular style used on every Settings page ----
         val back = ImageView(this).apply {
@@ -229,6 +227,9 @@ class SettingsHubActivity : AppCompatActivity() {
                     .setInterpolator(SPRING).start()
             }
         }
+
+        // Attach the prototype-matched pull stretch after the page content is complete.
+        PageStretch.attach(scroll, density, reduced)
     }
 
     // ================= Tiles =================
@@ -555,162 +556,6 @@ class SettingsHubActivity : AppCompatActivity() {
                 1f
             ) > 0f
         } else true
-    }
-
-    private fun installScrollBounce(
-        scroll: ScrollView,
-        content: View,
-        edgeLayer: EdgeStretchLayer
-    ) {
-        // The stretch is a visual deformation of the foreground page surface only.
-        // Ambient background layers continue rendering independently and are never warped.
-        scroll.overScrollMode = View.OVER_SCROLL_NEVER
-
-        var lastY = 0f
-        var activeEdge = 0 // 1 = top, 2 = bottom
-        var pull = 0f
-        var releaseAnimator: ValueAnimator? = null
-        val maxPull = { (scroll.height * 0.30f).coerceAtLeast(dpf(48f)) }
-
-        fun renderStretch() {
-            edgeLayer.setStretch(activeEdge, pull)
-        }
-
-        fun releaseStretch() {
-            if (pull <= 0f) {
-                activeEdge = 0
-                edgeLayer.setStretch(0, 0f)
-                return
-            }
-            val startPull = pull
-            val startEdge = activeEdge
-            releaseAnimator?.cancel()
-            releaseAnimator = ValueAnimator.ofFloat(startPull, 0f).apply {
-                duration = 460L
-                interpolator = PathInterpolator(0.22f, 1f, 0.36f, 1f)
-                addUpdateListener { animator ->
-                    pull = animator.animatedValue as Float
-                    activeEdge = if (pull > 0.5f) startEdge else 0
-                    edgeLayer.setStretch(startEdge, pull)
-                }
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: android.animation.Animator) {
-                        if (releaseAnimator === this@apply) {
-                            pull = 0f
-                            activeEdge = 0
-                            edgeLayer.setStretch(0, 0f)
-                        }
-                    }
-                })
-                start()
-            }
-        }
-
-        scroll.setOnTouchListener { _, event ->
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    releaseAnimator?.cancel()
-                    lastY = event.y
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val deltaY = event.y - lastY
-                    lastY = event.y
-                    val child = scroll.getChildAt(0)
-                    val atTop = scroll.scrollY <= 0
-                    val atBottom = child != null &&
-                        scroll.scrollY >= child.height - scroll.height - 1
-
-                    when {
-                        atTop && deltaY > 0f -> {
-                            if (activeEdge != 1) pull = 0f
-                            activeEdge = 1
-                            // Direct finger tracking with resistance, including slow drags.
-                            pull = (pull + deltaY * 0.78f).coerceAtMost(maxPull())
-                            renderStretch()
-                        }
-                        atBottom && deltaY < 0f -> {
-                            if (activeEdge != 2) pull = 0f
-                            activeEdge = 2
-                            pull = (pull - deltaY * 0.78f).coerceAtMost(maxPull())
-                            renderStretch()
-                        }
-                        activeEdge == 1 && deltaY < 0f -> {
-                            pull = (pull + deltaY * 0.78f).coerceAtLeast(0f)
-                            renderStretch()
-                        }
-                        activeEdge == 2 && deltaY > 0f -> {
-                            pull = (pull - deltaY * 0.78f).coerceAtLeast(0f)
-                            renderStretch()
-                        }
-                    }
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> releaseStretch()
-            }
-            false
-        }
-    }
-
-    /**
-     * Deforms the rendered foreground page surface, including cards, text, icons and controls.
-     * The ambient background is deliberately not an input to this effect.
-     */
-    private inner class EdgeStretchLayer(
-        context: Context,
-        private val pageSurface: View,
-        private val scrollViewport: ScrollView
-    ) : View(context) {
-        private val runtimeShader: android.graphics.RuntimeShader? =
-            if (Build.VERSION.SDK_INT >= 33) runCatching {
-                android.graphics.RuntimeShader("""
-                    uniform shader content;
-                    uniform float pull;
-                    uniform float edge;
-                    uniform float contentHeight;
-                    uniform float viewportHeight;
-                    half4 main(float2 p) {
-                        float h = max(contentHeight, 1.0);
-                        float viewport = max(viewportHeight, 1.0);
-                        float fromEdge = edge < 1.5 ? p.y : h - p.y;
-                        float reach = max(1.0, min(pull * 6.0, viewport * 0.82));
-                        float influence = 1.0 - smoothstep(0.0, reach, max(0.0, fromEdge));
-                        // A strong spatial warp makes the whole rendered page surface visibly stretch.
-                        float displacement = pull * 1.65 * influence * influence;
-                        float sourceY = edge < 1.5 ? p.y - displacement : p.y + displacement;
-                        sourceY = clamp(sourceY, 0.0, h - 1.0);
-                        return content.eval(float2(p.x, sourceY));
-                    }
-                """.trimIndent())
-            }.getOrNull() else null
-
-        init {
-            isClickable = false
-            isFocusable = false
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-
-        fun setStretch(edge: Int, amount: Float) {
-            val pull = amount.coerceAtLeast(0f)
-            if (Build.VERSION.SDK_INT >= 33 && runtimeShader != null) {
-                if (edge == 0 || pull <= 0.5f) {
-                    pageSurface.setRenderEffect(null)
-                } else {
-                    runtimeShader.setFloatUniform("pull", pull)
-                    runtimeShader.setFloatUniform("edge", edge.toFloat())
-                    runtimeShader.setFloatUniform("contentHeight", pageSurface.height.toFloat().coerceAtLeast(1f))
-                    runtimeShader.setFloatUniform("viewportHeight", scrollViewport.height.toFloat().coerceAtLeast(1f))
-                    pageSurface.setRenderEffect(RenderEffect.createRuntimeShaderEffect(runtimeShader, "content"))
-                }
-            } else {
-                // Older Android versions use a surface-wide scale around the active edge.
-                if (edge == 0 || pull <= 0.5f) {
-                    pageSurface.scaleY = 1f
-                    pageSurface.pivotY = 0f
-                } else {
-                    pageSurface.pivotY = if (edge == 1) 0f else pageSurface.height.toFloat()
-                    pageSurface.scaleY = 1f + (pull / scrollViewport.height.coerceAtLeast(1)) * 0.72f
-                }
-            }
-        }
     }
 
     private fun addGlows(root: FrameLayout, animate: Boolean) {
