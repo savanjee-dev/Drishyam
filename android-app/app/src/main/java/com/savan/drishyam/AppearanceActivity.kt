@@ -142,7 +142,7 @@ class AppearanceActivity : AppCompatActivity() {
         buildPage()
         // Draw the button above the feather fade but below the scrolling page, so
         // header content passes over it instead of being tinted by its glass surface.
-        root.addView(backButton, 4, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
+        root.addView(backButton, 5, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
             leftMargin = dp(20)
             topMargin = dp(36)
         })
