@@ -171,7 +171,7 @@ class SettingsHubActivity : AppCompatActivity() {
         val themeName = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("theme", "System") ?: "System"
         val row1 = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         row1.addView(tile(R.drawable.ic_tile_appearance, "Appearance", themeName, appearancePreview()) {
-            openSettings("appearance")
+            startActivity(Intent(this, AppearanceActivity::class.java))
         }, tileParams(left = true))
         row1.addView(tile(R.drawable.ic_tile_browsing, "Browsing", "Hot · India on", browsingPreview()) {
             toast("Browsing page: next prototype step")
