@@ -12,6 +12,7 @@ class FullscreenActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
         super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
         setContentView(R.layout.activity_fullscreen)
         animatePageEntrance(findViewById(android.R.id.content))
 
