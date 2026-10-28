@@ -40,7 +40,7 @@ class WhatsNewActivity : AppCompatActivity() {
 
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(surface)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -98,7 +98,12 @@ class WhatsNewActivity : AppCompatActivity() {
             setPadding(20.dp(), 0, 20.dp(), 10.dp())
         }
         page.addView(loading)
-        setContentView(page)
+        val screen = android.widget.FrameLayout(this).apply {
+            setBackgroundColor(surface)
+            addView(UniversalBackgroundView(this), android.widget.FrameLayout.LayoutParams(-1, -1))
+            addView(page, android.widget.FrameLayout.LayoutParams(-1, -1))
+        }
+        setContentView(screen)
         if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(page)
 
         // Render local data immediately, without waiting for GitHub.
