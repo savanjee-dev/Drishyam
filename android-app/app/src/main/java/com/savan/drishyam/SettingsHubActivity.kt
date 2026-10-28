@@ -39,7 +39,7 @@ import androidx.core.content.res.ResourcesCompat
 
 /**
  * Settings hub (Phase 1). Built to match Drishyam_Settings_Prototype_v9.html.
- * Glass Off = the existing "low_fx" setting. Motion Reduced = the system reduce-motion setting.
+ * Glass Off controls glass rendering. Motion follows the shared app preference and system animation setting.
  */
 class SettingsHubActivity : AppCompatActivity() {
 
@@ -52,6 +52,8 @@ class SettingsHubActivity : AppCompatActivity() {
     private var lowFx = false
     private var reduced = false
     private var lightMode = false
+    private var visualFxAtCreate = true
+    private var motionAtCreate = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -59,10 +61,12 @@ class SettingsHubActivity : AppCompatActivity() {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
 
-        lowFx = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("low_fx", false)
+        lowFx = lowFx(this)
         reduced = !motionEnabled(this)
+        visualFxAtCreate = visualEffectsEnabled(this)
+        motionAtCreate = motionEnabled(this)
         lightMode = Color.luminance(color(R.color.bg)) > 0.5f
-        val animate = !reduced
+        val animate = !reduced && visualEffectsEnabled(this)
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -536,7 +540,9 @@ class SettingsHubActivity : AppCompatActivity() {
 
         // A dedicated drawing layer keeps the galaxy visible above elevated card content.
         // It always draws stars; motion is optional so reduced-motion/Glass Off never hides them.
-        card.addView(StoryGalaxyView(this, animate && !lowFx), FrameLayout.LayoutParams(-1, -1))
+        if (visualEffectsEnabled(this)) {
+            card.addView(StoryGalaxyView(this, animate && motionEnabled(this)), FrameLayout.LayoutParams(-1, -1))
+        }
 
         if (animate) {
             startFlow(flowBg)
@@ -547,17 +553,16 @@ class SettingsHubActivity : AppCompatActivity() {
         return card
     }
 
-    // ================= Background glows =================
-
-    private fun motionEnabled(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            android.provider.Settings.Global.getFloat(
-                context.contentResolver,
-                android.provider.Settings.Global.ANIMATOR_DURATION_SCALE,
-                1f
-            ) > 0f
-        } else true
+    override fun onResume() {
+        super.onResume()
+        if (visualEffectsEnabled(this) != visualFxAtCreate ||
+            motionEnabled(this) != motionAtCreate ||
+            lowFx(this) != lowFx) {
+            recreate()
+        }
     }
+
+    // ================= Background glows =================
 
     private fun addGlows(root: FrameLayout, animate: Boolean) {
         data class G(val colorRes: Int, val alpha: Float, val dur: Long, val gravity: Int, val top: Int, val bottom: Int, val start: Int, val end: Int)
