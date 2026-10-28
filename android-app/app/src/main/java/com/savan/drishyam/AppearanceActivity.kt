@@ -102,6 +102,7 @@ class AppearanceActivity : AppCompatActivity() {
             isFillViewport = true
             clipChildren = false
             clipToPadding = false
+            isVerticalScrollBarEnabled = false
             addView(page)
         }
         root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
@@ -164,9 +165,9 @@ class AppearanceActivity : AppCompatActivity() {
         page.addView(View(this), LinearLayout.LayoutParams(dp(48), dp(48)))
 
         // Eyebrow, title, lead
-        page.addView(tv("Settings", 11f, R.color.accent, R.font.poppins_semibold, 16, 0).apply { letterSpacing = 0.16f; text = "SETTINGS" })
-        page.addView(tv("Appearance", 38f, R.color.fg, R.font.poppins_extrabold, 4, 2).apply { letterSpacing = -0.02f })
-        page.addView(tv("Theme, haptics and visual effects.", 14f, R.color.mute, R.font.poppins_regular, 0, 6))
+        page.addView(tv("Settings", 11f, R.color.accent, R.font.poppins_semibold, 10, 0).apply { letterSpacing = 0.16f; text = "SETTINGS" })
+        page.addView(tv("Appearance", 38f, R.color.fg, R.font.poppins_extrabold, 1, 1).apply { letterSpacing = -0.02f })
+        page.addView(tv("Theme, haptics and visual effects.", 14f, R.color.mute, R.font.poppins_regular, 0, 4))
 
         // ---- Theme ----
         page.addView(label("Theme"))
