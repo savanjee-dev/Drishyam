@@ -364,8 +364,17 @@ class MainActivity : AppCompatActivity() {
             private var direction = 1f
             private var gestureSource: MainBackState? = null
             private var gestureTarget: MainBackState? = null
+            private var gestureGeneration = 0
 
             override fun onBackStarted(backEvent: android.window.BackEvent) {
+                // Clean up any stale preview left by an interrupted system gesture before
+                // beginning another one. A stale full-screen snapshot can block the app.
+                removePreviewSnapshot()
+                backGestureState = null
+                gestureSource = null
+                gestureTarget = null
+                gestureGeneration++
+
                 if (!isInAppBackState()) return
                 startedWithPopup = PopupStack.isOpen()
                 if (startedWithPopup) return
@@ -383,14 +392,24 @@ class MainActivity : AppCompatActivity() {
                         setImageBitmap(bitmap)
                         scaleType = android.widget.ImageView.ScaleType.FIT_XY
                         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                        isClickable = false
+                        // The preview must own the touch stream while visible, so taps cannot
+                        // leak into the page being revealed beneath it.
+                        isClickable = true
+                        isFocusable = false
                         elevation = 1000f
+                        clipToOutline = true
+                        outlineProvider = object : android.view.ViewOutlineProvider() {
+                            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                                val radius = 30.dp()
+                                outline.setRoundRect(0, 0, view.width, view.height, radius.toFloat())
+                            }
+                        }
                     }
                     host.addView(previewSnapshot, android.view.ViewGroup.LayoutParams(-1, -1))
                 }
 
                 // Put the actual previous in-app destination underneath the captured
-                // outgoing frame. The gesture then reveals that destination, not Android's launcher.
+                // outgoing frame. Only the snapshot moves; the destination remains stable.
                 showMainBackState(target)
                 backGestureState = gestureSource
             }
@@ -399,21 +418,16 @@ class MainActivity : AppCompatActivity() {
                 if (startedWithPopup || backGestureState == null || isFinishing || isDestroyed) return
                 val snapshot = previewSnapshot ?: return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
-                val eased = progress * (2f - progress)
-                snapshot.scaleX = 1f - 0.085f * eased
-                snapshot.scaleY = 1f - 0.085f * eased
-                snapshot.translationX = direction * snapshot.width * eased
-                snapshot.translationY = 10.dp() * eased
+                // Smoothstep avoids abrupt velocity changes when the gesture moves slowly.
+                val eased = progress * progress * (3f - 2f * progress)
+                snapshot.scaleX = 1f - 0.075f * eased
+                snapshot.scaleY = 1f - 0.075f * eased
+                snapshot.translationX = direction * snapshot.width * 0.82f * eased
+                snapshot.translationY = 8.dp() * eased
                 snapshot.pivotX = if (direction > 0) 0f else snapshot.width.toFloat()
                 snapshot.pivotY = snapshot.height / 2f
-                snapshot.clipToOutline = true
-                snapshot.outlineProvider = object : android.view.ViewOutlineProvider() {
-                    override fun getOutline(view: View, outline: android.graphics.Outline) {
-                        outline.setRoundRect(0, 0, view.width, view.height, 34.dp() * eased)
-                    }
-                }
                 snapshot.invalidateOutline()
-                snapshot.elevation = 12.dp() * eased
+                snapshot.elevation = 10.dp() * eased
             }
 
             override fun onBackCancelled() {
@@ -423,9 +437,15 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
                 val outgoing = gestureSource
-                if (outgoing == null || isFinishing || isDestroyed) return
-                backGestureState = null
                 val snapshot = previewSnapshot
+                backGestureState = null
+                if (outgoing == null || isFinishing || isDestroyed) {
+                    removePreviewSnapshot()
+                    gestureSource = null
+                    gestureTarget = null
+                    refreshMainPredictiveBackRegistration()
+                    return
+                }
                 if (snapshot == null) {
                     showMainBackState(outgoing)
                     gestureSource = null
@@ -433,11 +453,13 @@ class MainActivity : AppCompatActivity() {
                     refreshMainPredictiveBackRegistration()
                     return
                 }
+                val generation = gestureGeneration
                 snapshot.animate().cancel()
                 snapshot.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f)
-                    .setDuration(560L)
-                    .setInterpolator(android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f))
+                    .setDuration(420L)
+                    .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0.2f, 1f))
                     .withEndAction {
+                        if (generation != gestureGeneration) return@withEndAction
                         removePreviewSnapshot()
                         showMainBackState(outgoing)
                         gestureSource = null
@@ -458,6 +480,9 @@ class MainActivity : AppCompatActivity() {
                 backGestureState = null
                 val snapshot = previewSnapshot
                 if (outgoing == null || target == null) {
+                    removePreviewSnapshot()
+                    gestureSource = null
+                    gestureTarget = null
                     if (PopupStack.dismiss()) refreshMainPredictiveBackRegistration()
                     return
                 }
@@ -469,12 +494,14 @@ class MainActivity : AppCompatActivity() {
                     refreshMainPredictiveBackRegistration()
                     return
                 }
+                val generation = gestureGeneration
                 snapshot.animate().cancel()
-                snapshot.animate().scaleX(0.915f).scaleY(0.915f)
-                    .translationX(direction * snapshot.width.toFloat()).translationY(10.dp().toFloat())
-                    .setDuration(240L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                snapshot.animate().scaleX(0.925f).scaleY(0.925f)
+                    .translationX(direction * snapshot.width.toFloat()).translationY(8.dp().toFloat())
+                    .setDuration(420L)
+                    .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0.2f, 1f))
                     .withEndAction {
+                        if (generation != gestureGeneration) return@withEndAction
                         removePreviewSnapshot()
                         if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
                         showMainBackState(target)
