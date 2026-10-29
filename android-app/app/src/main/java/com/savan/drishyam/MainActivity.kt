@@ -179,6 +179,7 @@ class MainActivity : AppCompatActivity() {
         aboutScroll = findViewById(R.id.about)
         aboutScroll.isVerticalScrollBarEnabled = false
         glassSource = findViewById(R.id.glassSource)
+        if (launchedAsOurStory) glassSource.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK))
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
         overlay = findViewById(R.id.overlay)
@@ -186,9 +187,6 @@ class MainActivity : AppCompatActivity() {
         // Keep the glass header below status-bar icons while the animated page background
         // remains visible behind the transparent system bar.
         val root = findViewById<View>(R.id.root)
-        // Our Story is hosted in this translucent portal Activity; keep its page opaque
-        // during normal display so the Settings screen underneath cannot bleed through.
-        if (launchedAsOurStory) root.setBackgroundColor(ContextCompat.getColor(this, R.color.bg))
         // No foreground fade overlay: keep the portrait and story content unobscured.
         // The transparent status bar shows the real page background beneath system icons.
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
