@@ -291,7 +291,6 @@ class MainActivity : AppCompatActivity() {
         installMainPredictiveBack()
         if (launchedAsOurStory) {
             showTab(2)
-            prepareOurStoryTransparentWindow()
         }
         glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
@@ -303,21 +302,8 @@ class MainActivity : AppCompatActivity() {
         if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) {
             launchedAsOurStory = true
             showTab(2)
-            prepareOurStoryTransparentWindow()
             refreshMainPredictiveBackRegistration()
         }
-    }
-
-    /** Our Story is opened from Settings; keep this window transparent so Settings is the real Back preview. */
-    private fun prepareOurStoryTransparentWindow() {
-        findViewById<View>(R.id.root).setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        glassSource.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        findViewById<View>(R.id.content).setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        // The first glassSource child is UniversalBackgroundView. Hide it only for this
-        // dedicated overlay route so the Settings Activity underneath remains visible.
-        (glassSource as? ViewGroup)?.getChildAt(0)?.visibility = View.GONE
-        overlay.visibility = View.GONE
-        aboutScroll.setBackgroundColor(android.graphics.Color.TRANSPARENT)
     }
 
     /**
