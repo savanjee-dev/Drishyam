@@ -74,6 +74,9 @@ class AppearanceActivity : AppCompatActivity() {
     private var ambientStarfield: AppearanceStarfieldView? = null
     internal val reflectionTargets = mutableListOf<Pair<View, Boolean>>()
     private var reflectionOverlay: AppearanceReflectionOverlay? = null
+    private var themeRevealOverlay: View? = null
+    private var themeTransitionInProgress = false
+    private var themeTapScreen: Pair<Float, Float>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -88,7 +91,7 @@ class AppearanceActivity : AppCompatActivity() {
         lowFx = glassLevel == "off"
         reduced = motion == "reduced"
 
-        window.setBackgroundDrawable(ColorDrawable(color(R.color.bg)))
+        window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
@@ -352,9 +355,12 @@ class AppearanceActivity : AppCompatActivity() {
         }
     }
 
-    // Keep theme-card feedback native to the card; do not add a second page-sized reveal.
+    // Theme selection has its own circular reveal, independent from page navigation.
+    // The reveal begins at the actual ACTION_DOWN point on the selected card.
     private fun chooseTheme(name: String, card: View) {
-        if (name == theme) return
+        if (themeTransitionInProgress || name == theme) return
+        themeTransitionInProgress = true
+        themeCards.forEach { it.isEnabled = false }
         buzz(8)
 
         val targetMode = when (name) {
@@ -362,11 +368,74 @@ class AppearanceActivity : AppCompatActivity() {
             "Light" -> AppCompatDelegate.MODE_NIGHT_NO
             else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         }
+        val systemDark = (android.content.res.Resources.getSystem().configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val targetDark = when (name) {
+            "Dark" -> true
+            "Light" -> false
+            else -> systemDark
+        }
+        val currentDark = (resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val appearanceWillChange = currentDark != targetDark
 
         theme = name
         prefs.edit().putString("theme", name).apply()
         refreshThemeCards()
-        AppCompatDelegate.setDefaultNightMode(targetMode)
+
+        themeRevealOverlay?.let { root.removeView(it) }
+        val targetColor = if (targetDark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
+        val overlay = View(this).apply { setBackgroundColor(targetColor) }
+        themeRevealOverlay = overlay
+        root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+
+        val rootLoc = IntArray(2)
+        root.getLocationOnScreen(rootLoc)
+        val touched = themeTapScreen
+        themeTapScreen = null
+        val cx = ((touched?.first ?: run {
+            val loc = IntArray(2); card.getLocationOnScreen(loc)
+            loc[0] + card.width / 2f
+        }) - rootLoc[0]).coerceIn(0f, root.width.toFloat())
+        val cy = ((touched?.second ?: run {
+            val loc = IntArray(2); card.getLocationOnScreen(loc)
+            loc[1] + card.height / 2f
+        }) - rootLoc[1]).coerceIn(0f, root.height.toFloat())
+        val radius = hypot(maxOf(cx, root.width - cx), maxOf(cy, root.height - cy))
+        val anim = ViewAnimationUtils.createCircularReveal(overlay, cx.toInt(), cy.toInt(), 0f, radius)
+        anim.duration = if (reduced) 0L else 420L
+        anim.interpolator = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
+
+        var finished = false
+        fun applyThemeBehindCover() {
+            if (finished) return
+            finished = true
+            AppCompatDelegate.setDefaultNightMode(targetMode)
+            if (!appearanceWillChange || isFinishing || isDestroyed) {
+                if (overlay.parent === root) root.removeView(overlay)
+                if (themeRevealOverlay === overlay) themeRevealOverlay = null
+                themeTransitionInProgress = false
+                themeCards.forEach { it.isEnabled = true }
+            }
+        }
+        anim.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) = applyThemeBehindCover()
+            override fun onAnimationCancel(animation: android.animation.Animator) {
+                overlay.visibility = View.VISIBLE
+                overlay.setBackgroundColor(targetColor)
+                applyThemeBehindCover()
+            }
+        })
+        anim.start()
+    }
+
+    override fun onDestroy() {
+        themeRevealOverlay?.let { overlay -> (overlay.parent as? ViewGroup)?.removeView(overlay) }
+        themeRevealOverlay = null
+        themeTransitionInProgress = false
+        super.onDestroy()
     }
 
     // ---------- Glass effects (segmented: Off / Subtle / Full) ----------
@@ -701,6 +770,9 @@ class AppearanceActivity : AppCompatActivity() {
         setOnTouchListener { v, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    if (themeCards.any { it === v }) {
+                        themeTapScreen = e.rawX to e.rawY
+                    }
                     ObjectAnimator.ofPropertyValuesHolder(v,
                         PropertyValuesHolder.ofFloat(View.SCALE_X, 0.92f),
                         PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.92f)).apply {
