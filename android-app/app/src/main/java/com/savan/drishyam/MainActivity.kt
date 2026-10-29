@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var savedBar: View
     private lateinit var swipe: SwipeRefreshLayout
     private lateinit var aboutScroll: ScrollView
-    private lateinit var glassSource: View
+    private lateinit var glassSource: ViewGroup
     private lateinit var glassTop: GlassLayout
     private lateinit var glassNav: GlassLayout
     private lateinit var overlay: View
