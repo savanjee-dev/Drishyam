@@ -57,7 +57,7 @@ object PortalTransition {
             val radius = maxRadius(content.width, content.height, cx, cy)
             runCatching {
                 ViewAnimationUtils.createCircularReveal(content, cx, cy, 0f, radius).apply {
-                    duration = 480L
+                    duration = 660L
                     interpolator = portalEasing
                 }.start()
             }
@@ -77,16 +77,23 @@ object PortalTransition {
         }
         val rootLocation = IntArray(2)
         content.getLocationOnScreen(rootLocation)
+        // Reverse towards the exact screen-space point that opened this activity.
+        // Do not use the Back button's position as the closing origin.
+        val hasOpeningOrigin = activity.intent.hasExtra(EXTRA_X) && activity.intent.hasExtra(EXTRA_Y)
         val sourceLocation = IntArray(2)
         if (backControl != null) backControl.getLocationOnScreen(sourceLocation)
-        val cx = if (backControl != null) sourceLocation[0] + backControl.width / 2 - rootLocation[0] else content.width / 2
-        val cy = if (backControl != null) sourceLocation[1] + backControl.height / 2 - rootLocation[1] else 0
-        val x = cx.coerceIn(0, content.width)
-        val y = cy.coerceIn(0, content.height)
+        val originScreenX = if (hasOpeningOrigin) activity.intent.getIntExtra(EXTRA_X, 0)
+            else if (backControl != null) sourceLocation[0] + backControl.width / 2
+            else rootLocation[0] + content.width / 2
+        val originScreenY = if (hasOpeningOrigin) activity.intent.getIntExtra(EXTRA_Y, 0)
+            else if (backControl != null) sourceLocation[1] + backControl.height / 2
+            else rootLocation[1] + content.height / 2
+        val x = (originScreenX - rootLocation[0]).coerceIn(0, content.width)
+        val y = (originScreenY - rootLocation[1]).coerceIn(0, content.height)
         val radius = maxRadius(content.width, content.height, x, y)
         runCatching {
             ViewAnimationUtils.createCircularReveal(content, x, y, radius, 0f).apply {
-                duration = 360L
+                duration = 620L
                 interpolator = portalEasing
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     private var finished = false
