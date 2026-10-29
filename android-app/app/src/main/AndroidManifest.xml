@@ -29,10 +29,10 @@
              Back closing reveal exposes the previous Activity instead of a black surface. -->
         <activity android:name=".SettingsHubActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
         <activity android:name=".AppearanceActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
-        <activity android:name=".SettingsActivity" android:exported="false" />
-        <activity android:name=".UpdatesActivity" android:exported="false" />
-        <activity android:name=".WhatsNewActivity" android:exported="false" />
-        <activity android:name=".ViewerActivity" android:exported="false" />
-        <activity android:name=".FullscreenActivity" android:exported="false" />
+        <activity android:name=".SettingsActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
+        <activity android:name=".UpdatesActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
+        <activity android:name=".WhatsNewActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
+        <activity android:name=".ViewerActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
+        <activity android:name=".FullscreenActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
     </application>
 </manifest>
