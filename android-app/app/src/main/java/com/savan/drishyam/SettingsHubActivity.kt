@@ -392,7 +392,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 0)
             attachPress(glowable = true)
             setOnClickListener {
-                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
+                PortalTransition.launch(this@SettingsHubActivity, this, Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
         }
 
@@ -475,7 +475,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 leftMargin = dp(4)
             })
             setOnClickListener {
-                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
+                PortalTransition.launch(this@SettingsHubActivity, this, Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
             attachPress(glowable = true)
         }
