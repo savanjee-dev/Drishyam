@@ -58,7 +58,7 @@ class SettingsActivity : AppCompatActivity() {
                 setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFBBBBBB.toInt()))
                 setPadding(0, 4.dp(), 0, 0)
             })
-            setOnClickListener { startActivity(android.content.Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
+            setOnClickListener { PortalTransition.launch(this@SettingsActivity, this, android.content.Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
         }
         (findViewById<View>(R.id.rowCredits).parent as? ViewGroup)?.let { parent ->
             parent.addView(updateRow, parent.indexOfChild(findViewById(R.id.rowCredits)) + 1,
@@ -389,7 +389,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<View>(R.id.rowWhatsNew).apply {
             pressFx()
             setOnClickListener {
-                startActivity(android.content.Intent(this@SettingsActivity, WhatsNewActivity::class.java))
+                PortalTransition.launch(this@SettingsActivity, this, android.content.Intent(this@SettingsActivity, WhatsNewActivity::class.java))
             }
         }
         findViewById<View>(R.id.rowCredits).apply {
