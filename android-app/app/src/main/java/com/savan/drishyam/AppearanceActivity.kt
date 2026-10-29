@@ -157,6 +157,10 @@ class AppearanceActivity : AppCompatActivity() {
         val reflections = AppearanceReflectionOverlay(this, this)
         reflectionOverlay = reflections
         reflections.visibility = if (glassLevel != "off") View.VISIBLE else View.INVISIBLE
+        // This visual-only overlay must never intercept taps on the Back control or page content.
+        reflections.isClickable = false
+        reflections.isFocusable = false
+        reflections.isFocusableInTouchMode = false
         root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
         applyGlassLevel()
         addLoop { reflectionOverlay?.setElapsed(it) }
