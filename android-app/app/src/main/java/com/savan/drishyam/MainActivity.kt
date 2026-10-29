@@ -440,7 +440,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshMainPredictiveBackRegistration() {
         if (Build.VERSION.SDK_INT < 34 || mainBackCallback == null) return
-        val shouldRegister = isInAppBackState()
+        val shouldRegister = isInAppBackState() || backGestureState != null
         if (shouldRegister && !mainBackCallbackRegistered) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, mainBackCallback!!
