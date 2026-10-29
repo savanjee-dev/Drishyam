@@ -118,6 +118,10 @@ class MainActivity : AppCompatActivity() {
     private var statusBarInsetTop = 0
     private var transientStatus: String? = null
     private var statusGeneration = 0
+    private var homeSource: Source? = null
+    private var backGestureState: Pair<Int, Source>? = null
+    private var mainBackCallback: android.window.OnBackAnimationCallback? = null
+    private var mainBackCallbackRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
@@ -264,6 +268,9 @@ class MainActivity : AppCompatActivity() {
         shownSort = currentSort()
         styleSort()
         showTab(0)
+        homeSource = cur
+        PopupStack.setOnChanged { refreshMainPredictiveBackRegistration() }
+        installMainPredictiveBack()
         if (intent.getBooleanExtra("open_about", false)) showTab(2)
         glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
@@ -315,13 +322,137 @@ class MainActivity : AppCompatActivity() {
         if (tab == 1) refreshSaved() else adapter.notifyDataSetChanged()
     }
 
+    private fun installMainPredictiveBack() {
+        if (Build.VERSION.SDK_INT < 34 || mainBackCallback != null) return
+        mainBackCallback = object : android.window.OnBackAnimationCallback {
+            private var startTab = 0
+            private var startSource: Source? = null
+            private var startWasSearch = false
+
+            override fun onBackStarted(backEvent: android.window.BackEvent) {
+                if (!isInAppBackState()) return
+                startTab = tab
+                startSource = cur
+                startWasSearch = cur.name == "Search"
+                backGestureState = startTab to cur
+                if (PopupStack.dismiss()) {
+                    // Pop-ups are dismissed only when Back commits; their own scrim remains
+                    // visible during the gesture so cancellation never loses the user's input.
+                    return
+                }
+                if (startWasSearch) {
+                    cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
+                    showTab(0)
+                } else {
+                    showTab(0)
+                }
+                val content = findViewById<View>(android.R.id.content)
+                content.pivotX = content.width / 2f
+                content.pivotY = content.height / 2f
+                content.animate().cancel()
+                content.scaleX = 1f
+                content.scaleY = 1f
+            }
+
+            override fun onBackProgressed(backEvent: android.window.BackEvent) {
+                if (backGestureState == null || isFinishing || isDestroyed) return
+                val progress = backEvent.progress.coerceIn(0f, 1f)
+                val content = findViewById<View>(android.R.id.content)
+                val eased = progress * (2f - progress)
+                val scale = 1f - 0.085f * eased
+                content.scaleX = scale
+                content.scaleY = scale
+                content.translationX = 0f
+                content.translationY = 10.dp() * eased
+                content.clipToOutline = true
+                content.outlineProvider = object : android.view.ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: android.graphics.Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, 34.dp() * eased)
+                    }
+                }
+                content.invalidateOutline()
+                content.elevation = 12.dp() * eased
+            }
+
+            override fun onBackCancelled() {
+                if (backGestureState == null || isFinishing || isDestroyed) return
+                val state = backGestureState
+                backGestureState = null
+                val content = findViewById<View>(android.R.id.content)
+                content.animate().cancel()
+                content.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f)
+                    .setDuration(560L)
+                    .setInterpolator(android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f))
+                    .withEndAction {
+                        content.clipToOutline = false
+                        content.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+                        content.elevation = 0f
+                        if (state != null) restoreMainBackState(state.first, state.second)
+                        refreshMainPredictiveBackRegistration()
+                    }.start()
+            }
+
+            override fun onBackInvoked() {
+                val state = backGestureState
+                backGestureState = null
+                val content = findViewById<View>(android.R.id.content)
+                content.animate().cancel()
+                content.animate().scaleX(0.915f).scaleY(0.915f).translationY(10.dp().toFloat())
+                    .setDuration(190L)
+                    .setInterpolator(android.view.animation.DecelerateInterpolator())
+                    .withEndAction {
+                        content.scaleX = 1f
+                        content.scaleY = 1f
+                        content.translationX = 0f
+                        content.translationY = 0f
+                        content.clipToOutline = false
+                        content.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+                        content.elevation = 0f
+                        if (state == null && PopupStack.dismiss()) {
+                            refreshMainPredictiveBackRegistration()
+                        } else {
+                            cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
+                            showTab(0)
+                            refreshMainPredictiveBackRegistration()
+                        }
+                    }.start()
+            }
+        }
+        refreshMainPredictiveBackRegistration()
+    }
+
+    private fun isInAppBackState(): Boolean =
+        PopupStack.isOpen() || tab != 0 || cur.name == "Search"
+
+    private fun refreshMainPredictiveBackRegistration() {
+        if (Build.VERSION.SDK_INT < 34 || mainBackCallback == null) return
+        val shouldRegister = isInAppBackState()
+        if (shouldRegister && !mainBackCallbackRegistered) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, mainBackCallback!!
+            )
+            mainBackCallbackRegistered = true
+        } else if (!shouldRegister && mainBackCallbackRegistered) {
+            onBackInvokedDispatcher.unregisterOnBackInvokedCallback(mainBackCallback!!)
+            mainBackCallbackRegistered = false
+        }
+    }
+
+    private fun restoreMainBackState(previousTab: Int, previousSource: Source) {
+        cur = previousSource
+        showTab(previousTab)
+    }
+
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
-        if (PopupStack.dismiss()) return
-        // These destinations are states inside MainActivity, not separate Activities.
-        // Return to the feed instead of closing the app or sliding the whole opaque window.
-        if (tab == 2 || tab == 1) {
+        if (PopupStack.dismiss()) {
+            refreshMainPredictiveBackRegistration()
+            return
+        }
+        if (tab == 2 || tab == 1 || cur.name == "Search") {
+            cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
             showTab(0)
+            refreshMainPredictiveBackRegistration()
             return
         }
         super.onBackPressed()
@@ -521,6 +652,7 @@ class MainActivity : AppCompatActivity() {
         }
         pokeGlass()
         if (n == 2) animateAbout()
+        refreshMainPredictiveBackRegistration()
     }
 
     // ---------- Chips ----------
@@ -578,9 +710,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun select(s: Source) {
         cur = s
+        if (s.name != "Search") homeSource = s
         styleChips()
         rv.scrollToPosition(0)
         showTab(0)
+        refreshMainPredictiveBackRegistration()
     }
 
     private fun shuffleCurrent() {
