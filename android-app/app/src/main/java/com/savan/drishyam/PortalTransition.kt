@@ -227,7 +227,7 @@ object PortalTransition {
         runCatching {
             ViewAnimationUtils.createCircularReveal(content, x, y, radius, 0f).apply {
                 // Faster close makes the page collapse into the Back button promptly.
-                duration = 400L
+                duration = 700L
                 interpolator = portalEasing
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     private var finished = false
