@@ -160,7 +160,7 @@ class SettingsHubActivity : AppCompatActivity() {
         // Reserve the original layout space, but anchor the Back button above the fade.
         content.addView(View(this).apply {
             layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
-            isImportantForAccessibility = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         })
         settingsBackButton = back
         root.addView(back, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.START).apply {
