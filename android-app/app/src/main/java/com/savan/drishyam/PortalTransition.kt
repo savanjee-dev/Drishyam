@@ -39,33 +39,12 @@ object PortalTransition {
     }
 
     fun enter(activity: Activity) {
-        // Always keep the portal Activity window transparent so a closing reveal
-        // exposes the Activity beneath it, even when this page was opened without
-        // a recorded portal origin (in which case there is no entrance reveal).
+        // Page-opening animation is intentionally disabled for Phase S2.
+        // Keep the portal window transparent so the independent Back closing
+        // animation can reveal the previous Activity beneath this page.
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ||
-            !motionEnabled(activity) || !activity.intent.hasExtra(EXTRA_X) ||
-            !activity.intent.hasExtra(EXTRA_Y)) return
-
-        val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-        content.post {
-            if (activity.isFinishing || activity.isDestroyed || content.width <= 0 || content.height <= 0) return@post
-            val rootLocation = IntArray(2)
-            content.getLocationOnScreen(rootLocation)
-            val cx = (activity.intent.getIntExtra(EXTRA_X, rootLocation[0] + content.width / 2) - rootLocation[0])
-                .coerceIn(0, content.width)
-            val cy = (activity.intent.getIntExtra(EXTRA_Y, rootLocation[1] + content.height / 2) - rootLocation[1])
-                .coerceIn(0, content.height)
-            val radius = maxRadius(content.width, content.height, cx, cy)
-            runCatching {
-                ViewAnimationUtils.createCircularReveal(content, cx, cy, 0f, radius).apply {
-                    duration = 660L
-                    interpolator = portalEasing
-                }.start()
-            }
-        }
     }
 
     fun close(activity: Activity, backControl: View?) {
