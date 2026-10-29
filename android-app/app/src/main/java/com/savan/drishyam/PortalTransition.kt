@@ -67,7 +67,6 @@ object PortalTransition {
         val originalElevation = content.elevation
         val originalClipToOutline = content.clipToOutline
         val originalOutlineProvider = content.outlineProvider
-        val isOurStoryOverlay = activity is MainActivity && activity.intent.getBooleanExtra("open_about", false)
         val storyRoot = if (isOurStoryOverlay) activity.findViewById<View>(R.id.root) else null
         val storyGlassSource = if (isOurStoryOverlay) activity.findViewById<View>(R.id.glassSource) else null
         val storyAbout = if (isOurStoryOverlay) activity.findViewById<View>(R.id.about) else null
