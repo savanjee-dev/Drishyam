@@ -4,11 +4,14 @@ import android.app.Activity
 import android.animation.ObjectAnimator
 import android.content.Intent
 import android.graphics.Color
+import android.graphics.Outline
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.view.View
 import android.view.ViewAnimationUtils
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
+import android.animation.ValueAnimator
 import android.view.animation.PathInterpolator
 import android.view.animation.DecelerateInterpolator
 import kotlin.math.hypot
@@ -114,6 +117,27 @@ object PortalTransition {
         var startTranslation = 0f
         var latestProgress = 0f
         val cancelThreshold = 0.10f
+        val density = activity.resources.displayMetrics.density
+        val minCornerRadius = 4f * density
+        val maxCornerRadius = 32f * density
+        var currentCornerRadius = minCornerRadius
+        content.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, currentCornerRadius)
+            }
+        }
+        content.clipToOutline = true
+        fun animateCornerRadius(targetRadius: Float, durationMs: Long) {
+            ValueAnimator.ofFloat(currentCornerRadius, targetRadius).apply {
+                duration = durationMs
+                interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
+                addUpdateListener { animator ->
+                    currentCornerRadius = animator.animatedValue as Float
+                    content.invalidateOutline()
+                }
+                start()
+            }
+        }
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 // Android supports edge-back from either side. Move the page away
@@ -128,6 +152,8 @@ object PortalTransition {
                 if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
                 latestProgress = progress
+                currentCornerRadius = minCornerRadius + (maxCornerRadius - minCornerRadius) * progress
+                content.invalidateOutline()
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
@@ -135,6 +161,7 @@ object PortalTransition {
                 latestProgress = 0f
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
+                animateCornerRadius(minCornerRadius, 700L)
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
                     duration = 700L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
@@ -148,6 +175,7 @@ object PortalTransition {
                 if (latestProgress <= cancelThreshold) {
                     // A short edge pull is a cancelled gesture, not a navigation request.
                     // Glide back to the current page and keep this Activity alive.
+                    animateCornerRadius(minCornerRadius, 700L)
                     ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
                         duration = 700L
                         interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
@@ -156,6 +184,7 @@ object PortalTransition {
                     latestProgress = 0f
                     return
                 }
+                animateCornerRadius(maxCornerRadius, 160L)
                 val targetX = startTranslation + direction * content.width.toFloat()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
                     duration = 160L
