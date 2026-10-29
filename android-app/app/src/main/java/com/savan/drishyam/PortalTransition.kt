@@ -57,9 +57,11 @@ object PortalTransition {
      * Cancellation returns the page to its exact starting position.
      */
     private fun registerDirectionalBackGesture(activity: Activity) {
-        // MainActivity owns tab/popup navigation. Let Android dispatch Back normally there;
-        // applying a whole-window glide to the opaque root would reveal only its dark window.
-        if (activity is MainActivity || Build.VERSION.SDK_INT < 34) return
+        // MainActivity normally owns tab/popup navigation. The dedicated Our Story route is
+        // different: it is a transparent overlay over Settings, so the shared Activity gesture
+        // can reveal the actual previous page beneath it.
+        val isOurStoryOverlay = activity is MainActivity && activity.intent.getBooleanExtra("open_about", false)
+        if ((activity is MainActivity && !isOurStoryOverlay) || Build.VERSION.SDK_INT < 34) return
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         val density = activity.resources.displayMetrics.density
         val originalElevation = content.elevation
