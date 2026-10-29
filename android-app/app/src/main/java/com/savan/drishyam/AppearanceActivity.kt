@@ -119,12 +119,18 @@ class AppearanceActivity : AppCompatActivity() {
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
+                intArrayOf(
+                    color(R.color.bg),
+                    withAlpha(color(R.color.bg), 0.92f),
+                    withAlpha(color(R.color.bg), 0.68f),
+                    withAlpha(color(R.color.bg), 0.34f),
+                    Color.TRANSPARENT
+                ))
         }
         root.addView(appearanceScroll, FrameLayout.LayoutParams(-1, -1))
-        // Keep the top fade above scrolling content so it remains visible while scrolling.
-        // The floating back control is inserted above this fade below.
-        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(76), Gravity.TOP))
+        // Keep the wider, softer top fade above scrolling content while the fixed Back
+        // button is drawn above it and fades only as the page scrolls.
+        root.addView(topFeather, FrameLayout.LayoutParams(-1, dp(148), Gravity.TOP))
         root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
