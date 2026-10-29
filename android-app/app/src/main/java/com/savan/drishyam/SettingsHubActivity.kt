@@ -230,8 +230,8 @@ class SettingsHubActivity : AppCompatActivity() {
         })
         content.addView(footer, matchWrap(0))
 
-        // Phase S2: no page-entry animation. Keep the page stable so the
-        // dedicated Back-button collapse is the only page-navigation animation.
+        // The shared portal handles page opening from the saved tap origin;
+        // keep the dedicated Back-button collapse independent and unchanged.
 
         // Attach the prototype-matched pull stretch after the page content is complete.
         PageStretch.attach(scroll, density, reduced)
