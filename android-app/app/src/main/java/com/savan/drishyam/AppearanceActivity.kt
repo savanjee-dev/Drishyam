@@ -168,7 +168,6 @@ class AppearanceActivity : AppCompatActivity() {
         root.bringChildToFront(backButton)
         applyGlassLevel()
         addLoop { reflectionOverlay?.setElapsed(it) }
-        attachPendingThemeReveal()
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
             val visible = 1f - progress
@@ -357,6 +356,8 @@ class AppearanceActivity : AppCompatActivity() {
 
     // Keep the previous appearance as a snapshot during AppCompat's uiMode recreation.
     // A growing transparent aperture then exposes the new theme from the tap point.
+    // A single tap-centred reveal. The old palette covers the new UI while the
+    // circular aperture expands, so the theme changes underneath one continuous animation.
     private fun chooseTheme(name: String, card: View) {
         if (themeTransitionInProgress || name == theme) return
         themeTransitionInProgress = true
@@ -395,80 +396,21 @@ class AppearanceActivity : AppCompatActivity() {
         val screenY = touched?.second ?: (cardLoc[1] + card.height / 2f)
         val cx = (screenX - rootLoc[0]).coerceIn(0f, root.width.toFloat())
         val cy = (screenY - rootLoc[1]).coerceIn(0f, root.height.toFloat())
-
-        if (appearanceWillChange && !reduced && root.width > 0 && root.height > 0) {
-            val snapshot = android.graphics.Bitmap.createBitmap(
-                root.width, root.height, android.graphics.Bitmap.Config.ARGB_8888
-            )
-            root.draw(Canvas(snapshot))
-            pendingThemeSnapshot?.let { if (!it.isRecycled) it.recycle() }
-            pendingThemeSnapshot = snapshot
-            pendingThemeCenterX = cx
-            pendingThemeCenterY = cy
-            pendingThemeDuration = 460L
-            AppCompatDelegate.setDefaultNightMode(targetMode)
-            return
-        }
-
-        if (appearanceWillChange) {
-            AppCompatDelegate.setDefaultNightMode(targetMode)
-            themeTransitionInProgress = false
-            themeCards.forEach { it.isEnabled = true }
-            return
-        }
-
-        // System can be selected without a palette change; animate a colour reveal in place.
-        val targetColor = if (targetDark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
-        val overlay = View(this).apply { setBackgroundColor(targetColor) }
-        themeRevealOverlay?.let { root.removeView(it) }
-        themeRevealOverlay = overlay
-        root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
         val radius = hypot(maxOf(cx, root.width - cx), maxOf(cy, root.height - cy))
-        ViewAnimationUtils.createCircularReveal(overlay, cx.toInt(), cy.toInt(), 0f, radius).apply {
-            duration = if (reduced) 0L else 420L
-            interpolator = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
-            addListener(object : android.animation.AnimatorListenerAdapter() {
-                private fun finish() {
-                    if (overlay.parent === root) root.removeView(overlay)
-                    if (themeRevealOverlay === overlay) themeRevealOverlay = null
-                    themeTransitionInProgress = false
-                    themeCards.forEach { it.isEnabled = true }
-                }
-                override fun onAnimationEnd(animation: android.animation.Animator) = finish()
-                override fun onAnimationCancel(animation: android.animation.Animator) = finish()
-            })
-            start()
-        }
-    }
 
-    private fun attachPendingThemeReveal() {
-        val snapshot = pendingThemeSnapshot ?: return
-        pendingThemeSnapshot = null
-        val cx = pendingThemeCenterX
-        val cy = pendingThemeCenterY
-        val duration = pendingThemeDuration
-        root.post {
-            if (isFinishing || isDestroyed || root.width <= 0 || root.height <= 0) {
-                if (!snapshot.isRecycled) snapshot.recycle()
-                themeTransitionInProgress = false
-                return@post
-            }
-            val cover = ThemeSnapshotApertureView(this, snapshot, cx, cy)
-            themeRevealOverlay = cover
-            root.addView(cover, FrameLayout.LayoutParams(-1, -1))
-            val radius = hypot(maxOf(cx, root.width - cx), maxOf(cy, root.height - cy))
-            ValueAnimator.ofFloat(0f, radius).apply {
-                this.duration = duration
+        if (!appearanceWillChange || reduced || root.width <= 0 || root.height <= 0) {
+            val targetColor = if (targetDark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
+            val overlay = View(this).apply { setBackgroundColor(targetColor) }
+            themeRevealOverlay?.let { root.removeView(it) }
+            themeRevealOverlay = overlay
+            root.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+            ViewAnimationUtils.createCircularReveal(overlay, cx.toInt(), cy.toInt(), 0f, radius).apply {
+                duration = if (reduced) 0L else 420L
                 interpolator = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
-                addUpdateListener {
-                    cover.revealRadius = it.animatedValue as Float
-                    cover.invalidate()
-                }
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     private fun finish() {
-                        if (cover.parent === root) root.removeView(cover)
-                        if (themeRevealOverlay === cover) themeRevealOverlay = null
-                        if (!snapshot.isRecycled) snapshot.recycle()
+                        if (overlay.parent === root) root.removeView(overlay)
+                        if (themeRevealOverlay === overlay) themeRevealOverlay = null
                         themeTransitionInProgress = false
                         themeCards.forEach { it.isEnabled = true }
                     }
@@ -477,6 +419,35 @@ class AppearanceActivity : AppCompatActivity() {
                 })
                 start()
             }
+            if (appearanceWillChange) AppCompatDelegate.setDefaultNightMode(targetMode)
+            return
+        }
+
+        val oldBackground = if (currentDark) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
+        val cover = ThemeRevealCoverView(this, oldBackground, cx, cy)
+        themeRevealOverlay?.let { root.removeView(it) }
+        themeRevealOverlay = cover
+        root.addView(cover, FrameLayout.LayoutParams(-1, -1))
+        AppCompatDelegate.setDefaultNightMode(targetMode)
+
+        ValueAnimator.ofFloat(0f, radius).apply {
+            duration = 620L
+            interpolator = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
+            addUpdateListener {
+                cover.revealRadius = it.animatedValue as Float
+                cover.invalidate()
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                private fun finish() {
+                    if (cover.parent === root) root.removeView(cover)
+                    if (themeRevealOverlay === cover) themeRevealOverlay = null
+                    themeTransitionInProgress = false
+                    themeCards.forEach { it.isEnabled = true }
+                }
+                override fun onAnimationEnd(animation: android.animation.Animator) = finish()
+                override fun onAnimationCancel(animation: android.animation.Animator) = finish()
+            })
+            start()
         }
     }
 
@@ -979,11 +950,6 @@ class AppearanceActivity : AppCompatActivity() {
     private fun easeInOut(p: Float): Float = (0.5 - 0.5 * cos(PI * p.toDouble())).toFloat()
 
     companion object {
-        private var pendingThemeSnapshot: android.graphics.Bitmap? = null
-        private var pendingThemeCenterX = 0f
-        private var pendingThemeCenterY = 0f
-        private var pendingThemeDuration = 460L
-
         private val SPRING = PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
         private val OUT = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
         private val EASE_OUT = PathInterpolator(0f, 0f, 0.58f, 1f)
@@ -996,26 +962,25 @@ class AppearanceActivity : AppCompatActivity() {
  * Shared moving reflection layer for registered glass controls.
  * Uses the page clock, avoiding separate animators for each control.
  */
-/** Previous-theme snapshot with an expanding transparent aperture. */
-private class ThemeSnapshotApertureView(
+/** Old-palette cover with a growing transparent aperture; it stores no UI snapshot. */
+private class ThemeRevealCoverView(
     context: Context,
-    private val snapshot: android.graphics.Bitmap,
+    private val coverColor: Int,
     private val centerX: Float,
     private val centerY: Float
 ) : View(context) {
-    private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val aperturePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     var revealRadius: Float = 0f
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (snapshot.isRecycled) return
         val save = canvas.save()
         val aperture = android.graphics.Path().apply {
             addCircle(centerX, centerY, revealRadius, android.graphics.Path.Direction.CW)
         }
         @Suppress("DEPRECATION")
         canvas.clipPath(aperture, android.graphics.Region.Op.DIFFERENCE)
-        canvas.drawBitmap(snapshot, null, android.graphics.Rect(0, 0, width, height), bitmapPaint)
+        canvas.drawColor(coverColor)
         canvas.restoreToCount(save)
     }
 }
