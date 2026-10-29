@@ -112,6 +112,16 @@ object PortalTransition {
             activity.finish()
             return
         }
+        // Stop any in-flight child view property animations before starting the
+        // close reveal. Otherwise staggered fades/translations can redraw over the
+        // shrinking portal and look like a flash or flicker.
+        fun cancelAnimations(view: View) {
+            view.animate().cancel()
+            if (view is ViewGroup) {
+                for (index in 0 until view.childCount) cancelAnimations(view.getChildAt(index))
+            }
+        }
+        cancelAnimations(content)
         val rootLocation = IntArray(2)
         content.getLocationOnScreen(rootLocation)
         // A tap on the visible Back control makes the whole page collapse into
