@@ -41,13 +41,36 @@ object PortalTransition {
     }
 
     fun enter(activity: Activity) {
-        // Page-opening animation is intentionally disabled for Phase S2.
-        // Keep the portal window transparent so the independent Back closing
-        // animation can reveal the previous Activity beneath this page.
+        // Keep the portal window transparent so both the opening reveal and the
+        // dedicated Back closing animation can expose the Activity beneath it.
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         registerDirectionalBackGesture(activity)
+
+        val intent = activity.intent
+        if (!intent.hasExtra(EXTRA_X) || !intent.hasExtra(EXTRA_Y) ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || !motionEnabled(activity)
+        ) return
+
+        val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        content.post {
+            if (activity.isFinishing || activity.isDestroyed || content.width <= 0 || content.height <= 0) return@post
+            val location = IntArray(2)
+            content.getLocationOnScreen(location)
+            val x = (intent.getIntExtra(EXTRA_X, location[0] + content.width / 2) - location[0])
+                .coerceIn(0, content.width)
+            val y = (intent.getIntExtra(EXTRA_Y, location[1] + content.height / 2) - location[1])
+                .coerceIn(0, content.height)
+            val radius = maxRadius(content.width, content.height, x, y)
+            runCatching {
+                ViewAnimationUtils.createCircularReveal(content, x, y, 0f, radius).apply {
+                    duration = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) 560L else 0L
+                    interpolator = portalEasing
+                    start()
+                }
+            }
+        }
     }
 
     /**
