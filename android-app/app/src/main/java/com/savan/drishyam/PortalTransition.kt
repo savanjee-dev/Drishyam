@@ -112,6 +112,8 @@ object PortalTransition {
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         var direction = 1f
         var startTranslation = 0f
+        var latestProgress = 0f
+        val cancelThreshold = 0.35f
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 // Android supports edge-back from either side. Move the page away
@@ -119,15 +121,18 @@ object PortalTransition {
                 // discarding right-edge gestures.
                 direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
                 startTranslation = content.translationX
+                latestProgress = 0f
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
                 if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
+                latestProgress = progress
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
             override fun onBackCancelled() {
+                latestProgress = 0f
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
@@ -140,6 +145,17 @@ object PortalTransition {
             override fun onBackInvoked() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
+                if (latestProgress <= cancelThreshold) {
+                    // A short edge pull is a cancelled gesture, not a navigation request.
+                    // Glide back to the current page and keep this Activity alive.
+                    ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
+                        duration = 400L
+                        interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
+                        start()
+                    }
+                    latestProgress = 0f
+                    return
+                }
                 val targetX = startTranslation + direction * content.width.toFloat()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
                     duration = 160L
