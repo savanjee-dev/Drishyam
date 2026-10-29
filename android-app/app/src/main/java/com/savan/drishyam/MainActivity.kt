@@ -318,7 +318,12 @@ class MainActivity : AppCompatActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         if (PopupStack.dismiss()) return
-        if (tab == 2) { finish(); return }
+        // These destinations are states inside MainActivity, not separate Activities.
+        // Return to the feed instead of closing the app or sliding the whole opaque window.
+        if (tab == 2 || tab == 1) {
+            showTab(0)
+            return
+        }
         super.onBackPressed()
     }
 
