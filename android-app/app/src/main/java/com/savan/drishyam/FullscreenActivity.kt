@@ -14,6 +14,7 @@ class FullscreenActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyActivityTransitionPreference(this)
         setContentView(R.layout.activity_fullscreen)
+        PortalTransition.enter(this)
         animatePageEntrance(findViewById(android.R.id.content))
 
         val payload = intent.getStringExtra("p")
