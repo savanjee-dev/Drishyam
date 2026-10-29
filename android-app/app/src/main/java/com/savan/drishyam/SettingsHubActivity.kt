@@ -401,7 +401,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setPadding(0, 0, 0, 0)
             attachPress(glowable = true)
             setOnClickListener {
-                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
+                PortalTransition.launch(this@SettingsHubActivity, this, Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
         }
 
@@ -484,7 +484,7 @@ class SettingsHubActivity : AppCompatActivity() {
                 leftMargin = dp(4)
             })
             setOnClickListener {
-                startActivity(Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
+                PortalTransition.launch(this@SettingsHubActivity, this, Intent(this@SettingsHubActivity, MainActivity::class.java).putExtra("open_about", true))
             }
             attachPress(glowable = true)
         }
@@ -827,7 +827,7 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 }
 
-/** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
+/** Touch effect: one expanding glow ring with a soft halo; no layered water-ripple waves. */
 private class TouchRippleGlowDrawable(private val density: Float, private val lightMode: Boolean) : Drawable() {
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -884,14 +884,11 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         glowPaint.alpha = (fade * 255f).toInt()
         canvas.drawCircle(centerX, centerY, radius, glowPaint)
 
-        // Layered wave fronts make the ripple feel less flat.
-        ripplePaint.color = 0xFF89945A.toInt()
-        ripplePaint.alpha = (fade * 220f).toInt()
-        ripplePaint.strokeWidth = density * (1.7f - 0.8f * progress)
-        canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
-        ripplePaint.alpha = (fade * 125f).toInt()
-        ripplePaint.strokeWidth = density * 2.4f
-        canvas.drawCircle(centerX, centerY, maxRadius * (progress * 0.72f), ripplePaint)
+        // A single luminous ring expands from the exact touch point and fades smoothly.
+        ripplePaint.color = if (lightMode) 0xFF89945A.toInt() else 0xFFD5DDBB.toInt()
+        ripplePaint.alpha = (fade * 205f).toInt()
+        ripplePaint.strokeWidth = density * (3.2f - 2.0f * progress)
+        canvas.drawCircle(centerX, centerY, radius, ripplePaint)
         canvas.restoreToCount(save)
     }
 
