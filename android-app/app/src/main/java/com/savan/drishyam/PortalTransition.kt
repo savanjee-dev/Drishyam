@@ -1,28 +1,30 @@
 package com.savan.drishyam
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.content.Intent
 import android.os.Build
 import android.view.View
 import android.view.ViewAnimationUtils
 import android.view.ViewGroup
-import android.view.animation.AccelerateDecelerateInterpolator
+import android.view.animation.PathInterpolator
 import kotlin.math.hypot
 
 /**
- * Circular Portal page transitions. The launch origin is recorded in screen coordinates
- * and converted into the destination content's coordinate space after layout.
+ * Circular Portal page transitions. Touch coordinates are captured in screen space and
+ * converted to the destination content's local coordinates after layout.
  */
 object PortalTransition {
     private var lastTouch: Pair<Int, Int>? = null
 
+    private const val EXTRA_X = "drishyam.portal.origin_x"
+    private const val EXTRA_Y = "drishyam.portal.origin_y"
+    private val portalEasing = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
+
     fun recordTouch(view: View, rawX: Float, rawY: Float) {
         lastTouch = rawX.toInt() to rawY.toInt()
     }
-    private const val EXTRA_X = "drishyam.portal.origin_x"
-    private const val EXTRA_Y = "drishyam.portal.origin_y"
 
     fun launch(activity: Activity, source: View, intent: Intent) {
         val location = IntArray(2)
@@ -32,7 +34,7 @@ object PortalTransition {
         val y = touched?.second?.takeIf { it >= 0 } ?: (location[1] + source.height / 2)
         intent.putExtra(EXTRA_X, x)
         intent.putExtra(EXTRA_Y, y)
-        if (motionEnabled(activity)) activity.window.setWindowAnimations(0)
+        activity.window.setWindowAnimations(0)
         activity.startActivity(intent)
     }
 
@@ -44,9 +46,8 @@ object PortalTransition {
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         activity.window.setWindowAnimations(0)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        content.alpha = 0f
         content.post {
-            if (activity.isFinishing || content.width <= 0 || content.height <= 0) return@post
+            if (activity.isFinishing || activity.isDestroyed || content.width <= 0 || content.height <= 0) return@post
             val rootLocation = IntArray(2)
             content.getLocationOnScreen(rootLocation)
             val cx = (activity.intent.getIntExtra(EXTRA_X, rootLocation[0] + content.width / 2) - rootLocation[0])
@@ -54,24 +55,22 @@ object PortalTransition {
             val cy = (activity.intent.getIntExtra(EXTRA_Y, rootLocation[1] + content.height / 2) - rootLocation[1])
                 .coerceIn(0, content.height)
             val radius = maxRadius(content.width, content.height, cx, cy)
-            content.alpha = 1f
             runCatching {
                 ViewAnimationUtils.createCircularReveal(content, cx, cy, 0f, radius).apply {
-                    duration = 420L
-                    interpolator = AccelerateDecelerateInterpolator()
+                    duration = 480L
+                    interpolator = portalEasing
                 }.start()
             }
         }
     }
 
     fun close(activity: Activity, backControl: View?) {
+        if (activity.isFinishing) return
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || !motionEnabled(activity)) {
             activity.finish()
             return
         }
         val content = activity.findViewById<ViewGroup>(android.R.id.content)
-        activity.window.setWindowAnimations(0)
-        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (content == null || content.width <= 0 || content.height <= 0) {
             activity.finish()
             return
@@ -87,19 +86,26 @@ object PortalTransition {
         val radius = maxRadius(content.width, content.height, x, y)
         runCatching {
             ViewAnimationUtils.createCircularReveal(content, x, y, radius, 0f).apply {
-                duration = 300L
-                interpolator = AccelerateDecelerateInterpolator()
+                duration = 360L
+                interpolator = portalEasing
                 addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: android.animation.Animator) {
-                        activity.finish()
+                    private var finished = false
+                    private fun finishOnce() {
+                        if (!finished) {
+                            finished = true
+                            activity.finish()
+                            activity.overridePendingTransition(0, 0)
+                        }
                     }
-                    override fun onAnimationCancel(animation: android.animation.Animator) {
-                        if (!activity.isFinishing) activity.finish()
-                    }
+                    override fun onAnimationEnd(animation: android.animation.Animator) = finishOnce()
+                    override fun onAnimationCancel(animation: android.animation.Animator) = finishOnce()
                 })
                 start()
             }
-        }.onFailure { activity.finish() }
+        }.onFailure {
+            activity.finish()
+            activity.overridePendingTransition(0, 0)
+        }
     }
 
     private fun maxRadius(width: Int, height: Int, x: Int, y: Int): Float {
