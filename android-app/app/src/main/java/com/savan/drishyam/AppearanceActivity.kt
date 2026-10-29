@@ -49,13 +49,6 @@ import kotlin.math.hypot
  * low_fx (boolean, true when Glass effects is Off), glass_level ("off"/"subtle"/"full"), motion ("standard"/"reduced").
  */
 class AppearanceActivity : AppCompatActivity() {
-    companion object {
-        private var pendingThemeSnapshot: android.graphics.Bitmap? = null
-        private var pendingThemeCenterX = 0f
-        private var pendingThemeCenterY = 0f
-        private var pendingThemeDuration = 460L
-    }
-
     private val density by lazy { resources.displayMetrics.density }
     private fun dp(v: Number): Int = (v.toFloat() * density).toInt()
     private fun dpf(v: Number): Float = v.toFloat() * density
@@ -986,6 +979,11 @@ class AppearanceActivity : AppCompatActivity() {
     private fun easeInOut(p: Float): Float = (0.5 - 0.5 * cos(PI * p.toDouble())).toFloat()
 
     companion object {
+        private var pendingThemeSnapshot: android.graphics.Bitmap? = null
+        private var pendingThemeCenterX = 0f
+        private var pendingThemeCenterY = 0f
+        private var pendingThemeDuration = 460L
+
         private val SPRING = PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
         private val OUT = PathInterpolator(0.2f, 0.8f, 0.2f, 1f)
         private val EASE_OUT = PathInterpolator(0f, 0f, 0.58f, 1f)
