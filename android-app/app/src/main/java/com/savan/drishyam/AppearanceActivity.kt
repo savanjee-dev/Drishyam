@@ -162,6 +162,9 @@ class AppearanceActivity : AppCompatActivity() {
         reflections.isFocusable = false
         reflections.isFocusableInTouchMode = false
         root.addView(reflections, FrameLayout.LayoutParams(-1, -1))
+        // Keep the floating Back control above the full-screen reflection layer so
+        // it reliably receives taps instead of depending on child dispatch order.
+        root.bringChildToFront(backButton)
         applyGlassLevel()
         addLoop { reflectionOverlay?.setElapsed(it) }
         appearanceScroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
