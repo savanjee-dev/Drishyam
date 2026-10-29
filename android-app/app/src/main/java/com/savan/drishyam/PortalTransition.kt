@@ -67,13 +67,45 @@ object PortalTransition {
         val originalElevation = content.elevation
         val originalClipToOutline = content.clipToOutline
         val originalOutlineProvider = content.outlineProvider
+        val isOurStoryOverlay = activity is MainActivity && activity.intent.getBooleanExtra("open_about", false)
+        val storyRoot = if (isOurStoryOverlay) activity.findViewById<View>(R.id.root) else null
+        val storyGlassSource = if (isOurStoryOverlay) activity.findViewById<View>(R.id.glassSource) else null
+        val storyAbout = if (isOurStoryOverlay) activity.findViewById<View>(R.id.about) else null
+        val storyOverlay = if (isOurStoryOverlay) activity.findViewById<View>(R.id.overlay) else null
+        val storyBackground = (storyGlassSource as? ViewGroup)?.getChildAt(0)
+        val originalStoryRootBackground = storyRoot?.background
+        val originalStoryGlassBackground = storyGlassSource?.background
+        val originalStoryAboutBackground = storyAbout?.background
+        val originalStoryBackgroundVisibility = storyBackground?.visibility
+        val originalStoryOverlayVisibility = storyOverlay?.visibility
+        var storyPreviewPrepared = false
         var direction = 1f
         var startTranslation = 0f
         var currentProgress = 0f
         val backOutlineProvider = object : android.view.ViewOutlineProvider() {
             override fun getOutline(view: View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, 34f * density * currentProgress)
+                outline.setRoundRect(0, 0, view.width, view.height, 24f * density * currentProgress)
             }
+        }
+
+        fun prepareStoryPreview() {
+            if (!isOurStoryOverlay || storyPreviewPrepared) return
+            storyPreviewPrepared = true
+            storyRoot?.setBackgroundColor(Color.TRANSPARENT)
+            storyGlassSource?.setBackgroundColor(Color.TRANSPARENT)
+            storyAbout?.setBackgroundColor(Color.TRANSPARENT)
+            storyBackground?.visibility = View.GONE
+            storyOverlay?.visibility = View.GONE
+        }
+
+        fun restoreStoryAppearance() {
+            if (!storyPreviewPrepared) return
+            storyRoot?.background = originalStoryRootBackground
+            storyGlassSource?.background = originalStoryGlassBackground
+            storyAbout?.background = originalStoryAboutBackground
+            if (storyBackground != null && originalStoryBackgroundVisibility != null) storyBackground.visibility = originalStoryBackgroundVisibility
+            if (storyOverlay != null && originalStoryOverlayVisibility != null) storyOverlay.visibility = originalStoryOverlayVisibility
+            storyPreviewPrepared = false
         }
         var returnAnimator: android.animation.ValueAnimator? = null
         var commitAnimator: android.animation.ValueAnimator? = null
@@ -82,7 +114,7 @@ object PortalTransition {
             val progress = progressValue.coerceIn(0f, 1f)
             currentProgress = progress
             content.translationX = translation
-            val scale = 1f - 0.085f * progress
+            val scale = 1f - 0.045f * progress
             content.scaleX = scale
             content.scaleY = scale
             if (content.outlineProvider !== backOutlineProvider) content.outlineProvider = backOutlineProvider
@@ -108,6 +140,7 @@ object PortalTransition {
                 commitAnimator?.cancel()
                 direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
                 startTranslation = content.translationX
+                prepareStoryPreview()
                 applyProgress(0f, startTranslation)
             }
 
@@ -123,10 +156,10 @@ object PortalTransition {
                 returnAnimator?.cancel()
                 val fromTranslation = content.translationX
                 val fromScale = content.scaleX
-                val fromRadiusProgress = ((1f - fromScale) / 0.085f).coerceIn(0f, 1f)
+                val fromRadiusProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
                 returnAnimator = android.animation.ValueAnimator.ofFloat(1f, 0f).apply {
                     // A more deliberate glide instead of the previous 260 ms snap-back.
-                    duration = 560L
+                    duration = 390L
                     interpolator = android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f)
                     addUpdateListener { animator ->
                         val remaining = animator.animatedValue as Float
@@ -135,7 +168,10 @@ object PortalTransition {
                     }
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         override fun onAnimationEnd(animation: android.animation.Animator) {
-                            if (!activity.isFinishing && !activity.isDestroyed) restoreOriginalShape()
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                restoreOriginalShape()
+                                restoreStoryAppearance()
+                            }
                         }
                         override fun onAnimationCancel(animation: android.animation.Animator) {
                             // A new gesture can interrupt the return; the next start owns the visuals.
@@ -151,11 +187,11 @@ object PortalTransition {
                 commitAnimator?.cancel()
                 val fromTranslation = content.translationX
                 val fromScale = content.scaleX
-                val fromProgress = ((1f - fromScale) / 0.085f).coerceIn(0f, 1f)
+                val fromProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
                 val target = direction * content.width.toFloat().coerceAtLeast(1f)
                 commitAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                    duration = 240L
-                    interpolator = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
+                    duration = 210L
+                    interpolator = DecelerateInterpolator()
                     addUpdateListener { animator ->
                         val t = animator.animatedValue as Float
                         val eased = t * t * (3f - 2f * t)
