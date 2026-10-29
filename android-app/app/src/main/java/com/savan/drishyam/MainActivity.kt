@@ -321,7 +321,7 @@ class MainActivity : AppCompatActivity() {
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         if (PopupStack.dismiss()) return
-        if (tab == 2) { finish(); return }
+        if (tab == 2) { PortalTransition.close(this, null); return }
         super.onBackPressed()
     }
 
