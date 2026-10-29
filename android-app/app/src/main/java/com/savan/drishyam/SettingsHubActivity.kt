@@ -638,7 +638,7 @@ class SettingsHubActivity : AppCompatActivity() {
                         touchAnimator?.cancel()
                         touchEffect.begin(e.x, e.y)
                         touchAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = if (reduced) 2400L else 1050L
+                            duration = if (reduced) 700L else 480L
                             interpolator = EASE_OUT
                             addUpdateListener { a -> touchEffect.setProgress(a.animatedValue as Float) }
                             addListener(object : android.animation.AnimatorListenerAdapter() {
@@ -821,10 +821,6 @@ class SettingsHubActivity : AppCompatActivity() {
 /** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
 private class TouchRippleGlowDrawable(private val density: Float, private val lightMode: Boolean) : Drawable() {
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val ripplePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.35f * density
-    }
     private var centerX = 0f
     private var centerY = 0f
     private var progress = 1f
@@ -875,26 +871,16 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         glowPaint.alpha = (fade * 255f).toInt()
         canvas.drawCircle(centerX, centerY, radius, glowPaint)
 
-        // Layered wave fronts make the ripple feel less flat.
-        ripplePaint.color = 0xFF89945A.toInt()
-        ripplePaint.alpha = (fade * 220f).toInt()
-        ripplePaint.strokeWidth = density * (1.7f - 0.8f * progress)
-        canvas.drawCircle(centerX, centerY, maxRadius * progress, ripplePaint)
-        ripplePaint.alpha = (fade * 125f).toInt()
-        ripplePaint.strokeWidth = density * 2.4f
-        canvas.drawCircle(centerX, centerY, maxRadius * (progress * 0.72f), ripplePaint)
         canvas.restoreToCount(save)
     }
 
     override fun setAlpha(alpha: Int) {
         glowPaint.alpha = alpha
-        ripplePaint.alpha = alpha
         invalidateSelf()
     }
 
     override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
         glowPaint.colorFilter = colorFilter
-        ripplePaint.colorFilter = colorFilter
         invalidateSelf()
     }
 
