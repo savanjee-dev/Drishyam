@@ -189,6 +189,9 @@ class MainActivity : AppCompatActivity() {
             findViewById<View>(R.id.root).setBackgroundColor(storySurface)
             glassSource.setBackgroundColor(storySurface)
             val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            // In light-mode Story, replace the always-redrawing shared backdrop with this
+            // lighter ambient layer; dark mode retains the original shared background unchanged.
+            if (!nightMode) glassSource.getChildAt(0)?.visibility = View.GONE
             storyAmbientLayer = StoryAmbientLayer(this).apply {
                 visibility = if (!nightMode && visualEffectsEnabled(this@MainActivity) && motionEnabled(this@MainActivity)) View.VISIBLE else View.GONE
             }
