@@ -110,7 +110,13 @@ fun bindGlass(root: View, source: View, tickMs: Long) {
 /** Remembers the open pop-up so the Back button can close it first. */
 object PopupStack {
     private var closer: (() -> Unit)? = null
-    fun set(c: (() -> Unit)?) { closer = c }
+    private var changeListener: (() -> Unit)? = null
+    fun setOnChanged(listener: (() -> Unit)?) { changeListener = listener }
+    fun isOpen(): Boolean = closer != null
+    fun set(c: (() -> Unit)?) {
+        closer = c
+        changeListener?.invoke()
+    }
     fun dismiss(): Boolean {
         val c = closer ?: return false
         c()
