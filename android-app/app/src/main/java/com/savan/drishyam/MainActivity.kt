@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity() {
     )
     private var mainBackCallbackRegistered = false
     private var launchedAsOurStory = false
+    private var storyAmbientLayer: StoryAmbientLayer? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
@@ -187,6 +188,11 @@ class MainActivity : AppCompatActivity() {
             // The Story content itself must still fully cover the Settings page beneath it.
             findViewById<View>(R.id.root).setBackgroundColor(storySurface)
             glassSource.setBackgroundColor(storySurface)
+            val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            storyAmbientLayer = StoryAmbientLayer(this).apply {
+                visibility = if (!nightMode && visualEffectsEnabled(this@MainActivity) && motionEnabled(this@MainActivity)) View.VISIBLE else View.GONE
+            }
+            glassSource.addView(storyAmbientLayer, 1, android.widget.FrameLayout.LayoutParams(-1, -1))
         }
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
@@ -225,7 +231,8 @@ class MainActivity : AppCompatActivity() {
         glassTop.addOnLayoutChangeListener(relayout)
         glassNav.addOnLayoutChangeListener(relayout)
         overlay.addOnLayoutChangeListener(relayout)
-        aboutScroll.setOnScrollChangeListener { _, _, _, _, _ -> pokeGlass() }
+        // Story hides the floating glass bars; don't trigger backdrop captures on every scroll frame.
+        // The home feed still refreshes glass through its RecyclerView scroll listener.
 
         swipe.setColorSchemeColors(ContextCompat.getColor(this, R.color.accent), ContextCompat.getColor(this, R.color.accent2))
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
@@ -708,6 +715,17 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.aboutPhoto4).setImageResource(R.drawable.akshat_photo_3)
         val blur = findViewById<ImageView>(R.id.aboutBlur)
         blur.setImageResource(R.drawable.savan_background)
+        // Add a very low-contrast, static grain layer over the hero card's backdrop.
+        // It is drawn once per size change, not on every scroll frame.
+        val heroFrame = blur.parent as? android.widget.FrameLayout
+        if (heroFrame != null && heroFrame.findViewWithTag<View>("story-grain-overlay") == null) {
+            heroFrame.addView(StoryGrainOverlay(this).apply {
+                tag = "story-grain-overlay"
+                isClickable = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                visibility = if (isLightThemeNow()) View.VISIBLE else View.GONE
+            }, 1, android.widget.FrameLayout.LayoutParams(-1, -1))
+        }
         // Real background blur needs Android 12+; low-effects mode skips it.
         if (Build.VERSION.SDK_INT >= 31 && visualEffectsEnabled(this)) {
             blur.setRenderEffect(RenderEffect.createBlurEffect(90f, 90f, Shader.TileMode.CLAMP))
@@ -717,6 +735,9 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://instagram.com/savanjee"))) }
         }
     }
+
+    private fun isLightThemeNow(): Boolean =
+        (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     private fun animateAbout() {
         if (!visualEffectsEnabled(this) || !motionEnabled(this)) return
