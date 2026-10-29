@@ -328,18 +328,19 @@ class MainActivity : AppCompatActivity() {
             private var startTab = 0
             private var startSource: Source? = null
             private var startWasSearch = false
+            private var startedWithPopup = false
 
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 if (!isInAppBackState()) return
+                startedWithPopup = PopupStack.isOpen()
                 startTab = tab
                 startSource = cur
                 startWasSearch = cur.name == "Search"
-                backGestureState = startTab to cur
-                if (PopupStack.dismiss()) {
-                    // Pop-ups are dismissed only when Back commits; their own scrim remains
-                    // visible during the gesture so cancellation never loses the user's input.
+                if (startedWithPopup) {
+                    backGestureState = null
                     return
                 }
+                backGestureState = startTab to cur
                 if (startWasSearch) {
                     cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
                     showTab(0)
@@ -355,7 +356,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
-                if (backGestureState == null || isFinishing || isDestroyed) return
+                if (startedWithPopup || backGestureState == null || isFinishing || isDestroyed) return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
                 val content = findViewById<View>(android.R.id.content)
                 val eased = progress * (2f - progress)
@@ -375,6 +376,12 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onBackCancelled() {
+                if (startedWithPopup) {
+                    startedWithPopup = false
+                    backGestureState = null
+                    refreshMainPredictiveBackRegistration()
+                    return
+                }
                 if (backGestureState == null || isFinishing || isDestroyed) return
                 val state = backGestureState
                 backGestureState = null
@@ -393,6 +400,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onBackInvoked() {
+                if (startedWithPopup) {
+                    startedWithPopup = false
+                    backGestureState = null
+                    PopupStack.dismiss()
+                    refreshMainPredictiveBackRegistration()
+                    return
+                }
                 val state = backGestureState
                 backGestureState = null
                 val content = findViewById<View>(android.R.id.content)
