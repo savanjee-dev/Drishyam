@@ -60,21 +60,23 @@ object PortalTransition {
         if (Build.VERSION.SDK_INT < 34) return
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         var direction = 1f
+        var ignoredRightEdgeGesture = false
         var startTranslation = 0f
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
-                direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
+                ignoredRightEdgeGesture = backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT
+                direction = 1f
                 startTranslation = content.translationX
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
-                if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
+                if (ignoredRightEdgeGesture || activity.isFinishing || activity.isDestroyed || content.width <= 0) return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
             override fun onBackCancelled() {
-                if (activity.isFinishing || activity.isDestroyed) return
+                if (ignoredRightEdgeGesture || activity.isFinishing || activity.isDestroyed) return
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
                     duration = 220L
                     interpolator = DecelerateInterpolator()
@@ -83,7 +85,7 @@ object PortalTransition {
             }
 
             override fun onBackInvoked() {
-                if (activity.isFinishing) return
+                if (ignoredRightEdgeGesture || activity.isFinishing) return
                 // The gesture has already moved the page completely away. Do not
                 // run the button's circular-close animation on top of this slide.
                 activity.finish()
@@ -148,9 +150,9 @@ object PortalTransition {
                     private fun finishOnce() {
                         if (!finished) {
                             finished = true
-                            // Drop the fully-revealed content before finishing so a
-                            // final stale frame cannot flash over the Activity beneath.
-                            content.visibility = View.INVISIBLE
+                            // Keep the final clipped frame transparent until the Activity
+                            // is removed; hiding the content here can expose an opaque black
+                            // decor frame on devices that do not composite it immediately.
                             activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
                             activity.overridePendingTransition(0, 0)
                             activity.finish()
