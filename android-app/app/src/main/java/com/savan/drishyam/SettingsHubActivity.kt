@@ -638,7 +638,7 @@ class SettingsHubActivity : AppCompatActivity() {
                         touchAnimator?.cancel()
                         touchEffect.begin(e.x, e.y)
                         touchAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = if (reduced) 700L else 480L
+                            duration = if (reduced) 420L else 340L
                             interpolator = EASE_OUT
                             addUpdateListener { a -> touchEffect.setProgress(a.animatedValue as Float) }
                             addListener(object : android.animation.AnimatorListenerAdapter() {
@@ -858,9 +858,10 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         }
         canvas.clipPath(clip)
 
-        val maxRadius = kotlin.math.hypot(w.toDouble(), h.toDouble()).toFloat() * 0.72f
-        val radius = (maxRadius * (0.18f + 0.82f * progress)).coerceAtLeast(1f)
-        val fade = (1f - progress).coerceIn(0f, 1f)
+        val maxRadius = kotlin.math.hypot(w.toDouble(), h.toDouble()).toFloat() * 0.58f
+        // Keep the original restrained radial glow; do not expand it like a water ripple.
+        val radius = maxRadius.coerceAtLeast(1f)
+        val fade = ((1f - progress) * 0.62f).coerceIn(0f, 1f)
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
             if (lightMode) intArrayOf(0x9989945A.toInt(), 0x77B7A879, 0x55D5C9A5, 0x00D5C9A5)
