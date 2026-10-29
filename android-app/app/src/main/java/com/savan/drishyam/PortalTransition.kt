@@ -60,27 +60,26 @@ object PortalTransition {
         if (Build.VERSION.SDK_INT < 34) return
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         var direction = 1f
-        var ignoredRightEdgeGesture = false
         var startTranslation = 0f
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
-                ignoredRightEdgeGesture = backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT
-                direction = 1f
+                // Android supports edge-back from either side. Move the page away
+                // from the edge that received the gesture instead of silently
+                // discarding right-edge gestures.
+                direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
                 startTranslation = content.translationX
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
-                if (ignoredRightEdgeGesture || activity.isFinishing || activity.isDestroyed || content.width <= 0) return
-                // Dampen finger-driven travel so the page follows the gesture more gently.
-                // The remaining distance is completed slowly only after the gesture commits.
+                if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
                 val progress = backEvent.progress.coerceIn(0f, 1f) * 0.72f
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
             override fun onBackCancelled() {
-                if (ignoredRightEdgeGesture || activity.isFinishing || activity.isDestroyed) return
-                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
-                    // Give a cancelled edge gesture a long, gently decelerating return.
+                if (activity.isFinishing || activity.isDestroyed) return
+                content.animate().cancel()
+                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
                     duration = 900L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     start()
@@ -88,20 +87,19 @@ object PortalTransition {
             }
 
             override fun onBackInvoked() {
-                if (ignoredRightEdgeGesture || activity.isFinishing) return
-                // Finish the remaining travel at a deliberate, eased pace instead of
-                // snapping away as soon as the system commits the gesture.
-                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, content.width.toFloat()).apply {
+                if (activity.isFinishing || activity.isDestroyed) return
+                content.animate().cancel()
+                val targetX = startTranslation + direction * content.width.toFloat()
+                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
                     duration = 850L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     addListener(object : android.animation.AnimatorListenerAdapter() {
-                        override fun onAnimationEnd(animation: android.animation.Animator) {
-                            if (activity.isFinishing || activity.isDestroyed) return
-                            activity.finish()
-                            activity.overridePendingTransition(0, 0)
-                        }
+                        private var cancelled = false
                         override fun onAnimationCancel(animation: android.animation.Animator) {
-                            if (activity.isFinishing || activity.isDestroyed) return
+                            cancelled = true
+                        }
+                        override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (cancelled || activity.isFinishing || activity.isDestroyed) return
                             activity.finish()
                             activity.overridePendingTransition(0, 0)
                         }
@@ -169,11 +167,9 @@ object PortalTransition {
                     private fun finishOnce() {
                         if (!finished) {
                             finished = true
-                            // Keep the final clipped frame transparent until the Activity
-                            // is removed; hiding the content here can expose an opaque black
-                            // decor frame on devices that do not composite it immediately.
-                            activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
-                            activity.overridePendingTransition(0, 0)
+                            // Do not mutate the decor background on the final frame:
+                            // that creates a one-frame surface flash on some devices.
+                            // The Portal theme already keeps the window transparent.
                             activity.finish()
                             activity.overridePendingTransition(0, 0)
                         }
