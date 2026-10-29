@@ -14,6 +14,9 @@ class FullscreenActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyActivityTransitionPreference(this)
         setContentView(R.layout.activity_fullscreen)
+        // Register the S2 edge-back gesture, but keep fullscreen entry independent
+        // from the Settings portal's circular opening animation.
+        PortalTransition.enter(this, animateOpening = false)
         animatePageEntrance(findViewById(android.R.id.content))
 
         val payload = intent.getStringExtra("p")
