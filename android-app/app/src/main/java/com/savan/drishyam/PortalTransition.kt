@@ -78,8 +78,9 @@ object PortalTransition {
             override fun onBackCancelled() {
                 if (ignoredRightEdgeGesture || activity.isFinishing || activity.isDestroyed) return
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
-                    duration = 220L
-                    interpolator = DecelerateInterpolator()
+                    // Give a cancelled edge gesture a long, gently decelerating return.
+                    duration = 900L
+                    interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     start()
                 }
             }
@@ -143,7 +144,8 @@ object PortalTransition {
         val radius = maxRadius(content.width, content.height, x, y)
         runCatching {
             ViewAnimationUtils.createCircularReveal(content, x, y, radius, 0f).apply {
-                duration = 620L
+                // Slower close keeps the previous page visible as the portal collapses.
+                duration = 900L
                 interpolator = portalEasing
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     private var finished = false
