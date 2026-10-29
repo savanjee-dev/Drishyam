@@ -615,6 +615,9 @@ class AppearanceActivity : AppCompatActivity() {
                 tag = value
                 isClickable = true
                 isFocusable = true
+                // Each segmented option is an independent touch target; attach the
+                // same point-origin glow used by the theme cards and switch control.
+                attachPress(glowable = true)
             }
             buttons.add(b)
             row.addView(b, LinearLayout.LayoutParams(0, -2, 1f))
