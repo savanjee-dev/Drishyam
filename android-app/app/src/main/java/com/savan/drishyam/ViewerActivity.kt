@@ -34,6 +34,9 @@ class ViewerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyActivityTransitionPreference(this)
         setContentView(R.layout.activity_viewer)
+        // Register the S2 edge-back gesture without applying the portal opening reveal:
+        // the viewer is opened from the photo feed, not through PortalTransition.launch().
+        PortalTransition.enter(this, animateOpening = false)
         // Keep system-bar icons readable over the viewer's pale Light Mode bars.
         val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
