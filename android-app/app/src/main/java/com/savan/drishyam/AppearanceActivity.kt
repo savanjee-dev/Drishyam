@@ -489,7 +489,7 @@ class AppearanceActivity : AppCompatActivity() {
         })
         registerReflection(track)
         // Reuse the exact touch-point glow used by the Theme cards for setting toggles.
-        track.attachPress(glowable = true)
+        track.attachRadialGlow()
         track.setOnClickListener {
             checked = !checked
             track.contentDescription = if (checked) "On" else "Off"
@@ -615,9 +615,9 @@ class AppearanceActivity : AppCompatActivity() {
                 tag = value
                 isClickable = true
                 isFocusable = true
-                // Each segmented option is an independent touch target; attach the
-                // same point-origin glow used by the theme cards and switch control.
-                attachPress(glowable = true)
+                // Theme cards keep their existing effect. Segmented options use a separate
+                // bounded radial glow implementation.
+                attachRadialGlow()
             }
             buttons.add(b)
             row.addView(b, LinearLayout.LayoutParams(0, -2, 1f))
@@ -817,6 +817,52 @@ class AppearanceActivity : AppCompatActivity() {
                             duration = 450L
                             interpolator = EASE
                             addUpdateListener { a -> glow.glowAlpha = a.animatedValue as Int }
+                            start()
+                        }
+                    }
+                    if (reduced) { v.scaleX = 1f; v.scaleY = 1f } else springBack(v)
+                }
+            }
+            false
+        }
+    }
+
+    /** Strong point-origin radial bloom for non-theme toggles and selectable options. */
+    private fun View.attachRadialGlow() {
+        val glow = AppearanceBoundedRadialGlow(density)
+        foreground = glow
+        var animator: ValueAnimator? = null
+        setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    ObjectAnimator.ofPropertyValuesHolder(v,
+                        PropertyValuesHolder.ofFloat(View.SCALE_X, 0.96f),
+                        PropertyValuesHolder.ofFloat(View.SCALE_Y, 0.96f)).apply {
+                        duration = if (reduced) 0L else 80L
+                        interpolator = OUT
+                        start()
+                    }
+                    if (glassLevel != "off") {
+                        animator?.cancel()
+                        glow.begin(e.x, e.y)
+                        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+                            duration = if (reduced) 160L else 300L
+                            interpolator = EASE
+                            addUpdateListener { glow.setProgress(it.animatedValue as Float, releasing = false) }
+                            start()
+                        }
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (glassLevel != "off") {
+                        animator?.cancel()
+                        animator = ValueAnimator.ofFloat(glow.progress, 1f).apply {
+                            duration = if (reduced) 180L else 420L
+                            interpolator = EASE
+                            addUpdateListener { glow.setProgress(it.animatedValue as Float, releasing = true) }
+                            addListener(object : android.animation.AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: android.animation.Animator) { glow.finish() }
+                            })
                             start()
                         }
                     }
@@ -1170,6 +1216,65 @@ private class AppearanceTouchGlow(
  * Sparse, low-contrast grains catch the moving reflection without a fixed band,
  * image asset, random generation, or continuous texture animation.
  */
+/** Bounded soft radial light; no rings, and no drawing outside the control outline. */
+private class AppearanceBoundedRadialGlow(private val density: Float) : Drawable() {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val rect = android.graphics.RectF()
+    private val clip = android.graphics.Path()
+    var progress = 0f
+        private set
+    private var centreX = 0f
+    private var centreY = 0f
+    private var active = false
+    private var releasing = false
+
+    fun begin(x: Float, y: Float) {
+        centreX = x.coerceIn(0f, bounds.width().toFloat())
+        centreY = y.coerceIn(0f, bounds.height().toFloat())
+        progress = 0f
+        releasing = false
+        active = true
+        invalidateSelf()
+    }
+    fun setProgress(value: Float, releasing: Boolean) {
+        progress = value.coerceIn(0f, 1f)
+        this.releasing = releasing
+        invalidateSelf()
+    }
+    fun finish() { active = false; paint.shader = null; invalidateSelf() }
+
+    override fun draw(canvas: Canvas) {
+        if (!active || bounds.isEmpty) return
+        val w = bounds.width().toFloat()
+        val h = bounds.height().toFloat()
+        rect.set(0f, 0f, w, h)
+        clip.reset()
+        val corner = (h * 0.28f).coerceAtMost(14f * density).coerceAtLeast(2f * density)
+        clip.addRoundRect(rect, corner, corner, android.graphics.Path.Direction.CW)
+        val save = canvas.save()
+        canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
+        canvas.clipPath(clip)
+        val maxRadius = maxOf(
+            kotlin.math.hypot(centreX.toDouble(), centreY.toDouble()),
+            kotlin.math.hypot((w - centreX).toDouble(), centreY.toDouble()),
+            kotlin.math.hypot(centreX.toDouble(), (h - centreY).toDouble()),
+            kotlin.math.hypot((w - centreX).toDouble(), (h - centreY).toDouble())
+        ).toFloat().coerceAtLeast(1f)
+        val radiusNow = maxRadius * (0.22f + 0.78f * progress)
+        val fade = if (releasing) (1f - progress).coerceIn(0f, 1f) else 1f
+        paint.shader = RadialGradient(centreX, centreY, radiusNow,
+            intArrayOf(0xC8B8C78B.toInt(), 0x8C9FAE68.toInt(), 0x4599A45D, 0x0099A45D),
+            floatArrayOf(0f, 0.30f, 0.68f, 1f), Shader.TileMode.CLAMP)
+        paint.alpha = (fade * 255f).toInt()
+        canvas.drawRect(rect, paint)
+        canvas.restoreToCount(save)
+    }
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha; invalidateSelf() }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter; invalidateSelf() }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
 private class FineGlassTextureDrawable(private val density: Float) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rect = android.graphics.RectF()
