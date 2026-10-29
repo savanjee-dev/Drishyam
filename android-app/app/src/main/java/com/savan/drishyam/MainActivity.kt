@@ -269,7 +269,7 @@ class MainActivity : AppCompatActivity() {
         showTab(0)
         if (intent.getBooleanExtra("open_about", false)) showTab(2)
         glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
-        animatePageEntrance(findViewById(android.R.id.content))
+        if (!PortalTransition.hasOpeningOrigin(this)) animatePageEntrance(findViewById(android.R.id.content))
     }
 
     override fun onNewIntent(intent: Intent) {
