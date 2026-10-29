@@ -112,12 +112,16 @@ object PortalTransition {
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // The decor was deliberately opaque during entry. It must become
+        // transparent before the outgoing content moves, otherwise the
+        // previous Activity cannot be previewed through the exposed area.
+        activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
         content.animate().cancel()
         content.translationX = 0f
         content.alpha = 1f
         content.animate()
             .translationX(content.width.toFloat())
-            .alpha(0.98f)
+            .alpha(1f)
             .setDuration(300L)
             .setInterpolator(PathInterpolator(0.18f, 0.72f, 0.22f, 1f))
             .withEndAction {
@@ -138,6 +142,9 @@ object PortalTransition {
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Preserve the Back-button portal collapse: the real previous Activity
+        // must show through as the page shrinks into the control.
+        activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || !motionEnabled(activity)) {
             activity.finish()
             return
