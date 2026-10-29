@@ -125,7 +125,10 @@ class MainActivity : AppCompatActivity() {
         applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
-        PortalTransition.enter(this)
+        // Let Android own predictive Back when this is the task's launcher/home instance.
+        // That allows the real launcher (wallpaper and icons) to be previewed on exit.
+        // A MainActivity opened from Our Story keeps the existing in-app back gesture.
+        PortalTransition.enter(this, enableDirectionalBackGesture = intent.getBooleanExtra("open_about", false))
         // Draw the app background beneath the status bar; keep system icons theme-aware.
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         @Suppress("DEPRECATION")
