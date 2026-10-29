@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -244,6 +245,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
         findViewById<View>(R.id.navItem3).apply {
             pressFx()
+            // Capture the actual finger-down point; the portal must not default to
+            // the navigation item's centre when the user taps near an edge.
+            setOnTouchListener { v, event ->
+                if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+                    PortalTransition.recordTouch(v, event.rawX, event.rawY)
+                }
+                false
+            }
             setOnClickListener { PortalTransition.launch(this@MainActivity, this, Intent(this@MainActivity, SettingsHubActivity::class.java)) }
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
