@@ -43,7 +43,11 @@ object PortalTransition {
     fun hasOpeningOrigin(activity: Activity): Boolean =
         activity.intent.hasExtra(EXTRA_X) && activity.intent.hasExtra(EXTRA_Y)
 
-    fun enter(activity: Activity, enableDirectionalBackGesture: Boolean = true) {
+    fun enter(
+        activity: Activity,
+        enableDirectionalBackGesture: Boolean = true,
+        animateOpening: Boolean = true
+    ) {
         // Keep the portal window transparent so the opening reveal and the
         // independent Back closing animation can show the real Activity beneath it.
         activity.window.setWindowAnimations(0)
@@ -57,7 +61,7 @@ object PortalTransition {
 
         // Only animate pages launched through the portal. The launcher/Home instance
         // has no saved origin and must retain Android's native predictive-Back preview.
-        if (!hasOpeningOrigin(activity) ||
+        if (!animateOpening || !hasOpeningOrigin(activity) ||
             Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ||
             !motionEnabled(activity) || content == null) return
 
