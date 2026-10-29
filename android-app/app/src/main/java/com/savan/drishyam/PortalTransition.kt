@@ -1,7 +1,6 @@
 package com.savan.drishyam
 
 import android.app.Activity
-import android.animation.ObjectAnimator
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -11,6 +10,9 @@ import android.view.ViewAnimationUtils
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
 import android.view.animation.DecelerateInterpolator
+import android.util.TypedValue
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import kotlin.math.hypot
 
 /**
@@ -48,6 +50,24 @@ object PortalTransition {
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
 
+        // Paint the decor with the app surface during entry so the translucent
+        // portal window cannot expose the outgoing Activity around the reveal.
+        val backgroundValue = TypedValue()
+        val surfaceColor = if (activity.theme.resolveAttribute(android.R.attr.colorBackground, backgroundValue, true)) {
+            if (backgroundValue.resourceId != 0) runCatching {
+                androidx.core.content.ContextCompat.getColor(activity, backgroundValue.resourceId)
+            }.getOrDefault(Color.BLACK) else backgroundValue.data
+        } else Color.BLACK
+        activity.window.decorView.background = ColorDrawable(surfaceColor)
+
+        // Back is animated after recognition; animation progress is not tied to
+        // the finger. Keep the home Activity's normal exit behaviour unchanged.
+        if (activity !is MainActivity && activity is ComponentActivity) {
+            activity.onBackPressedDispatcher.addCallback(activity, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() = slideBack(activity)
+            })
+        }
+
         val intent = activity.intent
         if (!intent.hasExtra(EXTRA_X) || !intent.hasExtra(EXTRA_Y) ||
             Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || !motionEnabled(activity)
@@ -65,12 +85,50 @@ object PortalTransition {
             val radius = maxRadius(content.width, content.height, x, y)
             runCatching {
                 ViewAnimationUtils.createCircularReveal(content, x, y, 0f, radius).apply {
-                    duration = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) 560L else 0L
+                    duration = 560L
                     interpolator = portalEasing
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
+                            }
+                        }
+                    })
                     start()
                 }
             }
         }
+    }
+
+    private fun slideBack(activity: Activity) {
+        if (activity.isFinishing || activity.isDestroyed) return
+        val content = activity.findViewById<ViewGroup>(android.R.id.content)
+        if (content == null || content.width <= 0 || !motionEnabled(activity)) {
+            activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            activity.finish()
+            activity.overridePendingTransition(0, 0)
+            return
+        }
+        activity.window.setWindowAnimations(0)
+        activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        content.animate().cancel()
+        content.translationX = 0f
+        content.alpha = 1f
+        content.animate()
+            .translationX(content.width.toFloat())
+            .alpha(0.98f)
+            .setDuration(300L)
+            .setInterpolator(PathInterpolator(0.18f, 0.72f, 0.22f, 1f))
+            .withEndAction {
+                if (!activity.isFinishing && !activity.isDestroyed) {
+                    content.visibility = View.INVISIBLE
+                    activity.overridePendingTransition(0, 0)
+                    activity.finish()
+                    activity.overridePendingTransition(0, 0)
+                }
+            }
+            .start()
     }
 
     fun close(activity: Activity, backControl: View?) {
