@@ -174,9 +174,11 @@ object PortalTransition {
                     private fun finishOnce() {
                         if (!finished) {
                             finished = true
-                            // Do not mutate the decor background on the final frame:
-                            // that creates a one-frame surface flash on some devices.
-                            // The Portal theme already keeps the window transparent.
+                            // ViewAnimationUtils removes its reveal clip when the animator ends.
+                            // Hide the outgoing content before finishing so Android cannot draw
+                            // one full, un-clipped frame between the collapsed portal and finish().
+                            // Keep the translucent window/decor backgrounds untouched.
+                            content.visibility = View.INVISIBLE
                             activity.finish()
                             activity.overridePendingTransition(0, 0)
                         }
