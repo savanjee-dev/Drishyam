@@ -898,9 +898,9 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         }
         canvas.clipPath(clip)
 
-        val maxRadius = kotlin.math.hypot(w.toDouble(), h.toDouble()).toFloat() * 0.58f
-        // Keep the original restrained radial glow; do not expand it like a water ripple.
-        val radius = maxRadius.coerceAtLeast(1f)
+        val maxRadius = kotlin.math.hypot(w.toDouble(), h.toDouble()).toFloat() * 0.72f
+        // Expand from the exact contact point while the theme-card olive glow softly fades.
+        val radius = (maxRadius * (0.10f + 0.90f * progress)).coerceAtLeast(1f)
         val fade = ((1f - progress) * 0.62f).coerceIn(0f, 1f)
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
