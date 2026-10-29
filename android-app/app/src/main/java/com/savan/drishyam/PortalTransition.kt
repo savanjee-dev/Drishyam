@@ -62,7 +62,12 @@ object PortalTransition {
 
         // Back is animated after recognition; animation progress is not tied to
         // the finger. Keep the home Activity's normal exit behaviour unchanged.
-        if (activity !is MainActivity && activity is ComponentActivity) {
+        // MainActivity normally owns in-page Back. When it is opened as the
+        // external Our Story page, however, it is a dedicated page over Settings
+        // and must use the same system-Back slide as other portal destinations.
+        val isExternalStory = activity is MainActivity &&
+            activity.intent.getBooleanExtra("open_about", false)
+        if ((activity !is MainActivity || isExternalStory) && activity is ComponentActivity) {
             activity.onBackPressedDispatcher.addCallback(activity, object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() = slideBack(activity)
             })
