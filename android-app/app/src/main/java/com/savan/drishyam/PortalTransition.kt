@@ -47,6 +47,13 @@ object PortalTransition {
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // A transparent window background alone is insufficient on some Android
+        // builds: the decor/content host can retain the theme's opaque background.
+        // Make both host layers transparent before moving/revealing the page so the
+        // actual previous Activity is visible instead of a black sheet.
+        activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
+        activity.findViewById<ViewGroup>(android.R.id.content)
+            ?.setBackgroundColor(Color.TRANSPARENT)
         registerDirectionalBackGesture(activity)
     }
 
