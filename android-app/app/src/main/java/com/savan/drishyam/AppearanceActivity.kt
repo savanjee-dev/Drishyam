@@ -176,7 +176,6 @@ class AppearanceActivity : AppCompatActivity() {
             backButton.scaleX = 1f - 0.08f * progress
             backButton.scaleY = 1f - 0.08f * progress
         }
-        startEntrance()
     }
 
     // ============================ Page ============================
@@ -821,29 +820,6 @@ class AppearanceActivity : AppCompatActivity() {
             duration = 600L
             interpolator = OUT
             start()
-        }
-    }
-
-    // ============================ Entrance and page open ============================
-
-    private fun startEntrance() {
-        // Page open (prototype .sub): scale .98 to 1 and opacity 0 to 1, 260 ms, after 150 ms
-        page.alpha = 0f
-        page.scaleX = 0.98f
-        page.scaleY = 0.98f
-        if (!reduced) {
-            page.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(150L).setDuration(260L).setInterpolator(OUT).start()
-        } else {
-            page.alpha = 1f; page.scaleX = 1f; page.scaleY = 1f
-        }
-        // Blocks rise 16dp and fade in, 40 ms apart (prototype data-stagger)
-        if (!reduced) {
-            for (i in 0 until page.childCount) {
-                val child = page.getChildAt(i)
-                child.alpha = 0f
-                child.translationY = dpf(16)
-                child.animate().alpha(1f).translationY(0f).setStartDelay(i * 40L).setDuration(420L).setInterpolator(SPRING).start()
-            }
         }
     }
 
