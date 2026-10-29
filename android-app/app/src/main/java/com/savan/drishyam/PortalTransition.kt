@@ -73,12 +73,12 @@ object PortalTransition {
         fun applyProgress(progressValue: Float, translation: Float) {
             val progress = progressValue.coerceIn(0f, 1f)
             content.translationX = translation
-            val scale = 1f - 0.045f * progress
+            val scale = 1f - 0.085f * progress
             content.scaleX = scale
             content.scaleY = scale
             content.outlineProvider = object : android.view.ViewOutlineProvider() {
                 override fun getOutline(view: View, outline: android.graphics.Outline) {
-                    val radius = 24f * density * progress
+                    val radius = 34f * density * progress
                     outline.setRoundRect(0, 0, view.width, view.height, radius)
                 }
             }
@@ -119,10 +119,10 @@ object PortalTransition {
                 returnAnimator?.cancel()
                 val fromTranslation = content.translationX
                 val fromScale = content.scaleX
-                val fromRadiusProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
+                val fromRadiusProgress = ((1f - fromScale) / 0.085f).coerceIn(0f, 1f)
                 returnAnimator = android.animation.ValueAnimator.ofFloat(1f, 0f).apply {
                     // A more deliberate glide instead of the previous 260 ms snap-back.
-                    duration = 390L
+                    duration = 560L
                     interpolator = android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f)
                     addUpdateListener { animator ->
                         val remaining = animator.animatedValue as Float
@@ -150,7 +150,7 @@ object PortalTransition {
                 val fromProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
                 val target = direction * content.width.toFloat().coerceAtLeast(1f)
                 commitAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                    duration = 210L
+                    duration = 240L
                     interpolator = DecelerateInterpolator()
                     addUpdateListener { animator ->
                         val t = animator.animatedValue as Float
