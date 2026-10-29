@@ -57,33 +57,86 @@ object PortalTransition {
      * Cancellation returns the page to its exact starting position.
      */
     private fun registerDirectionalBackGesture(activity: Activity) {
-        if (Build.VERSION.SDK_INT < 34) return
+        // MainActivity owns tab/popup navigation. Let Android dispatch Back normally there;
+        // applying a whole-window glide to the opaque root would reveal only its dark window.
+        if (activity is MainActivity || Build.VERSION.SDK_INT < 34) return
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        val density = activity.resources.displayMetrics.density
+        val originalElevation = content.elevation
+        val originalClipToOutline = content.clipToOutline
+        val originalOutlineProvider = content.outlineProvider
         var direction = 1f
         var startTranslation = 0f
-        var returnAnimator: ObjectAnimator? = null
-        var commitAnimator: ObjectAnimator? = null
+        var returnAnimator: android.animation.ValueAnimator? = null
+        var commitAnimator: android.animation.ValueAnimator? = null
+
+        fun applyProgress(progressValue: Float, translation: Float) {
+            val progress = progressValue.coerceIn(0f, 1f)
+            content.translationX = translation
+            val scale = 1f - 0.045f * progress
+            content.scaleX = scale
+            content.scaleY = scale
+            content.outlineProvider = object : android.view.ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    val radius = 24f * density * progress
+                    outline.setRoundRect(0, 0, view.width, view.height, radius)
+                }
+            }
+            content.clipToOutline = progress > 0f
+            // Keep the depth restrained; elevation is restored on cancellation.
+            content.elevation = originalElevation + 8f * density * progress
+            content.invalidateOutline()
+        }
+
+        fun restoreOriginalShape() {
+            content.scaleX = 1f
+            content.scaleY = 1f
+            content.translationX = 0f
+            content.clipToOutline = originalClipToOutline
+            content.outlineProvider = originalOutlineProvider
+            content.elevation = originalElevation
+            content.invalidateOutline()
+        }
+
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 returnAnimator?.cancel()
                 commitAnimator?.cancel()
                 direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
                 startTranslation = content.translationX
+                applyProgress(0f, startTranslation)
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
                 if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
-                content.translationX = startTranslation + direction * content.width * progress
+                applyProgress(progress, startTranslation + direction * content.width * progress)
             }
 
             override fun onBackCancelled() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 commitAnimator?.cancel()
-                content.animate().cancel()
-                returnAnimator = ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
-                    duration = 260L
-                    interpolator = DecelerateInterpolator()
+                returnAnimator?.cancel()
+                val fromTranslation = content.translationX
+                val fromScale = content.scaleX
+                val fromRadiusProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
+                returnAnimator = android.animation.ValueAnimator.ofFloat(1f, 0f).apply {
+                    // A more deliberate glide instead of the previous 260 ms snap-back.
+                    duration = 390L
+                    interpolator = android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f)
+                    addUpdateListener { animator ->
+                        val remaining = animator.animatedValue as Float
+                        val progress = fromRadiusProgress * remaining
+                        applyProgress(progress, fromTranslation * remaining)
+                    }
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (!activity.isFinishing && !activity.isDestroyed) restoreOriginalShape()
+                        }
+                        override fun onAnimationCancel(animation: android.animation.Animator) {
+                            // A new gesture can interrupt the return; the next start owns the visuals.
+                        }
+                    })
                     start()
                 }
             }
@@ -91,13 +144,20 @@ object PortalTransition {
             override fun onBackInvoked() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 returnAnimator?.cancel()
-                content.animate().cancel()
-                // Commit must glide the remaining distance. Finishing immediately here
-                // drops the translucent Activity before the user sees the end of the swipe.
+                commitAnimator?.cancel()
+                val fromTranslation = content.translationX
+                val fromScale = content.scaleX
+                val fromProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
                 val target = direction * content.width.toFloat().coerceAtLeast(1f)
-                commitAnimator = ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, target).apply {
-                    duration = 180L
+                commitAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                    duration = 210L
                     interpolator = DecelerateInterpolator()
+                    addUpdateListener { animator ->
+                        val t = animator.animatedValue as Float
+                        val eased = t * (2f - t)
+                        applyProgress(fromProgress + (1f - fromProgress) * eased,
+                            fromTranslation + (target - fromTranslation) * eased)
+                    }
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         private var finished = false
                         private fun finishOnce() {
