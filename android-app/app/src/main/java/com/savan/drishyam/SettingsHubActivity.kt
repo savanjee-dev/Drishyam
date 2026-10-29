@@ -644,7 +644,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     // ================= Effects =================
 
-    /** Press feedback combines a water-like ripple with a soft, fading sunlight glow. */
+    /** Press feedback is a touch-origin radial glow, clipped to each control's outline. */
     private fun View.attachPress(glowable: Boolean) {
         val touchEffect = TouchRippleGlowDrawable(density, lightMode)
         val useTouchEffect = glowable && !lowFx
@@ -856,7 +856,7 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 }
 
-/** Touch effect: an expanding, softly fading ripple ring plus a diffuse radial light. */
+/** Touch-origin radial bloom, clipped to the control silhouette; no ripple rings. */
 private class TouchRippleGlowDrawable(private val density: Float, private val lightMode: Boolean) : Drawable() {
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var centerX = 0f
@@ -891,40 +891,33 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         canvas.translate(bounds.left.toFloat(), bounds.top.toFloat())
         val w = bounds.width().toFloat()
         val h = bounds.height().toFloat()
-        // Clip the complete interaction to the control's rounded silhouette.
         val corner = (kotlin.math.min(w, h) * 0.16f).coerceAtLeast(1f)
-        val clip = Path().apply {
-            addRoundRect(0f, 0f, w, h, corner, corner, Path.Direction.CW)
-        }
+        val clip = Path().apply { addRoundRect(0f, 0f, w, h, corner, corner, Path.Direction.CW) }
         canvas.clipPath(clip)
 
-        val maxRadius = kotlin.math.hypot(w.toDouble(), h.toDouble()).toFloat() * 0.58f
-        // Keep the original restrained radial glow; do not expand it like a water ripple.
-        val radius = maxRadius.coerceAtLeast(1f)
-        val fade = ((1f - progress) * 0.62f).coerceIn(0f, 1f)
+        // Reach the farthest corner from the touch origin, then remain clipped to this outline.
+        val maxRadius = maxOf(
+            kotlin.math.hypot(centerX.toDouble(), centerY.toDouble()),
+            kotlin.math.hypot((w - centerX).toDouble(), centerY.toDouble()),
+            kotlin.math.hypot(centerX.toDouble(), (h - centerY).toDouble()),
+            kotlin.math.hypot((w - centerX).toDouble(), (h - centerY).toDouble())
+        ).toFloat().coerceAtLeast(1f)
+        val radius = maxRadius * (0.22f + 0.78f * progress)
+        val fade = if (progress > 0.35f) ((1f - progress) / 0.65f).coerceIn(0f, 1f) else 1f
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
-            if (lightMode) intArrayOf(0x9989945A.toInt(), 0x77B7A879, 0x55D5C9A5, 0x00D5C9A5)
-            else intArrayOf(0xA689945A.toInt(), 0x7289945A, 0x3889945A, 0x0089945A),
+            if (lightMode) intArrayOf(0xD899945A.toInt(), 0xAAB7A879.toInt(), 0x65D5C9A5, 0x00D5C9A5)
+            else intArrayOf(0xD689945A.toInt(), 0xA689945A.toInt(), 0x5599A45D, 0x0099A45D),
             floatArrayOf(0f, 0.34f, 0.72f, 1f),
             Shader.TileMode.CLAMP
         )
         glowPaint.alpha = (fade * 255f).toInt()
-        canvas.drawCircle(centerX, centerY, radius, glowPaint)
-
+        canvas.drawRect(0f, 0f, w, h, glowPaint)
         canvas.restoreToCount(save)
     }
 
-    override fun setAlpha(alpha: Int) {
-        glowPaint.alpha = alpha
-        invalidateSelf()
-    }
-
-    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {
-        glowPaint.colorFilter = colorFilter
-        invalidateSelf()
-    }
-
+    override fun setAlpha(alpha: Int) { glowPaint.alpha = alpha; invalidateSelf() }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { glowPaint.colorFilter = colorFilter; invalidateSelf() }
     @Deprecated("Deprecated in Java")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
