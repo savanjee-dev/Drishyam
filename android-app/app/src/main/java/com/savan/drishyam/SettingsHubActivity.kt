@@ -230,17 +230,8 @@ class SettingsHubActivity : AppCompatActivity() {
         })
         content.addView(footer, matchWrap(0))
 
-        // ---- Entrance: rise 16dp and fade, 40ms apart ----
-        if (animate) {
-            val items = (0 until content.childCount).map { content.getChildAt(it) }
-            items.forEachIndexed { i, v ->
-                v.alpha = 0f
-                v.translationY = dpf(16)
-                v.animate().alpha(1f).translationY(0f)
-                    .setStartDelay(i * 40L).setDuration(420L)
-                    .setInterpolator(SPRING).start()
-            }
-        }
+        // Phase S2: no page-entry animation. Keep the page stable so the
+        // dedicated Back-button collapse is the only page-navigation animation.
 
         // Attach the prototype-matched pull stretch after the page content is complete.
         PageStretch.attach(scroll, density, reduced)
