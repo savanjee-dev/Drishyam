@@ -55,6 +55,7 @@ class SettingsHubActivity : AppCompatActivity() {
     private var visualFxAtCreate = true
     private var motionAtCreate = true
     private var glassLevelAtCreate = "full"
+    private var settingsBackButton: ImageView? = null
     private val glassFactor: Float get() = when (glassLevel(this)) { "off" -> 0f; "subtle" -> 0.45f; else -> 1f }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,7 +90,6 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
-        var backButton: ImageView? = null
         // Keep ambient/background rendering on its original independent layer.
         // Stretch is applied only to the rendered foreground page surface (content).
         val backgroundSurface = FrameLayout(this).apply {
@@ -131,7 +131,7 @@ class SettingsHubActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
-            backButton?.let { button ->
+            settingsBackButton?.let { button ->
                 (button.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
                     lp.topMargin = topInset + dp(18)
                     button.layoutParams = lp
@@ -162,7 +162,7 @@ class SettingsHubActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
             isImportantForAccessibility = false
         })
-        backButton = back
+        settingsBackButton = back
         root.addView(back, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.START).apply {
             leftMargin = dp(20)
             topMargin = dp(42)
