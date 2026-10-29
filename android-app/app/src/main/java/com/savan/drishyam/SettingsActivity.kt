@@ -19,6 +19,7 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         applyActivityTransitionPreference(this)
         setContentView(R.layout.activity_settings)
+        PortalTransition.enter(this)
         installScrollBounce(findViewById(R.id.settingsScroll))
         if (!getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(findViewById(android.R.id.content))
         if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getBoolean("motion_reduced", false)) {
