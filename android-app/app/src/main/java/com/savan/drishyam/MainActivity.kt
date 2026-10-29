@@ -122,6 +122,13 @@ class MainActivity : AppCompatActivity() {
     private var backGestureState: MainBackState? = null
     private var backStack = ArrayList<MainBackState>()
     private var previewSnapshot: android.widget.ImageView? = null
+    private var activeBackDepthProgress = 0f
+    private val mainBackOutlineProvider = object : android.view.ViewOutlineProvider() {
+        override fun getOutline(view: View, outline: android.graphics.Outline) {
+            val radius = 34f * view.resources.displayMetrics.density * activeBackDepthProgress
+            outline.setRoundRect(0, 0, view.width, view.height, radius)
+        }
+    }
     private var mainBackCallback: android.window.OnBackAnimationCallback? = null
 
     private data class MainBackState(
@@ -396,10 +403,9 @@ class MainActivity : AppCompatActivity() {
         snapshot.translationY = 8.dp() * progress
         snapshot.pivotX = if (direction > 0f) 0f else snapshot.width.toFloat()
         snapshot.pivotY = snapshot.height / 2f
-        snapshot.outlineProvider = object : android.view.ViewOutlineProvider() {
-            override fun getOutline(view: View, outline: android.graphics.Outline) {
-                outline.setRoundRect(0, 0, view.width, view.height, 34.dp() * progress)
-            }
+        activeBackDepthProgress = progress
+        if (snapshot.outlineProvider !== mainBackOutlineProvider) {
+            snapshot.outlineProvider = mainBackOutlineProvider
         }
         snapshot.clipToOutline = progress > 0f
         snapshot.elevation = 10.dp() * progress
