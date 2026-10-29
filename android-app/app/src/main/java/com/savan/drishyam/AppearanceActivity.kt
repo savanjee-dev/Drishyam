@@ -1263,7 +1263,7 @@ private class AppearanceBoundedRadialGlow(private val density: Float) : Drawable
         val radiusNow = maxRadius * (0.22f + 0.78f * progress)
         val fade = if (releasing) (1f - progress).coerceIn(0f, 1f) else 1f
         paint.shader = RadialGradient(centreX, centreY, radiusNow,
-            intArrayOf(0xC8B8C78B.toInt(), 0x8C9FAE68.toInt(), 0x4599A45D, 0x0099A45D),
+            intArrayOf(0x82B8C78B.toInt(), 0x5B9FAE68.toInt(), 0x2D99A45D, 0x0099A45D),
             floatArrayOf(0f, 0.30f, 0.68f, 1f), Shader.TileMode.CLAMP)
         paint.alpha = (fade * 255f).toInt()
         canvas.drawRect(rect, paint)
