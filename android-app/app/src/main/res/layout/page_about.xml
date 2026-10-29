@@ -113,7 +113,7 @@
         android:textSize="13sp" android:fontFamily="@font/pacifico_regular" />
 
     <ImageView android:id="@+id/aboutPhoto3" android:layout_width="match_parent" android:layout_height="220dp"
-        android:layout_gravity="end" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
+        android:layout_marginStart="14dp" android:layout_marginEnd="14dp" android:layout_marginTop="22dp"
         android:background="@drawable/glass_card" android:clipToOutline="true"
         android:scaleType="centerCrop" android:contentDescription="A college friendship memory" />
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
