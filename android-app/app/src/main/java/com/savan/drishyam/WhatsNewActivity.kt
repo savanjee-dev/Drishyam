@@ -106,7 +106,7 @@ class WhatsNewActivity : AppCompatActivity() {
         }
         setContentView(screen)
         PortalTransition.enter(this)
-        if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(page)
+        if (!PortalTransition.hasOpeningOrigin(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(page)
 
         // Render local data immediately, without waiting for GitHub.
         val cached = ReleaseNotesCache.cachedHistory(this)
