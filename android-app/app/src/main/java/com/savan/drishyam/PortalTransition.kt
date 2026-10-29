@@ -39,13 +39,16 @@ object PortalTransition {
     }
 
     fun enter(activity: Activity) {
+        // Always keep the portal Activity window transparent so a closing reveal
+        // exposes the Activity beneath it, even when this page was opened without
+        // a recorded portal origin (in which case there is no entrance reveal).
+        activity.window.setWindowAnimations(0)
+        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ||
             !motionEnabled(activity) || !activity.intent.hasExtra(EXTRA_X) ||
             !activity.intent.hasExtra(EXTRA_Y)) return
 
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
-        activity.window.setWindowAnimations(0)
-        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         content.post {
             if (activity.isFinishing || activity.isDestroyed || content.width <= 0 || content.height <= 0) return@post
             val rootLocation = IntArray(2)
