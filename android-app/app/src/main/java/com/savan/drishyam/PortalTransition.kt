@@ -40,7 +40,7 @@ object PortalTransition {
         activity.startActivity(intent)
     }
 
-    fun enter(activity: Activity) {
+    fun enter(activity: Activity, enableDirectionalBackGesture: Boolean = true) {
         // Page-opening animation is intentionally disabled for Phase S2.
         // Keep the portal window transparent so the independent Back closing
         // animation can reveal the previous Activity beneath this page.
@@ -54,7 +54,7 @@ object PortalTransition {
         activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
         activity.findViewById<ViewGroup>(android.R.id.content)
             ?.setBackgroundColor(Color.TRANSPARENT)
-        registerDirectionalBackGesture(activity)
+        if (enableDirectionalBackGesture) registerDirectionalBackGesture(activity)
     }
 
     /**
