@@ -43,6 +43,7 @@ object PortalTransition {
         // exposes the Activity beneath it, even when this page was opened without
         // a recorded portal origin (in which case there is no entrance reveal).
         activity.window.setWindowAnimations(0)
+        activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ||
             !motionEnabled(activity) || !activity.intent.hasExtra(EXTRA_X) ||
@@ -69,6 +70,11 @@ object PortalTransition {
 
     fun close(activity: Activity, backControl: View?) {
         if (activity.isFinishing) return
+        // The shrinking content must reveal the still-visible Activity beneath it,
+        // never a dimmed or opaque window surface.
+        activity.window.setWindowAnimations(0)
+        activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP || !motionEnabled(activity)) {
             activity.finish()
             return
