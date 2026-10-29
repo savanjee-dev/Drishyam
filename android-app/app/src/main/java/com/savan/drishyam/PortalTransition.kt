@@ -138,6 +138,11 @@ object PortalTransition {
                     private fun finishOnce() {
                         if (!finished) {
                             finished = true
+                            // Drop the fully-revealed content before finishing so a
+                            // final stale frame cannot flash over the Activity beneath.
+                            content.visibility = View.INVISIBLE
+                            activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
+                            activity.overridePendingTransition(0, 0)
                             activity.finish()
                             activity.overridePendingTransition(0, 0)
                         }
