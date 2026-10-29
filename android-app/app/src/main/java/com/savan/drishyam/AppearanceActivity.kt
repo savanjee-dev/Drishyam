@@ -793,14 +793,13 @@ class AppearanceActivity : AppCompatActivity() {
                         glow.centreY = e.y
                         anim?.cancel()
                         anim = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = 520L
+                            duration = 450L
                             interpolator = EASE
                             addUpdateListener { a ->
                                 val t = a.animatedValue as Float
-                                // Begin tight at the finger, then spread outward while softening.
-                                glow.radiusScale = 0.10f + 0.90f * t
+                                glow.radiusScale = 0.4f + 0.6f * t
                                 val intensity = if (glassLevel == "subtle") 128 else 255
-                                glow.glowAlpha = (intensity * (0.82f - 0.22f * t)).toInt()
+                                glow.glowAlpha = (intensity * t).toInt()
                             }
                             start()
                         }
@@ -1148,10 +1147,9 @@ private class AppearanceTouchGlow(
         clipPath.addRoundRect(clipRect, cornerRadius, cornerRadius, android.graphics.Path.Direction.CW)
         val save = canvas.save()
         canvas.clipPath(clipPath)
-        val r = 180f * density * radiusScale
+        val r = 90f * density * radiusScale
         paint.shader = RadialGradient(centreX, centreY, r,
-            intArrayOf(0x8089945A.toInt(), 0x5589945A, 0x0089945A),
-            floatArrayOf(0f, 0.42f, 1f), Shader.TileMode.CLAMP)
+            intArrayOf(0x8089945A.toInt(), 0x0089945A), floatArrayOf(0f, 0.7f), Shader.TileMode.CLAMP)
         paint.alpha = glowAlpha
         canvas.drawCircle(centreX, centreY, r, paint)
         canvas.restoreToCount(save)
