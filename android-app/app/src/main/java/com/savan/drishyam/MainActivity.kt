@@ -231,23 +231,9 @@ class MainActivity : AppCompatActivity() {
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
         swipe.setOnRefreshListener { refreshCurrent() }
 
+        animateTitle()
+        animateAbout()
         setupAbout()
-        // Keep Our Story static: no recently added title shimmer or staggered content reveal.
-        if (!launchedAsOurStory) {
-            animateTitle()
-            animateAbout()
-        } else {
-            listOf(
-                R.id.aboutPhoto, R.id.aboutAkshatPhoto, R.id.aboutPhoto2,
-                R.id.aboutPhoto3, R.id.aboutPhoto4, R.id.ig
-            ).forEach { id ->
-                findViewById<View>(id).apply {
-                    animate().cancel()
-                    alpha = 1f
-                    translationY = 0f
-                }
-            }
-        }
 
         findViewById<ImageView>(R.id.sortButton).apply {
             imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
@@ -722,12 +708,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.aboutPhoto4).setImageResource(R.drawable.akshat_photo_3)
         val blur = findViewById<ImageView>(R.id.aboutBlur)
         blur.setImageResource(R.drawable.savan_background)
-        // Our Story uses its original static presentation without the recently added blur.
-        if (!launchedAsOurStory && Build.VERSION.SDK_INT >= 31 && visualEffectsEnabled(this)) {
+        // Real background blur needs Android 12+; low-effects mode skips it.
+        if (Build.VERSION.SDK_INT >= 31 && visualEffectsEnabled(this)) {
             blur.setRenderEffect(RenderEffect.createBlurEffect(90f, 90f, Shader.TileMode.CLAMP))
         }
         findViewById<View>(R.id.ig).apply {
-            if (!launchedAsOurStory) pressFx()
+            pressFx()
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://instagram.com/savanjee"))) }
         }
     }
@@ -842,7 +828,7 @@ class MainActivity : AppCompatActivity() {
             if (cur.items.isEmpty()) loadMore()
         }
         pokeGlass()
-        if (n == 2 && !launchedAsOurStory) animateAbout()
+        if (n == 2) animateAbout()
         refreshMainPredictiveBackRegistration()
     }
 
