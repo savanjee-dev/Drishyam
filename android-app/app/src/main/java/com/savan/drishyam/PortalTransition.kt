@@ -40,21 +40,61 @@ object PortalTransition {
         activity.startActivity(intent)
     }
 
+    fun hasOpeningOrigin(activity: Activity): Boolean =
+        activity.intent.hasExtra(EXTRA_X) && activity.intent.hasExtra(EXTRA_Y)
+
     fun enter(activity: Activity, enableDirectionalBackGesture: Boolean = true) {
-        // Page-opening animation is intentionally disabled for Phase S2.
-        // Keep the portal window transparent so the independent Back closing
-        // animation can reveal the previous Activity beneath this page.
+        // Keep the portal window transparent so the opening reveal and the
+        // independent Back closing animation can show the real Activity beneath it.
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        // A transparent window background alone is insufficient on some Android
-        // builds: the decor/content host can retain the theme's opaque background.
-        // Make both host layers transparent before moving/revealing the page so the
-        // actual previous Activity is visible instead of a black sheet.
         activity.window.decorView.background = ColorDrawable(Color.TRANSPARENT)
-        activity.findViewById<ViewGroup>(android.R.id.content)
-            ?.setBackgroundColor(Color.TRANSPARENT)
+        val content = activity.findViewById<ViewGroup>(android.R.id.content)
+        content?.setBackgroundColor(Color.TRANSPARENT)
+
         if (enableDirectionalBackGesture) registerDirectionalBackGesture(activity)
+
+        // Only animate pages launched through the portal. The launcher/Home instance
+        // has no saved origin and must retain Android's native predictive-Back preview.
+        if (!hasOpeningOrigin(activity) ||
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ||
+            !motionEnabled(activity) || content == null) return
+
+        // Hide the destination until its layout is measured so no un-clipped frame
+        // can appear before the circular reveal begins.
+        content.visibility = View.INVISIBLE
+        content.post {
+            if (activity.isFinishing || activity.isDestroyed) return@post
+            if (content.width <= 0 || content.height <= 0) {
+                content.visibility = View.VISIBLE
+                return@post
+            }
+
+            val rootLocation = IntArray(2)
+            content.getLocationOnScreen(rootLocation)
+            val originScreenX = activity.intent.getIntExtra(EXTRA_X, rootLocation[0] + content.width / 2)
+            val originScreenY = activity.intent.getIntExtra(EXTRA_Y, rootLocation[1] + content.height / 2)
+            val x = (originScreenX - rootLocation[0]).coerceIn(0, content.width)
+            val y = (originScreenY - rootLocation[1]).coerceIn(0, content.height)
+            val radius = maxRadius(content.width, content.height, x, y)
+
+            content.visibility = View.VISIBLE
+            runCatching {
+                ViewAnimationUtils.createCircularReveal(content, x, y, 0f, radius).apply {
+                    duration = 780L
+                    interpolator = portalEasing
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationCancel(animation: android.animation.Animator) {
+                            content.visibility = View.VISIBLE
+                        }
+                    })
+                    start()
+                }
+            }.onFailure {
+                content.visibility = View.VISIBLE
+            }
+        }
     }
 
     /**
