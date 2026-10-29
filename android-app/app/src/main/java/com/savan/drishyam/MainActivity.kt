@@ -179,7 +179,15 @@ class MainActivity : AppCompatActivity() {
         aboutScroll = findViewById(R.id.about)
         aboutScroll.isVerticalScrollBarEnabled = false
         glassSource = findViewById(R.id.glassSource)
-        if (launchedAsOurStory) glassSource.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK))
+        val storySurface = com.google.android.material.color.MaterialColors.getColor(
+            this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
+        )
+        if (launchedAsOurStory) {
+            // MainActivity uses a translucent portal window for predictive Back.
+            // The Story content itself must still fully cover the Settings page beneath it.
+            findViewById<View>(R.id.root).setBackgroundColor(storySurface)
+            glassSource.setBackgroundColor(storySurface)
+        }
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
         overlay = findViewById(R.id.overlay)
@@ -223,9 +231,23 @@ class MainActivity : AppCompatActivity() {
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
         swipe.setOnRefreshListener { refreshCurrent() }
 
-        animateTitle()
-        animateAbout()
         setupAbout()
+        // Keep Our Story static: no recently added title shimmer or staggered content reveal.
+        if (!launchedAsOurStory) {
+            animateTitle()
+            animateAbout()
+        } else {
+            listOf(
+                R.id.aboutPhoto, R.id.aboutAkshatPhoto, R.id.aboutPhoto2,
+                R.id.aboutPhoto3, R.id.aboutPhoto4, R.id.ig
+            ).forEach { id ->
+                findViewById<View>(id).apply {
+                    animate().cancel()
+                    alpha = 1f
+                    translationY = 0f
+                }
+            }
+        }
 
         findViewById<ImageView>(R.id.sortButton).apply {
             imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
@@ -293,8 +315,10 @@ class MainActivity : AppCompatActivity() {
         if (launchedAsOurStory) {
             showTab(2)
         }
-        glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
-        animatePageEntrance(findViewById(android.R.id.content))
+        if (!launchedAsOurStory) {
+            glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
+            animatePageEntrance(findViewById(android.R.id.content))
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -698,12 +722,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.aboutPhoto4).setImageResource(R.drawable.akshat_photo_3)
         val blur = findViewById<ImageView>(R.id.aboutBlur)
         blur.setImageResource(R.drawable.savan_background)
-        // Real background blur needs Android 12+; low-effects mode skips it.
-        if (Build.VERSION.SDK_INT >= 31 && visualEffectsEnabled(this)) {
+        // Our Story uses its original static presentation without the recently added blur.
+        if (!launchedAsOurStory && Build.VERSION.SDK_INT >= 31 && visualEffectsEnabled(this)) {
             blur.setRenderEffect(RenderEffect.createBlurEffect(90f, 90f, Shader.TileMode.CLAMP))
         }
         findViewById<View>(R.id.ig).apply {
-            pressFx()
+            if (!launchedAsOurStory) pressFx()
             setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://instagram.com/savanjee"))) }
         }
     }
@@ -818,7 +842,7 @@ class MainActivity : AppCompatActivity() {
             if (cur.items.isEmpty()) loadMore()
         }
         pokeGlass()
-        if (n == 2) animateAbout()
+        if (n == 2 && !launchedAsOurStory) animateAbout()
         refreshMainPredictiveBackRegistration()
     }
 
