@@ -110,8 +110,14 @@ class SettingsHubActivity : AppCompatActivity() {
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
-        }, FrameLayout.LayoutParams(-1, dp(76), Gravity.TOP))
+                intArrayOf(
+                    color(R.color.bg),
+                    withAlpha(color(R.color.bg), 0.92f),
+                    withAlpha(color(R.color.bg), 0.68f),
+                    withAlpha(color(R.color.bg), 0.34f),
+                    Color.TRANSPARENT
+                ))
+        }, FrameLayout.LayoutParams(-1, dp(148), Gravity.TOP))
         root.addView(View(this).apply {
             isClickable = false
             isFocusable = false
@@ -139,6 +145,8 @@ class SettingsHubActivity : AppCompatActivity() {
                 setStroke(dp(1), 0xFFC9C9B4.toInt())
             }
             layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+            // Stay crisp above the feather fade; scroll position controls its fade separately.
+            elevation = dpf(8)
             isClickable = true
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
@@ -146,6 +154,12 @@ class SettingsHubActivity : AppCompatActivity() {
             setOnClickListener { view -> PortalTransition.close(this@SettingsHubActivity, view) }
         }
         content.addView(back)
+        scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            val fadeProgress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
+            back.alpha = 1f - fadeProgress
+            back.isClickable = fadeProgress < 0.95f
+            back.isFocusable = fadeProgress < 0.95f
+        }
 
         // Leave system Back to Android so predictive-back preview tracks the user's
         // edge swipe. The on-screen Back button above keeps its custom portal close.
@@ -637,8 +651,21 @@ class SettingsHubActivity : AppCompatActivity() {
                     if (useTouchEffect) {
                         touchAnimator?.cancel()
                         touchEffect.begin(e.x, e.y)
-                        touchAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = if (reduced) 420L else 340L
+                        // Rise into the glow, then hold it while the finger remains down.
+                        // Releasing the finger below starts the fade-out phase.
+                        touchAnimator = ValueAnimator.ofFloat(0f, 0.35f).apply {
+                            duration = if (reduced) 180L else 280L
+                            interpolator = EASE_OUT
+                            addUpdateListener { a -> touchEffect.setProgress(a.animatedValue as Float) }
+                            start()
+                        }
+                    }
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    if (useTouchEffect) {
+                        touchAnimator?.cancel()
+                        touchAnimator = ValueAnimator.ofFloat(touchEffect.currentProgress(), 1f).apply {
+                            duration = if (reduced) 180L else 450L
                             interpolator = EASE_OUT
                             addUpdateListener { a -> touchEffect.setProgress(a.animatedValue as Float) }
                             addListener(object : android.animation.AnimatorListenerAdapter() {
@@ -649,8 +676,6 @@ class SettingsHubActivity : AppCompatActivity() {
                             start()
                         }
                     }
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     if (reduced) { v.scaleX = 1f; v.scaleY = 1f } else springBack(v)
                 }
             }
@@ -838,6 +863,8 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         progress = value.coerceIn(0f, 1f)
         invalidateSelf()
     }
+
+    fun currentProgress(): Float = progress
 
     fun finish() {
         active = false
