@@ -943,3 +943,269 @@ class AppearanceActivity : AppCompatActivity() {
  * Shared moving reflection layer for registered glass controls.
  * Uses the page clock, avoiding separate animators for each control.
  */
+
+/**
+ * Shared moving reflection layer for registered glass controls.
+ * Uses the page clock, avoiding separate animators for each control.
+ */
+private class AppearanceReflectionOverlay(context: Context, private val activity: AppearanceActivity) : View(context) {
+    private val reflectionPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val path = android.graphics.Path()
+    private val rect = android.graphics.RectF()
+    private val location = IntArray(2)
+    private val overlayLocation = IntArray(2)
+    private val density = resources.displayMetrics.density
+    private val lightMode = Color.luminance(activity.color(R.color.bg)) > 0.5f
+    private var elapsed = 0L
+
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        setWillNotDraw(false)
+    }
+
+    fun setElapsed(time: Long) { elapsed = time; invalidate() }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        if (activity.glassLevel == "off" || activity.reduced || !isShown) return
+        getLocationOnScreen(overlayLocation)
+        val phase = (elapsed % 7600L).toFloat() / 7600f
+        // Keep the original surface colours dominant; dark mode needs a much
+        // quieter sheen so charcoal and olive never wash out to grey or pale green.
+        val baseAlpha = when {
+            lightMode && activity.glassLevel == "subtle" -> 0.36f
+            lightMode -> 0.56f
+            activity.glassLevel == "subtle" -> 0.18f
+            else -> 0.30f
+        }
+        val glowColor = if (lightMode) Color.rgb(255, 251, 229) else Color.rgb(207, 218, 185)
+        val edgeColor = if (lightMode) Color.rgb(255, 255, 246) else Color.rgb(165, 179, 139)
+
+        activity.reflectionTargets.forEach { (target, circular) ->
+            if (!target.isShown || target.width <= 0 || target.height <= 0 || target.alpha <= 0.01f) return@forEach
+            target.getLocationOnScreen(location)
+            val left = (location[0] - overlayLocation[0]).toFloat()
+            val top = (location[1] - overlayLocation[1]).toFloat()
+            rect.set(left, top, left + target.width, top + target.height)
+            val radius = if (circular) minOf(rect.width(), rect.height()) / 2f else rect.height() / 2f
+            path.reset()
+            path.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW)
+            val save = canvas.save()
+            canvas.clipPath(path)
+
+            // Follow the nearest moving ambient gradient; its position determines
+            // where the reflection is brightest on this control.
+            val targetCx = location[0] + target.width / 2f
+            val targetCy = location[1] + target.height / 2f
+            var nearestGlow: View? = null
+            var nearestDistance = Float.MAX_VALUE
+            var lightX = 0.5f
+            var lightY = 0.18f
+            activity.ambientGlows.forEach { glow ->
+                if (glow.visibility != View.VISIBLE || glow.alpha <= 0.01f) return@forEach
+                val glowLoc = IntArray(2)
+                glow.getLocationOnScreen(glowLoc)
+                val gx = glowLoc[0] + glow.width / 2f
+                val gy = glowLoc[1] + glow.height / 2f
+                val dx = gx - targetCx
+                val dy = gy - targetCy
+                val dist = dx * dx + dy * dy
+                if (dist < nearestDistance) {
+                    nearestDistance = dist
+                    nearestGlow = glow
+                    // Project the source direction across the control surface.
+                    lightX = (0.5f + dx / maxOf(target.width.toFloat() * 1.6f, 1f)).coerceIn(-0.15f, 1.15f)
+                    lightY = (0.5f + dy / maxOf(target.height.toFloat() * 2.2f, 1f)).coerceIn(-0.20f, 1.20f)
+                }
+            }
+            // The page clock adds a very slow drift to the light position so the
+            // reflection remains alive even while a gradient is near its turning point.
+            val drift = 0.08f * kotlin.math.sin(phase * 2f * PI.toFloat())
+            lightX = (lightX + drift).coerceIn(-0.15f, 1.15f)
+            val isThemeCard = activity.themeCards.any { it === target }
+            val isBackControl = target === activity.backButton
+            val controlAlpha = when {
+                isThemeCard -> baseAlpha * 0.42f
+                isBackControl -> baseAlpha * 0.72f
+                else -> baseAlpha
+            }
+            val effectiveAlpha = controlAlpha * target.alpha * (nearestGlow?.alpha ?: 1f).coerceIn(0f, 1f)
+
+            // Full-surface radial reflection: the light source follows the ambient
+            // gradients, with a smooth falloff in both directions and no hard band.
+            reflectionPaint.shader = RadialGradient(
+                rect.left + rect.width() * lightX,
+                rect.top + rect.height() * lightY,
+                maxOf(rect.width(), rect.height()) * 1.12f,
+                intArrayOf(activity.withAlpha(glowColor, 0.34f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0.13f * effectiveAlpha),
+                    activity.withAlpha(glowColor, 0f)),
+                floatArrayOf(0f, 0.38f, 1f), Shader.TileMode.CLAMP
+            )
+            canvas.drawRoundRect(rect, radius, radius, reflectionPaint)
+            reflectionPaint.shader = null
+
+            // Reflect the perimeter without drawing a competing second ring on cards.
+            edgePaint.style = Paint.Style.STROKE
+            edgePaint.color = activity.withAlpha(edgeColor, (if (isThemeCard) 0.24f else 0.40f) * effectiveAlpha)
+            edgePaint.strokeWidth = maxOf(0.7f * density, 1f)
+            rect.inset(edgePaint.strokeWidth / 2f, edgePaint.strokeWidth / 2f)
+            canvas.drawRoundRect(rect, radius, radius, edgePaint)
+            if (!isThemeCard) {
+                edgePaint.color = activity.withAlpha(if (lightMode) 0xFF8B9468.toInt() else Color.BLACK,
+                    (if (lightMode) 0.08f else 0.10f) * effectiveAlpha)
+                edgePaint.strokeWidth = 0.7f * density
+                canvas.drawLine(rect.left + radius * 0.35f, rect.bottom - edgePaint.strokeWidth,
+                    rect.right - radius * 0.35f, rect.bottom - edgePaint.strokeWidth, edgePaint)
+            }
+            rect.inset(-edgePaint.strokeWidth / 2f, -edgePaint.strokeWidth / 2f)
+            edgePaint.style = Paint.Style.FILL
+            canvas.restoreToCount(save)
+        }
+    }
+}
+
+/** Settings-matched, lightweight animated starfield. */
+private class AppearanceStarfieldView(context: Context, private val reducedMotion: Boolean, private val lightMode: Boolean) : View(context) {
+    private data class Star(val x: Float, val y: Float, val radius: Float, val phase: Float, val speed: Float, val alpha: Float)
+    private val density = resources.displayMetrics.density
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val stars = ArrayList<Star>()
+    private var animator: ValueAnimator? = null
+    private var progress = 0f
+    init {
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        val random = java.util.Random(713L)
+        repeat(58) {
+            stars += Star(0.04f + random.nextFloat() * 0.92f, random.nextFloat(),
+                (0.65f + random.nextFloat() * 1.35f) * density, random.nextFloat() * 6.28318f,
+                0.12f + random.nextFloat() * 0.34f,
+                (if (lightMode) 0.62f else 0.22f) + random.nextFloat() * (if (lightMode) 0.34f else 0.48f))
+        }
+    }
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        animator?.cancel()
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = if (reducedMotion) 90000L else 26000L
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { progress = it.animatedValue as Float; invalidate() }
+            start()
+            currentPlayTime = SystemClock.uptimeMillis() % duration
+        }
+    }
+    override fun onDetachedFromWindow() { animator?.cancel(); animator = null; super.onDetachedFromWindow() }
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val w = width.toFloat(); val h = height.toFloat()
+        if (w <= 0f || h <= 0f) return
+        stars.forEachIndexed { index, star ->
+            val drift = progress * star.speed
+            val x = ((star.x + drift * 0.10f) % 1f) * w
+            val y = ((star.y + drift) % 1f) * h
+            val twinkle = 0.72f + 0.28f * kotlin.math.sin(progress * 6.28318f + star.phase)
+            val a = (star.alpha * twinkle * (if (reducedMotion) 0.52f else 1f) * 255f).toInt().coerceIn(0,255)
+            paint.color = if (lightMode) { if (index % 4 == 0) Color.argb(a,183,168,121) else Color.argb(a,112,126,77) } else Color.argb(a,218,222,165)
+            paint.style = Paint.Style.FILL
+            canvas.drawCircle(x,y,star.radius,paint)
+            if (star.radius > 1.55f * density) {
+                paint.alpha = (a * 0.22f).toInt(); paint.strokeWidth = 0.7f * density
+                canvas.drawLine(x-star.radius*2.2f,y,x+star.radius*2.2f,y,paint)
+                canvas.drawLine(x,y-star.radius*2.2f,x,y+star.radius*2.2f,paint)
+            }
+        }
+    }
+}
+
+/** Touch light for the Appearance page: 180dp radial glow from rgba(137,148,90,0.5) to transparent at 70%. */
+private class AppearanceTouchGlow(
+    private val density: Float,
+    private val cornerRadius: Float
+) : Drawable() {
+    var centreX = 0f
+    var centreY = 0f
+    var radiusScale = 1f
+        set(value) { field = value; invalidateSelf() }
+    var glowAlpha = 0
+        set(value) { field = value; invalidateSelf() }
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val clipPath = android.graphics.Path()
+    private val clipRect = android.graphics.RectF()
+    override fun draw(canvas: Canvas) {
+        if (glowAlpha <= 0) return
+        val bounds = bounds
+        clipRect.set(bounds.left.toFloat(), bounds.top.toFloat(), bounds.right.toFloat(), bounds.bottom.toFloat())
+        clipPath.reset()
+        clipPath.addRoundRect(clipRect, cornerRadius, cornerRadius, android.graphics.Path.Direction.CW)
+        val save = canvas.save()
+        canvas.clipPath(clipPath)
+        val r = 90f * density * radiusScale
+        paint.shader = RadialGradient(centreX, centreY, r,
+            intArrayOf(0x8089945A.toInt(), 0x0089945A), floatArrayOf(0f, 0.7f), Shader.TileMode.CLAMP)
+        paint.alpha = glowAlpha
+        canvas.drawCircle(centreX, centreY, r, paint)
+        canvas.restoreToCount(save)
+    }
+    override fun setAlpha(alpha: Int) { glowAlpha = alpha }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
+
+/**
+ * Deterministic satin-glass microtexture for elevated Light Mode pills.
+ * Sparse, low-contrast grains catch the moving reflection without a fixed band,
+ * image asset, random generation, or continuous texture animation.
+ */
+private class FineGlassTextureDrawable(private val density: Float) : Drawable() {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val rect = android.graphics.RectF()
+    private val path = android.graphics.Path()
+
+    override fun draw(canvas: Canvas) {
+        val b = bounds
+        if (b.width() <= 0 || b.height() <= 0) return
+        rect.set(b.left.toFloat(), b.top.toFloat(), b.right.toFloat(), b.bottom.toFloat())
+        path.reset()
+        path.addRoundRect(rect, rect.height() / 2f, rect.height() / 2f, android.graphics.Path.Direction.CW)
+        val save = canvas.save()
+        canvas.clipPath(path)
+
+        val stepX = (6.5f * density).coerceAtLeast(4f)
+        val stepY = (5.5f * density).coerceAtLeast(4f)
+        var row = 0
+        var y = rect.top + stepY * 0.5f
+        while (y < rect.bottom) {
+            var col = 0
+            var x = rect.left + stepX * 0.5f + if (row % 2 == 0) 0f else stepX * 0.42f
+            while (x < rect.right) {
+                // Stable pseudo-random pattern: naturally irregular, but never flickers.
+                val seed = kotlin.math.abs(kotlin.math.sin((col * 12.9898 + row * 78.233) * 0.73)).toFloat()
+                if (seed > 0.38f) {
+                    val alpha = (3f + seed * 9f).toInt().coerceIn(3, 12)
+                    paint.color = Color.argb(alpha, if ((row + col) % 3 == 0) 255 else 91,
+                        if ((row + col) % 3 == 0) 255 else 103, if ((row + col) % 3 == 0) 246 else 61)
+                    paint.style = Paint.Style.FILL
+                    val radius = (0.35f + seed * 0.42f) * density
+                    canvas.drawCircle(x, y, radius, paint)
+                }
+                col++
+                x += stepX
+            }
+            row++
+            y += stepY
+        }
+        canvas.restoreToCount(save)
+    }
+
+    override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+    override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+    @Deprecated("Deprecated in Java")
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+}
