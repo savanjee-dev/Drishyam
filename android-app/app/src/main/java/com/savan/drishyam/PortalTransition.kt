@@ -131,7 +131,7 @@ object PortalTransition {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
-                    duration = 200L
+                    duration = 400L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     start()
                 }
@@ -211,7 +211,7 @@ object PortalTransition {
         runCatching {
             ViewAnimationUtils.createCircularReveal(content, x, y, radius, 0f).apply {
                 // Faster close makes the page collapse into the Back button promptly.
-                duration = 200L
+                duration = 400L
                 interpolator = portalEasing
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     private var finished = false
