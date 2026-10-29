@@ -147,14 +147,14 @@ object PortalTransition {
                 commitAnimator?.cancel()
                 val fromTranslation = content.translationX
                 val fromScale = content.scaleX
-                val fromProgress = ((1f - fromScale) / 0.045f).coerceIn(0f, 1f)
+                val fromProgress = ((1f - fromScale) / 0.085f).coerceIn(0f, 1f)
                 val target = direction * content.width.toFloat().coerceAtLeast(1f)
                 commitAnimator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
                     duration = 240L
-                    interpolator = DecelerateInterpolator()
+                    interpolator = PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
                     addUpdateListener { animator ->
                         val t = animator.animatedValue as Float
-                        val eased = t * (2f - t)
+                        val eased = t * t * (3f - 2f * t)
                         applyProgress(fromProgress + (1f - fromProgress) * eased,
                             fromTranslation + (target - fromTranslation) * eased)
                     }
