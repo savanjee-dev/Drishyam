@@ -41,11 +41,12 @@ object PortalTransition {
     }
 
     fun enter(activity: Activity) {
-        // Keep the portal window transparent so both the opening reveal and the
-        // dedicated Back closing animation can expose the Activity beneath it.
+        // Keep the entering Activity window opaque. A transparent window here
+        // exposes the previous (home) Activity outside the circular reveal and
+        // can cause a visible home-screen flash. Transparency is applied only
+        // when closing, where revealing the Activity underneath is intentional.
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
         val intent = activity.intent
         if (!intent.hasExtra(EXTRA_X) || !intent.hasExtra(EXTRA_Y) ||
