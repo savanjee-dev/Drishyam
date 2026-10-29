@@ -113,7 +113,7 @@ object PortalTransition {
         var direction = 1f
         var startTranslation = 0f
         var latestProgress = 0f
-        val cancelThreshold = 0.35f
+        val cancelThreshold = 0.20f
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 // Android supports edge-back from either side. Move the page away
