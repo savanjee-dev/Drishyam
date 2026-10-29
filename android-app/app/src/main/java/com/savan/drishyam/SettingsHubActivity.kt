@@ -89,6 +89,7 @@ class SettingsHubActivity : AppCompatActivity() {
             setBackgroundColor(color(R.color.bg))
             clipChildren = false
         }
+        var backButton: ImageView? = null
         // Keep ambient/background rendering on its original independent layer.
         // Stretch is applied only to the rendered foreground page surface (content).
         val backgroundSurface = FrameLayout(this).apply {
@@ -130,6 +131,12 @@ class SettingsHubActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
+            backButton?.let { button ->
+                (button.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                    lp.topMargin = topInset + dp(18)
+                    button.layoutParams = lp
+                }
+            }
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
@@ -144,16 +151,22 @@ class SettingsHubActivity : AppCompatActivity() {
                 setColor(color(R.color.surface))
                 setStroke(dp(1), 0xFFC9C9B4.toInt())
             }
-            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
-            // Stay crisp above the feather fade; scroll position controls its fade separately.
-            elevation = dpf(8)
             isClickable = true
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
             attachPress(glowable = true)
             setOnClickListener { view -> PortalTransition.close(this@SettingsHubActivity, view) }
         }
-        content.addView(back)
+        // Reserve the original layout space, but anchor the Back button above the fade.
+        content.addView(View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+            isImportantForAccessibility = false
+        })
+        backButton = back
+        root.addView(back, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.START).apply {
+            leftMargin = dp(20)
+            topMargin = dp(42)
+        })
         scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val fadeProgress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
             back.alpha = 1f - fadeProgress
