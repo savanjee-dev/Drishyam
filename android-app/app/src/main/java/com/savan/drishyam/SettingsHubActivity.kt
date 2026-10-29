@@ -906,8 +906,8 @@ private class TouchRippleGlowDrawable(private val density: Float, private val li
         val fade = if (progress > 0.35f) ((1f - progress) / 0.65f).coerceIn(0f, 1f) else 1f
         glowPaint.shader = RadialGradient(
             centerX, centerY, radius,
-            if (lightMode) intArrayOf(0xD899945A.toInt(), 0xAAB7A879.toInt(), 0x65D5C9A5, 0x00D5C9A5)
-            else intArrayOf(0xD689945A.toInt(), 0xA689945A.toInt(), 0x5599A45D, 0x0099A45D),
+            if (lightMode) intArrayOf(0x8C99945A.toInt(), 0x6EB7A879.toInt(), 0x42D5C9A5, 0x00D5C9A5)
+            else intArrayOf(0x8B89945A.toInt(), 0x6C89945A.toInt(), 0x3799A45D, 0x0099A45D),
             floatArrayOf(0f, 0.34f, 0.72f, 1f),
             Shader.TileMode.CLAMP
         )
