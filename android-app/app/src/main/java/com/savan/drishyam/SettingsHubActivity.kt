@@ -146,13 +146,8 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         content.addView(back)
 
-        // Route Android/system Back through the same animated close path.
-        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                PortalTransition.close(this@SettingsHubActivity, null)
-            }
-        })
-
+        // Leave system Back to Android so predictive-back preview tracks the user's
+        // edge swipe. The on-screen Back button above keeps its custom portal close.
         // ---- Header ----
         content.addView(tv("YOUR SPACE, YOUR WAY", 11f, R.color.accent, R.font.montserrat_semibold, 22, 6).apply {
             letterSpacing = 0.16f
