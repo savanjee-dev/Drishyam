@@ -61,8 +61,12 @@ object PortalTransition {
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         var direction = 1f
         var startTranslation = 0f
+        var returnAnimator: ObjectAnimator? = null
+        var commitAnimator: ObjectAnimator? = null
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
+                returnAnimator?.cancel()
+                commitAnimator?.cancel()
                 direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
                 startTranslation = content.translationX
             }
@@ -75,19 +79,40 @@ object PortalTransition {
 
             override fun onBackCancelled() {
                 if (activity.isFinishing || activity.isDestroyed) return
-                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
-                    duration = 220L
+                commitAnimator?.cancel()
+                content.animate().cancel()
+                returnAnimator = ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
+                    duration = 260L
                     interpolator = DecelerateInterpolator()
                     start()
                 }
             }
 
             override fun onBackInvoked() {
-                if (activity.isFinishing) return
-                // The gesture has already moved the page completely away. Do not
-                // run the button's circular-close animation on top of this slide.
-                activity.finish()
-                activity.overridePendingTransition(0, 0)
+                if (activity.isFinishing || activity.isDestroyed) return
+                returnAnimator?.cancel()
+                content.animate().cancel()
+                // Commit must glide the remaining distance. Finishing immediately here
+                // drops the translucent Activity before the user sees the end of the swipe.
+                val target = direction * content.width.toFloat().coerceAtLeast(1f)
+                commitAnimator = ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, target).apply {
+                    duration = 180L
+                    interpolator = DecelerateInterpolator()
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        private var finished = false
+                        private fun finishOnce() {
+                            if (finished) return
+                            finished = true
+                            if (!activity.isFinishing && !activity.isDestroyed) {
+                                activity.finish()
+                                activity.overridePendingTransition(0, 0)
+                            }
+                        }
+                        override fun onAnimationEnd(animation: android.animation.Animator) = finishOnce()
+                        override fun onAnimationCancel(animation: android.animation.Animator) = finishOnce()
+                    })
+                    start()
+                }
             }
         }
         activity.onBackInvokedDispatcher.registerOnBackInvokedCallback(
