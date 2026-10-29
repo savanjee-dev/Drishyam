@@ -119,8 +119,17 @@ class MainActivity : AppCompatActivity() {
     private var transientStatus: String? = null
     private var statusGeneration = 0
     private var homeSource: Source? = null
-    private var backGestureState: Pair<Int, Source>? = null
+    private var backGestureState: MainBackState? = null
+    private var backStack = ArrayList<MainBackState>()
+    private var previewSnapshot: android.widget.ImageView? = null
     private var mainBackCallback: android.window.OnBackAnimationCallback? = null
+
+    private data class MainBackState(
+        val tab: Int,
+        val source: Source,
+        val savedMode: Int,
+        val scrollPosition: Int
+    )
     private var mainBackCallbackRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -244,9 +253,9 @@ class MainActivity : AppCompatActivity() {
 
         buildChips()
 
-        findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { showTab(0) } }
+        findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { backStack.clear(); showTab(0) } }
         findViewById<View>(R.id.navItem1).apply { pressFx(); setOnClickListener { showSearch() } }
-        findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
+        findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { pushMainBackState(); showTab(1) } }
         findViewById<View>(R.id.navItem3).apply {
             pressFx()
             // Capture the actual finger-down point; the portal must not default to
@@ -271,7 +280,7 @@ class MainActivity : AppCompatActivity() {
         homeSource = cur
         PopupStack.setOnChanged { refreshMainPredictiveBackRegistration() }
         installMainPredictiveBack()
-        if (intent.getBooleanExtra("open_about", false)) showTab(2)
+        if (intent.getBooleanExtra("open_about", false)) { pushMainBackState(); showTab(2) }
         glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
     }
@@ -279,7 +288,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) showTab(2)
+        if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) { pushMainBackState(); showTab(2) }
     }
 
     /**
@@ -322,79 +331,117 @@ class MainActivity : AppCompatActivity() {
         if (tab == 1) refreshSaved() else adapter.notifyDataSetChanged()
     }
 
+    private fun captureMainBackState(): MainBackState = MainBackState(
+        tab = tab,
+        source = cur,
+        savedMode = savedMode,
+        scrollPosition = (rv.layoutManager as? LinearLayoutManager)?.findFirstVisibleItemPosition()?.coerceAtLeast(0) ?: 0
+    )
+
+    private fun pushMainBackState() {
+        backStack.add(captureMainBackState())
+    }
+
+    private fun showMainBackState(state: MainBackState) {
+        cur = state.source
+        savedMode = state.savedMode
+        showTab(state.tab)
+        rv.post {
+            if (state.tab == 0) rv.scrollToPosition(state.scrollPosition)
+        }
+    }
+
+    private fun removePreviewSnapshot() {
+        val snapshot = previewSnapshot ?: return
+        (snapshot.parent as? android.view.ViewGroup)?.removeView(snapshot)
+        previewSnapshot = null
+    }
+
     private fun installMainPredictiveBack() {
         if (Build.VERSION.SDK_INT < 34 || mainBackCallback != null) return
         mainBackCallback = object : android.window.OnBackAnimationCallback {
-            private var startTab = 0
-            private var startSource: Source? = null
-            private var startWasSearch = false
             private var startedWithPopup = false
+            private var direction = 1f
+            private var gestureSource: MainBackState? = null
+            private var gestureTarget: MainBackState? = null
 
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 if (!isInAppBackState()) return
                 startedWithPopup = PopupStack.isOpen()
-                startTab = tab
-                startSource = cur
-                startWasSearch = cur.name == "Search"
-                if (startedWithPopup) {
-                    backGestureState = null
-                    return
+                if (startedWithPopup) return
+
+                val target = backStack.lastOrNull() ?: fallbackMainBackState() ?: return
+                gestureSource = captureMainBackState()
+                gestureTarget = target
+                direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
+
+                val host = findViewById<android.view.ViewGroup>(android.R.id.content)
+                if (host.width > 0 && host.height > 0) {
+                    val bitmap = android.graphics.Bitmap.createBitmap(host.width, host.height, android.graphics.Bitmap.Config.ARGB_8888)
+                    host.draw(android.graphics.Canvas(bitmap))
+                    previewSnapshot = android.widget.ImageView(this@MainActivity).apply {
+                        setImageBitmap(bitmap)
+                        scaleType = android.widget.ImageView.ScaleType.FIT_XY
+                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                        isClickable = false
+                        elevation = 1000f
+                    }
+                    host.addView(previewSnapshot, android.view.ViewGroup.LayoutParams(-1, -1))
                 }
-                backGestureState = startTab to cur
-                if (startWasSearch) {
-                    cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
-                    showTab(0)
-                } else {
-                    showTab(0)
-                }
-                val content = findViewById<View>(android.R.id.content)
-                content.pivotX = content.width / 2f
-                content.pivotY = content.height / 2f
-                content.animate().cancel()
-                content.scaleX = 1f
-                content.scaleY = 1f
+
+                // Put the actual previous in-app destination underneath the captured
+                // outgoing frame. The gesture then reveals that destination, not Android's launcher.
+                showMainBackState(target)
+                backGestureState = gestureSource
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
                 if (startedWithPopup || backGestureState == null || isFinishing || isDestroyed) return
+                val snapshot = previewSnapshot ?: return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
-                val content = findViewById<View>(android.R.id.content)
                 val eased = progress * (2f - progress)
-                val scale = 1f - 0.085f * eased
-                content.scaleX = scale
-                content.scaleY = scale
-                content.translationX = 0f
-                content.translationY = 10.dp() * eased
-                content.clipToOutline = true
-                content.outlineProvider = object : android.view.ViewOutlineProvider() {
+                snapshot.scaleX = 1f - 0.085f * eased
+                snapshot.scaleY = 1f - 0.085f * eased
+                snapshot.translationX = direction * snapshot.width * eased
+                snapshot.translationY = 10.dp() * eased
+                snapshot.pivotX = if (direction > 0) 0f else snapshot.width.toFloat()
+                snapshot.pivotY = snapshot.height / 2f
+                snapshot.clipToOutline = true
+                snapshot.outlineProvider = object : android.view.ViewOutlineProvider() {
                     override fun getOutline(view: View, outline: android.graphics.Outline) {
                         outline.setRoundRect(0, 0, view.width, view.height, 34.dp() * eased)
                     }
                 }
-                content.invalidateOutline()
-                content.elevation = 12.dp() * eased
+                snapshot.invalidateOutline()
+                snapshot.elevation = 12.dp() * eased
             }
 
             override fun onBackCancelled() {
                 if (startedWithPopup) {
                     startedWithPopup = false
-                    backGestureState = null
                     refreshMainPredictiveBackRegistration()
                     return
                 }
-                if (backGestureState == null || isFinishing || isDestroyed) return
-                val state = backGestureState
+                val outgoing = gestureSource
+                if (outgoing == null || isFinishing || isDestroyed) return
                 backGestureState = null
-                val content = findViewById<View>(android.R.id.content)
-                content.animate().cancel()
-                content.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f)
+                val snapshot = previewSnapshot
+                if (snapshot == null) {
+                    showMainBackState(outgoing)
+                    gestureSource = null
+                    gestureTarget = null
+                    refreshMainPredictiveBackRegistration()
+                    return
+                }
+                snapshot.animate().cancel()
+                snapshot.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f)
                     .setDuration(560L)
                     .setInterpolator(android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f))
                     .withEndAction {
-                        content.clipToOutline = false
-                        content.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-                        content.elevation = 0f
-                        if (state != null) restoreMainBackState(state.first, state.second)
+                        removePreviewSnapshot()
+                        showMainBackState(outgoing)
+                        gestureSource = null
+                        gestureTarget = null
                         refreshMainPredictiveBackRegistration()
                     }.start()
             }
@@ -402,41 +449,56 @@ class MainActivity : AppCompatActivity() {
             override fun onBackInvoked() {
                 if (startedWithPopup) {
                     startedWithPopup = false
-                    backGestureState = null
                     PopupStack.dismiss()
                     refreshMainPredictiveBackRegistration()
                     return
                 }
-                val state = backGestureState
+                val outgoing = gestureSource
+                val target = gestureTarget
                 backGestureState = null
-                val content = findViewById<View>(android.R.id.content)
-                content.animate().cancel()
-                content.animate().scaleX(0.915f).scaleY(0.915f).translationY(10.dp().toFloat())
-                    .setDuration(190L)
+                val snapshot = previewSnapshot
+                if (outgoing == null || target == null) {
+                    if (PopupStack.dismiss()) refreshMainPredictiveBackRegistration()
+                    return
+                }
+                if (snapshot == null) {
+                    if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
+                    showMainBackState(target)
+                    gestureSource = null
+                    gestureTarget = null
+                    refreshMainPredictiveBackRegistration()
+                    return
+                }
+                snapshot.animate().cancel()
+                snapshot.animate().scaleX(0.915f).scaleY(0.915f)
+                    .translationX(direction * snapshot.width.toFloat()).translationY(10.dp().toFloat())
+                    .setDuration(240L)
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
                     .withEndAction {
-                        content.scaleX = 1f
-                        content.scaleY = 1f
-                        content.translationX = 0f
-                        content.translationY = 0f
-                        content.clipToOutline = false
-                        content.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-                        content.elevation = 0f
-                        if (state == null && PopupStack.dismiss()) {
-                            refreshMainPredictiveBackRegistration()
-                        } else {
-                            cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
-                            showTab(0)
-                            refreshMainPredictiveBackRegistration()
-                        }
+                        removePreviewSnapshot()
+                        if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
+                        showMainBackState(target)
+                        gestureSource = null
+                        gestureTarget = null
+                        refreshMainPredictiveBackRegistration()
                     }.start()
             }
         }
         refreshMainPredictiveBackRegistration()
     }
 
+    private fun fallbackMainBackState(): MainBackState? {
+        if (tab == 1 || tab == 2 || cur.name == "Search") {
+            val source = if (cur.name == "Search") {
+                sources.firstOrNull { it.name == "For You" } ?: homeSource ?: cur
+            } else homeSource ?: cur
+            return MainBackState(0, source, savedMode, 0)
+        }
+        return null
+    }
+
     private fun isInAppBackState(): Boolean =
-        PopupStack.isOpen() || tab != 0 || cur.name == "Search"
+        PopupStack.isOpen() || backStack.isNotEmpty() || tab != 0 || cur.name == "Search"
 
     private fun refreshMainPredictiveBackRegistration() {
         if (Build.VERSION.SDK_INT < 34 || mainBackCallback == null) return
@@ -463,9 +525,10 @@ class MainActivity : AppCompatActivity() {
             refreshMainPredictiveBackRegistration()
             return
         }
-        if (tab == 2 || tab == 1 || cur.name == "Search") {
-            cur = homeSource ?: sources.firstOrNull { it.name == "For You" } ?: cur
-            showTab(0)
+        val target = backStack.lastOrNull() ?: fallbackMainBackState()
+        if (target != null) {
+            if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
+            showMainBackState(target)
             refreshMainPredictiveBackRegistration()
             return
         }
@@ -842,6 +905,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runSearch(q: String) {
+        // Keep the exact page/source that launched Search as its Back destination.
+        pushMainBackState()
         // Free-text search always uses Unsplash; photo topic names are no longer interpreted.
         sources.removeAll { it.extra || it.searchOnly || it.name == "Search" }
         val src = Source("Search", true, q, false).apply { extra = true }
