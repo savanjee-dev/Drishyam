@@ -357,6 +357,33 @@ class MainActivity : AppCompatActivity() {
         previewSnapshot = null
     }
 
+    /**
+     * Shared visual profile for in-app predictive Back. The outgoing page shrinks,
+     * rounds progressively, and glides over the actual previous destination beneath it.
+     */
+    private fun applyMainBackDepth(
+        snapshot: android.widget.ImageView,
+        progressValue: Float,
+        direction: Float,
+        travelFraction: Float
+    ) {
+        val progress = progressValue.coerceIn(0f, 1f)
+        snapshot.scaleX = 1f - 0.085f * progress
+        snapshot.scaleY = 1f - 0.085f * progress
+        snapshot.translationX = direction * snapshot.width * travelFraction * progress
+        snapshot.translationY = 8.dp() * progress
+        snapshot.pivotX = if (direction > 0f) 0f else snapshot.width.toFloat()
+        snapshot.pivotY = snapshot.height / 2f
+        snapshot.outlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, 34.dp() * progress)
+            }
+        }
+        snapshot.clipToOutline = progress > 0f
+        snapshot.elevation = 10.dp() * progress
+        snapshot.invalidateOutline()
+    }
+
     private fun installMainPredictiveBack() {
         if (Build.VERSION.SDK_INT < 34 || mainBackCallback != null) return
         mainBackCallback = object : android.window.OnBackAnimationCallback {
@@ -418,16 +445,8 @@ class MainActivity : AppCompatActivity() {
                 if (startedWithPopup || backGestureState == null || isFinishing || isDestroyed) return
                 val snapshot = previewSnapshot ?: return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
-                // Smoothstep avoids abrupt velocity changes when the gesture moves slowly.
-                val eased = progress * progress * (3f - 2f * progress)
-                snapshot.scaleX = 1f - 0.075f * eased
-                snapshot.scaleY = 1f - 0.075f * eased
-                snapshot.translationX = direction * snapshot.width * 0.82f * eased
-                snapshot.translationY = 8.dp() * eased
-                snapshot.pivotX = if (direction > 0) 0f else snapshot.width.toFloat()
-                snapshot.pivotY = snapshot.height / 2f
-                snapshot.invalidateOutline()
-                snapshot.elevation = 10.dp() * eased
+                // Match the depth, corner growth, and easing used by Activity-level pages.
+                applyMainBackDepth(snapshot, progress, direction, 0.82f)
             }
 
             override fun onBackCancelled() {
@@ -455,17 +474,27 @@ class MainActivity : AppCompatActivity() {
                 }
                 val generation = gestureGeneration
                 snapshot.animate().cancel()
-                snapshot.animate().scaleX(1f).scaleY(1f).translationX(0f).translationY(0f)
-                    .setDuration(420L)
-                    .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0.2f, 1f))
-                    .withEndAction {
-                        if (generation != gestureGeneration) return@withEndAction
-                        removePreviewSnapshot()
-                        showMainBackState(outgoing)
-                        gestureSource = null
-                        gestureTarget = null
-                        refreshMainPredictiveBackRegistration()
-                    }.start()
+                val startProgress = ((1f - snapshot.scaleX) / 0.085f).coerceIn(0f, 1f)
+                android.animation.ValueAnimator.ofFloat(startProgress, 0f).apply {
+                    duration = 560L
+                    interpolator = android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f)
+                    addUpdateListener { animator ->
+                        if (generation == gestureGeneration) {
+                            applyMainBackDepth(snapshot, animator.animatedValue as Float, direction, 0.82f)
+                        }
+                    }
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (generation != gestureGeneration) return
+                            removePreviewSnapshot()
+                            showMainBackState(outgoing)
+                            gestureSource = null
+                            gestureTarget = null
+                            refreshMainPredictiveBackRegistration()
+                        }
+                    })
+                    start()
+                }
             }
 
             override fun onBackInvoked() {
@@ -496,19 +525,28 @@ class MainActivity : AppCompatActivity() {
                 }
                 val generation = gestureGeneration
                 snapshot.animate().cancel()
-                snapshot.animate().scaleX(0.925f).scaleY(0.925f)
-                    .translationX(direction * snapshot.width.toFloat()).translationY(8.dp().toFloat())
-                    .setDuration(420L)
-                    .setInterpolator(android.view.animation.PathInterpolator(0.2f, 0f, 0.2f, 1f))
-                    .withEndAction {
-                        if (generation != gestureGeneration) return@withEndAction
-                        removePreviewSnapshot()
-                        if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
-                        showMainBackState(target)
-                        gestureSource = null
-                        gestureTarget = null
-                        refreshMainPredictiveBackRegistration()
-                    }.start()
+                val startProgress = ((1f - snapshot.scaleX) / 0.085f).coerceIn(0f, 1f)
+                android.animation.ValueAnimator.ofFloat(startProgress, 1f).apply {
+                    duration = 240L
+                    interpolator = android.view.animation.PathInterpolator(0.20f, 0.78f, 0.20f, 1f)
+                    addUpdateListener { animator ->
+                        if (generation == gestureGeneration) {
+                            applyMainBackDepth(snapshot, animator.animatedValue as Float, direction, 1f)
+                        }
+                    }
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (generation != gestureGeneration) return
+                            removePreviewSnapshot()
+                            if (backStack.isNotEmpty()) backStack.removeAt(backStack.lastIndex)
+                            showMainBackState(target)
+                            gestureSource = null
+                            gestureTarget = null
+                            refreshMainPredictiveBackRegistration()
+                        }
+                    })
+                    start()
+                }
             }
         }
         refreshMainPredictiveBackRegistration()
