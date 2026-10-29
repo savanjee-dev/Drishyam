@@ -109,7 +109,6 @@ object PortalTransition {
                             }
                         }
                         override fun onAnimationEnd(animation: android.animation.Animator) = finishOnce()
-                        override fun onAnimationCancel(animation: android.animation.Animator) = finishOnce()
                     })
                     start()
                 }
