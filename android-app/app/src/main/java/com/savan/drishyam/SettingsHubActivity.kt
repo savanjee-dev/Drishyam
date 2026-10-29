@@ -59,6 +59,7 @@ class SettingsHubActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
+        setTheme(R.style.Theme_Drishyam_Portal)
         super.onCreate(savedInstanceState)
         applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
