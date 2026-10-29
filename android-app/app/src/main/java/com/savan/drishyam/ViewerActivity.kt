@@ -40,10 +40,13 @@ class ViewerActivity : AppCompatActivity() {
         // Keep system-bar icons readable over the viewer's pale Light Mode bars.
         val nightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
             android.content.res.Configuration.UI_MODE_NIGHT_YES
-        window.statusBarColor = Color.TRANSPARENT
+        // ViewerActivity is translucent for transition gestures, but its status-bar
+        // region does not draw the photo content. Keep that region opaque so the
+        // previous Home feed cannot show through behind the system icons.
+        window.statusBarColor = Color.BLACK
         window.navigationBarColor = if (nightMode) Color.BLACK else ContextCompat.getColor(this, R.color.bg)
         WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !nightMode
+            isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = !nightMode
         }
         // Keep the floating photo controls clear of gesture/navigation and status bars.
