@@ -113,7 +113,7 @@ object PortalTransition {
         var direction = 1f
         var startTranslation = 0f
         var latestProgress = 0f
-        val cancelThreshold = 0.20f
+        val cancelThreshold = 0.10f
         val callback = object : android.window.OnBackAnimationCallback {
             override fun onBackStarted(backEvent: android.window.BackEvent) {
                 // Android supports edge-back from either side. Move the page away
@@ -136,7 +136,7 @@ object PortalTransition {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
-                    duration = 400L
+                    duration = 700L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     start()
                 }
@@ -149,7 +149,7 @@ object PortalTransition {
                     // A short edge pull is a cancelled gesture, not a navigation request.
                     // Glide back to the current page and keep this Activity alive.
                     ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
-                        duration = 400L
+                        duration = 700L
                         interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                         start()
                     }
