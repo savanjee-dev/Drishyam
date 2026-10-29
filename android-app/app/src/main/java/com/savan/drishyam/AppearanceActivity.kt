@@ -133,7 +133,9 @@ class AppearanceActivity : AppCompatActivity() {
                 intArrayOf(color(R.color.bg), withAlpha(color(R.color.bg), 0.56f), Color.TRANSPARENT))
         }, FrameLayout.LayoutParams(-1, dp(88), Gravity.BOTTOM))
         setContentView(root)
-        PortalTransition.enter(this)
+        // Theme changes recreate this Activity. Do not replay the page-opening portal
+        // during that recreation; the in-page theme reveal owns this transition.
+        PortalTransition.enter(this, animateOpening = savedInstanceState == null)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             // Move the complete header group down by 24dp and keep a further 16dp
