@@ -123,7 +123,7 @@ object PortalTransition {
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
                 if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
-                val progress = backEvent.progress.coerceIn(0f, 1f) * 0.72f
+                val progress = backEvent.progress.coerceIn(0f, 1f)
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
@@ -131,7 +131,7 @@ object PortalTransition {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
-                    duration = 900L
+                    duration = 200L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     start()
                 }
@@ -142,7 +142,7 @@ object PortalTransition {
                 content.animate().cancel()
                 val targetX = startTranslation + direction * content.width.toFloat()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
-                    duration = 850L
+                    duration = 160L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         private var cancelled = false
@@ -210,8 +210,8 @@ object PortalTransition {
         val radius = maxRadius(content.width, content.height, x, y)
         runCatching {
             ViewAnimationUtils.createCircularReveal(content, x, y, radius, 0f).apply {
-                // Slower close keeps the previous page visible as the portal collapses.
-                duration = 900L
+                // Faster close makes the page collapse into the Back button promptly.
+                duration = 200L
                 interpolator = portalEasing
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     private var finished = false
