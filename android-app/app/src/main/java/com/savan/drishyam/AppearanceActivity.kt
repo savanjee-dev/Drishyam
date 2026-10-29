@@ -845,7 +845,7 @@ class AppearanceActivity : AppCompatActivity() {
                     if (glassLevel != "off") {
                         animator?.cancel()
                         glow.begin(e.x, e.y)
-                        animator = ValueAnimator.ofFloat(0f, 1f).apply {
+                        animator = ValueAnimator.ofFloat(0f, 0.45f).apply {
                             duration = if (reduced) 160L else 300L
                             interpolator = EASE
                             addUpdateListener { glow.setProgress(it.animatedValue as Float, releasing = false) }
