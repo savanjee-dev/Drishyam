@@ -488,6 +488,8 @@ class AppearanceActivity : AppCompatActivity() {
             leftMargin = dp(3)
         })
         registerReflection(track)
+        // Reuse the exact touch-point glow used by the Theme cards for setting toggles.
+        attachPress(glowable = true)
         track.setOnClickListener {
             checked = !checked
             track.contentDescription = if (checked) "On" else "Off"
