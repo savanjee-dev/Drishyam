@@ -1,6 +1,7 @@
 package com.savan.drishyam
 
 import android.app.Activity
+import android.animation.ObjectAnimator
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -9,6 +10,7 @@ import android.view.View
 import android.view.ViewAnimationUtils
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
+import android.view.animation.DecelerateInterpolator
 import kotlin.math.hypot
 
 /**
@@ -45,6 +47,53 @@ object PortalTransition {
         activity.window.setWindowAnimations(0)
         activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         activity.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        registerDirectionalBackGesture(activity)
+    }
+
+    /**
+     * Keep system edge-back separate from the on-screen Back button.
+     * On Android 14+, track predictive-back progress and slide the current page
+     * toward the opposite edge, exposing the translucent previous Activity.
+     * Cancellation returns the page to its exact starting position.
+     */
+    private fun registerDirectionalBackGesture(activity: Activity) {
+        if (Build.VERSION.SDK_INT < 34) return
+        val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
+        var direction = 1f
+        var startTranslation = 0f
+        val callback = object : android.window.OnBackAnimationCallback {
+            override fun onBackStarted(backEvent: android.window.BackEvent) {
+                direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
+                startTranslation = content.translationX
+            }
+
+            override fun onBackProgressed(backEvent: android.window.BackEvent) {
+                if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
+                val progress = backEvent.progress.coerceIn(0f, 1f)
+                content.translationX = startTranslation + direction * content.width * progress
+            }
+
+            override fun onBackCancelled() {
+                if (activity.isFinishing || activity.isDestroyed) return
+                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, 0f).apply {
+                    duration = 220L
+                    interpolator = DecelerateInterpolator()
+                    start()
+                }
+            }
+
+            override fun onBackInvoked() {
+                if (activity.isFinishing) return
+                // The gesture has already moved the page completely away. Do not
+                // run the button's circular-close animation on top of this slide.
+                activity.finish()
+                activity.overridePendingTransition(0, 0)
+            }
+        }
+        activity.onBackInvokedDispatcher.registerOnBackInvokedCallback(
+            android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+            callback
+        )
     }
 
     fun close(activity: Activity, backControl: View?) {
