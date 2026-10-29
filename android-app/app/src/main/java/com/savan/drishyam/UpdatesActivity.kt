@@ -318,7 +318,7 @@ class UpdatesActivity : AppCompatActivity() {
         }
         setContentView(screen)
         PortalTransition.enter(this)
-        if (!getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(scroll)
+        if (!PortalTransition.hasOpeningOrigin(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) animatePageEntrance(scroll)
         if (motionEnabled(this) && !getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE).getBoolean("motion_reduced", false)) {
             val expressiveCards = listOf(statusCard, notesCard)
             expressiveCards.forEachIndexed { index, card ->
