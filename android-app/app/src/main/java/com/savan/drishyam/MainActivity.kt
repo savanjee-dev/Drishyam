@@ -131,6 +131,7 @@ class MainActivity : AppCompatActivity() {
         val scrollPosition: Int
     )
     private var mainBackCallbackRegistered = false
+    private var launchedAsOurStory = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
@@ -138,6 +139,7 @@ class MainActivity : AppCompatActivity() {
         applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
+        launchedAsOurStory = intent.getBooleanExtra("open_about", false)
         PortalTransition.enter(this)
         // Draw the app background beneath the status bar; keep system icons theme-aware.
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -280,7 +282,10 @@ class MainActivity : AppCompatActivity() {
         homeSource = cur
         PopupStack.setOnChanged { refreshMainPredictiveBackRegistration() }
         installMainPredictiveBack()
-        if (intent.getBooleanExtra("open_about", false)) { pushMainBackState(); showTab(2) }
+        if (launchedAsOurStory) {
+            showTab(2)
+            prepareOurStoryTransparentWindow()
+        }
         glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         animatePageEntrance(findViewById(android.R.id.content))
     }
@@ -288,7 +293,24 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) { pushMainBackState(); showTab(2) }
+        if (intent.getBooleanExtra("open_about", false) && ::glassNav.isInitialized) {
+            launchedAsOurStory = true
+            showTab(2)
+            prepareOurStoryTransparentWindow()
+            refreshMainPredictiveBackRegistration()
+        }
+    }
+
+    /** Our Story is opened from Settings; keep this window transparent so Settings is the real Back preview. */
+    private fun prepareOurStoryTransparentWindow() {
+        findViewById<View>(R.id.root).setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        glassSource.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        findViewById<View>(R.id.content).setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        // The first glassSource child is UniversalBackgroundView. Hide it only for this
+        // dedicated overlay route so the Settings Activity underneath remains visible.
+        (glassSource as? ViewGroup)?.getChildAt(0)?.visibility = View.GONE
+        overlay.visibility = View.GONE
+        aboutScroll.setBackgroundColor(android.graphics.Color.TRANSPARENT)
     }
 
     /**
@@ -567,7 +589,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshMainPredictiveBackRegistration() {
         if (Build.VERSION.SDK_INT < 34 || mainBackCallback == null) return
-        val shouldRegister = isInAppBackState() || backGestureState != null
+        // External Our Story is a transparent Activity over Settings; PortalTransition owns
+        // its system Back preview. Home and Favourites intentionally have no custom glide.
+        val shouldRegister = !launchedAsOurStory && (
+            PopupStack.isOpen() ||
+            ((tab != 0 && tab != 1) && (isInAppBackState() || backGestureState != null))
+        )
         if (shouldRegister && !mainBackCallbackRegistered) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, mainBackCallback!!
@@ -586,6 +613,11 @@ class MainActivity : AppCompatActivity() {
 
     @Suppress("OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
+        if (launchedAsOurStory) {
+            finish()
+            overridePendingTransition(0, 0)
+            return
+        }
         if (PopupStack.dismiss()) {
             refreshMainPredictiveBackRegistration()
             return
