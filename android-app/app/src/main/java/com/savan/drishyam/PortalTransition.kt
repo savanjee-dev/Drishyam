@@ -69,21 +69,23 @@ object PortalTransition {
         val originalOutlineProvider = content.outlineProvider
         var direction = 1f
         var startTranslation = 0f
+        var currentProgress = 0f
+        val backOutlineProvider = object : android.view.ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outline.setRoundRect(0, 0, view.width, view.height, 34f * density * currentProgress)
+            }
+        }
         var returnAnimator: android.animation.ValueAnimator? = null
         var commitAnimator: android.animation.ValueAnimator? = null
 
         fun applyProgress(progressValue: Float, translation: Float) {
             val progress = progressValue.coerceIn(0f, 1f)
+            currentProgress = progress
             content.translationX = translation
             val scale = 1f - 0.085f * progress
             content.scaleX = scale
             content.scaleY = scale
-            content.outlineProvider = object : android.view.ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: android.graphics.Outline) {
-                    val radius = 34f * density * progress
-                    outline.setRoundRect(0, 0, view.width, view.height, radius)
-                }
-            }
+            if (content.outlineProvider !== backOutlineProvider) content.outlineProvider = backOutlineProvider
             content.clipToOutline = progress > 0f
             // Keep the depth restrained; elevation is restored on cancellation.
             content.elevation = originalElevation + 8f * density * progress
