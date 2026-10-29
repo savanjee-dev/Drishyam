@@ -71,7 +71,9 @@ object PortalTransition {
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
                 if (ignoredRightEdgeGesture || activity.isFinishing || activity.isDestroyed || content.width <= 0) return
-                val progress = backEvent.progress.coerceIn(0f, 1f)
+                // Dampen finger-driven travel so the page follows the gesture more gently.
+                // The remaining distance is completed slowly only after the gesture commits.
+                val progress = backEvent.progress.coerceIn(0f, 1f) * 0.72f
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
@@ -87,10 +89,25 @@ object PortalTransition {
 
             override fun onBackInvoked() {
                 if (ignoredRightEdgeGesture || activity.isFinishing) return
-                // The gesture has already moved the page completely away. Do not
-                // run the button's circular-close animation on top of this slide.
-                activity.finish()
-                activity.overridePendingTransition(0, 0)
+                // Finish the remaining travel at a deliberate, eased pace instead of
+                // snapping away as soon as the system commits the gesture.
+                ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, content.width.toFloat()).apply {
+                    duration = 850L
+                    interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
+                    addListener(object : android.animation.AnimatorListenerAdapter() {
+                        override fun onAnimationEnd(animation: android.animation.Animator) {
+                            if (activity.isFinishing || activity.isDestroyed) return
+                            activity.finish()
+                            activity.overridePendingTransition(0, 0)
+                        }
+                        override fun onAnimationCancel(animation: android.animation.Animator) {
+                            if (activity.isFinishing || activity.isDestroyed) return
+                            activity.finish()
+                            activity.overridePendingTransition(0, 0)
+                        }
+                    })
+                    start()
+                }
             }
         }
         activity.onBackInvokedDispatcher.registerOnBackInvokedCallback(
