@@ -16,6 +16,9 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsFloating">false</item>
         <item name="android:backgroundDimEnabled">false</item>
+        <!-- Portal pages own their circular reveal; suppress theme-level Activity transitions,
+             including when AppCompat recreates the Activity after a theme change. -->
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 
     <style name="DrishyamActivityTransition">
