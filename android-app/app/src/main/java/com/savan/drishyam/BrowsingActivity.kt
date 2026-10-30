@@ -1,0 +1,235 @@
+package com.savan.drishyam
+
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.os.Bundle
+import android.view.Gravity
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.material.materialswitch.MaterialSwitch
+
+/**
+ * Browsing preferences for Plan - MilkyWay.
+ * Values are persisted locally; provider use is gated by these values in the feed pipeline.
+ */
+class BrowsingActivity : AppCompatActivity() {
+    private val prefs by lazy { getSharedPreferences("drishyam_browsing", MODE_PRIVATE) }
+    private val density get() = resources.displayMetrics.density
+    private fun dp(value: Int) = (value * density).toInt()
+    private fun c(id: Int) = ContextCompat.getColor(this, id)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        MainActivity.applyTheme(this)
+        setTheme(R.style.Theme_Drishyam_Portal)
+        super.onCreate(savedInstanceState)
+        applyActivityTransitionPreference(this)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(c(R.color.bg))
+        }
+        val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            clipToPadding = false
+        }
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(28), dp(20), dp(40))
+            clipChildren = false
+            clipToPadding = false
+        }
+        scroll.addView(content)
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        setContentView(root)
+        PortalTransition.enter(this)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
+            content.setPadding(dp(20), top + dp(22), dp(20), dp(40))
+            insets
+        }
+        androidx.core.view.ViewCompat.requestApplyInsets(root)
+
+        val back = TextView(this).apply {
+            text = "‹   Settings"
+            textSize = 15f
+            setTextColor(c(R.color.fg))
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), 0, dp(14), 0)
+            background = pillBackground()
+            isClickable = true
+            isFocusable = true
+            pressFx()
+            setOnClickListener { PortalTransition.close(this@BrowsingActivity, this) }
+        }
+        content.addView(back, LinearLayout.LayoutParams(-2, dp(44)))
+        content.addView(label("PERSONALISE YOUR DISCOVERY", 11f, R.color.accent, 18, 5))
+        content.addView(label("Browsing", 36f, R.color.fg, 0, 2, true))
+        content.addView(label("Choose where Drishyam discovers photographs and how it explores them.", 14f, R.color.mute, 0, 18))
+
+        content.addView(sectionTitle("Photo sources"))
+        val sourcesCard = card()
+        sourcesCard.addView(label("Choose which providers Drishyam may use. Disabled providers must never be used as fallbacks.", 12f, R.color.mute, 0, 10))
+        addSourceSwitch(sourcesCard, "Wikimedia Commons", "Openly licensed photographs from Wikimedia Commons.", "source_wikimedia", true, "Primary")
+        addDivider(sourcesCard)
+        addSourceSwitch(sourcesCard, "Openverse", "Search across multiple open-licence collections.", "source_openverse", true, "Secondary")
+        addDivider(sourcesCard)
+        addSourceSwitch(sourcesCard, "Unsplash", "An additional photography source.", "source_unsplash", true, "Backup")
+        content.addView(sourcesCard, match())
+
+        content.addView(sectionTitle("Quick preferences"))
+        val quick = card()
+        addChoiceRow(quick, "Image quality", "Choose the preferred image size.", "image_quality",
+            arrayOf("Standard", "High"), "High")
+        addDivider(quick)
+        addPreferenceSwitch(quick, "Avoid previously seen images", "Reduce repeated photographs where the feed can identify them.", "avoid_seen", true)
+        addDivider(quick)
+        addClickRow(quick, "Default discovery category", "Choose the category shown when opening the feed.") {
+            val categories = arrayOf("For You", "Nature", "Forest", "Mountains", "Wildlife", "Architecture", "Travel", "Ocean", "Abstract")
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Default category")
+                .setSingleChoiceItems(categories, categories.indexOf(prefs.getString("default_category", "For You"))) { dialog, which ->
+                    prefs.edit().putString("default_category", categories[which]).apply()
+                    dialog.dismiss()
+                    recreate()
+                }.setNegativeButton("Cancel", null).show()
+        }
+        content.addView(quick, match())
+
+        content.addView(sectionTitle("Advanced browsing"))
+        val advancedCard = card()
+        val advancedToggle = TextView(this).apply {
+            text = if (prefs.getBoolean("advanced_expanded", false)) "Advanced controls   ▴" else "Advanced controls   ▾"
+            textSize = 14f
+            setTextColor(c(R.color.fg))
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+            setPadding(dp(2), dp(8), dp(2), dp(8))
+            isClickable = true
+            isFocusable = true
+        }
+        val advancedBody = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = if (prefs.getBoolean("advanced_expanded", false)) View.VISIBLE else View.GONE }
+        advancedToggle.setOnClickListener {
+            val expanded = advancedBody.visibility != View.VISIBLE
+            advancedBody.visibility = if (expanded) View.VISIBLE else View.GONE
+            advancedToggle.text = if (expanded) "Advanced controls   ▴" else "Advanced controls   ▾"
+            prefs.edit().putBoolean("advanced_expanded", expanded).apply()
+        }
+        advancedCard.addView(advancedToggle)
+        addDivider(advancedCard)
+        advancedCard.addView(advancedBody)
+        addChoiceRow(advancedBody, "Preferred orientation", "Choose the shape of photographs to prioritise.", "orientation",
+            arrayOf("Any", "Portrait", "Landscape", "Square"), "Portrait")
+        addDivider(advancedBody)
+        addPreferenceSwitch(advancedBody, "Allow mature-content results", "Keep disabled to avoid sources that classify content as mature.", "allow_mature", false)
+        addDivider(advancedBody)
+        addPreferenceSwitch(advancedBody, "Load more automatically", "Continue pagination as you approach the end of the feed.", "auto_pagination", true)
+        addDivider(advancedBody)
+        addInfoRow(advancedBody, "Provider fallback", "Drishyam should try only enabled sources, in the configured order. If every enabled source fails, it will show a retry message.")
+        addDivider(advancedBody)
+        addInfoRow(advancedBody, "Licences and attribution", "Each photograph should retain its source, creator and licence details. Open the photo details to review attribution before reuse.")
+        content.addView(advancedCard, match())
+
+        content.addView(label("Your choices are saved on this device.", 11f, R.color.mute, 0, 16))
+    }
+
+    private fun match() = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(0) }
+    private fun card() = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(16), dp(14), dp(16), dp(14))
+        background = ContextCompat.getDrawable(this@BrowsingActivity, R.drawable.glass_card)
+    }
+    private fun pillBackground() = GradientDrawable().apply {
+        cornerRadius = dp(999).toFloat()
+        setColor(c(R.color.glassFill))
+        setStroke(dp(1), c(R.color.glassStroke))
+    }
+    private fun label(textValue: String, size: Float, colorId: Int, top: Int = 0, bottom: Int = 0, bold: Boolean = false) = TextView(this).apply {
+        text = textValue
+        textSize = size
+        setTextColor(c(colorId))
+        typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity,
+            if (bold) R.font.poppins_extrabold else if (size <= 12f) R.font.montserrat_semibold else R.font.poppins_regular)
+        setPadding(0, dp(top), 0, dp(bottom))
+    }
+    private fun sectionTitle(value: String) = label(value, 18f, R.color.fg, 22, 10, true)
+    private fun addSourceSwitch(parent: LinearLayout, title: String, subtitle: String, key: String, default: Boolean, role: String) {
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
+        text.addView(label(title, 14f, R.color.fg, 0, 2, true))
+        text.addView(label("$role  ·  $subtitle", 11f, R.color.mute))
+        val toggle = MaterialSwitch(this).apply {
+            isChecked = prefs.getBoolean(key, default)
+            contentDescription = "Enable $title"
+            setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean(key, checked).apply() }
+        }
+        row.addView(text)
+        row.addView(toggle)
+        parent.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
+    }
+    private fun addPreferenceSwitch(parent: LinearLayout, title: String, subtitle: String, key: String, default: Boolean) {
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
+        text.addView(label(title, 13f, R.color.fg, 0, 2, true))
+        text.addView(label(subtitle, 11f, R.color.mute))
+        val toggle = MaterialSwitch(this).apply {
+            isChecked = prefs.getBoolean(key, default)
+            setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean(key, checked).apply() }
+        }
+        row.addView(text); row.addView(toggle)
+        parent.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
+    }
+    private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
+        val current = prefs.getString(key, default) ?: default
+        val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
+        row.addView(label(title, 13f, R.color.fg, 0, 2, true))
+        row.addView(label(subtitle, 11f, R.color.mute, 0, 8))
+        val choicesRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        choices.forEach { choice ->
+            val selected = choice == current
+            val item = TextView(this).apply {
+                text = choice
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setTextColor(c(if (selected) R.color.surface else R.color.fg))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(999).toFloat()
+                    setColor(c(if (selected) R.color.accent else R.color.glassFill))
+                    setStroke(dp(1), c(R.color.glassStroke))
+                }
+                setPadding(dp(10), dp(9), dp(10), dp(9))
+                isClickable = true; isFocusable = true
+                setOnClickListener {
+                    prefs.edit().putString(key, choice).apply()
+                    recreate()
+                }
+            }
+            choicesRow.addView(item, LinearLayout.LayoutParams(0, -2, 1f).apply { if (choicesRow.childCount > 0) leftMargin = dp(5) })
+        }
+        row.addView(choicesRow)
+        parent.addView(row)
+    }
+    private fun addClickRow(parent: LinearLayout, title: String, subtitle: String, action: () -> Unit) {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(10), 0, dp(10))
+            isClickable = true; isFocusable = true
+            setOnClickListener { action() }
+        }
+        row.addView(label(title, 13f, R.color.fg, 0, 2, true))
+        row.addView(label(subtitle, 11f, R.color.mute))
+        parent.addView(row)
+    }
+    private fun addInfoRow(parent: LinearLayout, title: String, subtitle: String) {
+        parent.addView(label(title, 13f, R.color.fg, 10, 2, true))
+        parent.addView(label(subtitle, 11f, R.color.mute, 0, 8))
+    }
+    private fun addDivider(parent: LinearLayout) {
+        parent.addView(View(this).apply { setBackgroundColor(c(R.color.glassStroke)) },
+            LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(4); bottomMargin = dp(4) })
+    }
+}
