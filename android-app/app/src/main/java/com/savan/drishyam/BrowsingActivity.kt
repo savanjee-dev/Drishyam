@@ -349,10 +349,25 @@ class BrowsingActivity : AppCompatActivity() {
     }
     private fun sectionTitle(value: String) = label(value, 18f, R.color.fg, 22, 10, true)
     private fun addSourceSwitch(parent: LinearLayout, title: String, subtitle: String, key: String, default: Boolean, role: String) {
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
-        text.addView(label(title, 14f, R.color.fg, 0, 2, true))
-        text.addView(label("$role  ·  $subtitle", 11f, R.color.mute))
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        // Explicitly reserve a clear gap before the fixed-width switch. The
+        // weighted text column then wraps naturally inside the remaining width.
+        val text = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            minimumWidth = 0
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(14) }
+        }
+        text.addView(label(title, 14f, R.color.fg, 0, 2, true).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+        })
+        text.addView(label("$role  ·  $subtitle", 11f, R.color.mute).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+            setHorizontallyScrolling(false)
+            maxLines = 4
+        })
         val toggle = glassToggle(prefs.getBoolean(key, default), "Enable $title") { checked ->
             prefs.edit().putBoolean(key, checked).apply()
         }
@@ -361,10 +376,25 @@ class BrowsingActivity : AppCompatActivity() {
         parent.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
     }
     private fun addPreferenceSwitch(parent: LinearLayout, title: String, subtitle: String, key: String, default: Boolean) {
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
-        text.addView(label(title, 13f, R.color.fg, 0, 2, true))
-        text.addView(label(subtitle, 11f, R.color.mute))
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        // Keep the description fully inside its own column; the switch has
+        // a fixed footprint and a deliberate 14dp breathing gap.
+        val text = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            minimumWidth = 0
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(14) }
+        }
+        text.addView(label(title, 13f, R.color.fg, 0, 2, true).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+        })
+        text.addView(label(subtitle, 11f, R.color.mute).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+            setHorizontallyScrolling(false)
+            maxLines = 4
+        })
         val toggle = glassToggle(prefs.getBoolean(key, default), title) { checked ->
             prefs.edit().putBoolean(key, checked).apply()
         }
