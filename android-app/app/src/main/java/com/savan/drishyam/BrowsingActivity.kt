@@ -466,61 +466,94 @@ class BrowsingActivity : AppCompatActivity() {
         indicator: View,
         onSelectionChanged: (TextView) -> Unit
     ) {
-        fun optionAt(rawX: Float, rawY: Float): TextView? {
-            return buttons.firstOrNull { option ->
+        fun optionAt(rawX: Float, rawY: Float): TextView? =
+            buttons.firstOrNull { option ->
                 val location = IntArray(2)
                 option.getLocationOnScreen(location)
                 rawX >= location[0] && rawX <= location[0] + option.width &&
                     rawY >= location[1] && rawY <= location[1] + option.height
             }
+
+        fun settleJelly(peakX: Float, peakY: Float) {
+            val startX = indicator.scaleX
+            val startY = indicator.scaleY
+            android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 430L
+                interpolator = android.view.animation.LinearInterpolator()
+                addUpdateListener { frame ->
+                    val t = frame.animatedValue as Float
+                    // Damped spring: a soft overshoot followed by a few quickly fading ripples.
+                    val spring = kotlin.math.exp(-5.2f * t) * kotlin.math.cos(13.5f * t)
+                    indicator.scaleX = 1f + (startX - 1f) * spring + peakX * spring * 0.22f
+                    indicator.scaleY = 1f + (startY - 1f) * spring + peakY * spring * 0.22f
+                }
+                start()
+            }
         }
 
         buttons.forEach { origin ->
+            var tracker: android.view.VelocityTracker? = null
+            var lastRawX = 0f
+            var lastRawY = 0f
             origin.setOnTouchListener { _, event ->
                 when (event.actionMasked) {
                     android.view.MotionEvent.ACTION_DOWN -> {
+                        tracker?.recycle()
+                        tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
+                        lastRawX = event.rawX
+                        lastRawY = event.rawY
+                        segmentPositionAnimator?.cancel()
                         indicator.animate().cancel()
                         indicator.pivotX = indicator.width / 2f
                         indicator.pivotY = indicator.height / 2f
-                        indicator.animate().scaleX(1.035f).scaleY(0.965f)
-                            .setDuration(90L).setInterpolator(android.view.animation.DecelerateInterpolator())
-                            .start()
+                        // A soft press: compress horizontally and swell vertically like gel.
+                        indicator.scaleX = 0.975f
+                        indicator.scaleY = 1.045f
                         optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
                         true
                     }
                     android.view.MotionEvent.ACTION_MOVE -> {
+                        tracker?.addMovement(event)
                         optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
-                        val dx = event.x / origin.width.coerceAtLeast(1) - 0.5f
-                        val dy = event.y / origin.height.coerceAtLeast(1) - 0.5f
-                        // Soft velocity-like deformation: stretch along the gesture axis,
-                        // with a restrained squash across it. Position glide remains unchanged.
-                        val stretchX = (kotlin.math.abs(dx) * 0.10f).coerceIn(0f, 0.055f)
-                        val stretchY = (kotlin.math.abs(dy) * 0.10f).coerceIn(0f, 0.055f)
-                        indicator.scaleX = 1.025f + stretchX - stretchY * 0.35f
-                        indicator.scaleY = 0.975f + stretchY - stretchX * 0.35f
+                        val dx = event.rawX - lastRawX
+                        val dy = event.rawY - lastRawY
+                        lastRawX = event.rawX
+                        lastRawY = event.rawY
+                        tracker?.computeCurrentVelocity(1000)
+                        val vx = tracker?.xVelocity ?: 0f
+                        val vy = tracker?.yVelocity ?: 0f
+                        val speedX = (kotlin.math.abs(vx) / 9000f).coerceIn(0f, 0.105f)
+                        val speedY = (kotlin.math.abs(vy) / 9000f).coerceIn(0f, 0.105f)
+                        val directionX = if (kotlin.math.abs(dx) > 0.5f) kotlin.math.sign(dx) else kotlin.math.sign(vx)
+                        val directionY = if (kotlin.math.abs(dy) > 0.5f) kotlin.math.sign(dy) else kotlin.math.sign(vy)
+                        // Anchor the trailing edge so the leading edge stretches toward the finger.
+                        indicator.pivotX = if (directionX >= 0f) 0f else indicator.width.toFloat()
+                        indicator.pivotY = if (directionY >= 0f) 0f else indicator.height.toFloat()
+                        indicator.scaleX = (1.015f + speedX - speedY * 0.22f).coerceIn(0.985f, 1.105f)
+                        indicator.scaleY = (1.025f + speedY - speedX * 0.22f).coerceIn(0.985f, 1.105f)
                         true
                     }
                     android.view.MotionEvent.ACTION_UP -> {
-                        optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
+                        tracker?.addMovement(event)
+                        tracker?.computeCurrentVelocity(1000)
+                        val vx = tracker?.xVelocity ?: 0f
+                        val vy = tracker?.yVelocity ?: 0f
+                        val peakX = (kotlin.math.abs(vx) / 12000f).coerceIn(0f, 0.07f)
+                        val peakY = (kotlin.math.abs(vy) / 12000f).coerceIn(0f, 0.07f)
+                        val target = optionAt(event.rawX, event.rawY)
+                        target?.let(onSelectionChanged)
+                        tracker?.recycle()
+                        tracker = null
                         indicator.animate().cancel()
-                        android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                            duration = 230L
-                            interpolator = android.view.animation.OvershootInterpolator(0.75f)
-                            addUpdateListener { animator ->
-                                val t = animator.animatedValue as Float
-                                val settle = 1f - t
-                                indicator.scaleX = 1f + 0.045f * settle
-                                indicator.scaleY = 1f - 0.035f * settle
-                            }
-                            start()
-                        }
-                        optionAt(event.rawX, event.rawY)?.performClick()
+                        settleJelly(peakX, peakY)
+                        target?.performClick()
                         true
                     }
                     android.view.MotionEvent.ACTION_CANCEL -> {
+                        tracker?.recycle()
+                        tracker = null
                         indicator.animate().cancel()
-                        indicator.animate().scaleX(1f).scaleY(1f).setDuration(150L)
-                            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                        settleJelly(0.015f, 0.02f)
                         true
                     }
                     else -> true
@@ -578,7 +611,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(8), dp(2)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(14), dp(5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         val buttonRows = choices.toList().chunked(columns)
@@ -590,7 +623,7 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(6), dp(13), dp(6), dp(13))
+                    setPadding(dp(6), dp(20), dp(6), dp(20))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
@@ -623,7 +656,7 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = insetTarget(targetFor(active, parentLine, column), dp(8), dp(2))
+            val target = insetTarget(targetFor(active, parentLine, column), dp(14), dp(5))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
@@ -696,7 +729,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(8), dp(3)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(14), dp(5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         categories.chunked(2).forEachIndexed { rowIndex, pair ->
@@ -706,7 +739,7 @@ class BrowsingActivity : AppCompatActivity() {
                     text = category; tag = category
                     textSize = 14f; gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(8), dp(14), dp(8), dp(14))
+                    setPadding(dp(8), dp(18), dp(8), dp(18))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(18).toFloat()
                         setColor(Color.TRANSPARENT)
@@ -743,7 +776,7 @@ class BrowsingActivity : AppCompatActivity() {
         grid.post {
             buttons.firstOrNull { it.tag == selected }?.let { active ->
                 val line = active.parent as LinearLayout
-                val target = insetTarget(targetFor(active, line, column), dp(8), dp(3))
+                val target = insetTarget(targetFor(active, line, column), dp(14), dp(5))
                 val lp = indicator.layoutParams as FrameLayout.LayoutParams
                 lp.leftMargin = target.left; lp.topMargin = target.top
                 lp.width = target.width; lp.height = target.height
