@@ -167,15 +167,9 @@ class BrowsingActivity : AppCompatActivity() {
         addDivider(quick)
         addPreferenceSwitch(quick, "Avoid previously seen images", "Reduce repeated photographs where the feed can identify them.", "avoid_seen", true)
         addDivider(quick)
+        val categorySummary = label("Choose the category shown when opening the feed.", 11f, R.color.mute)
         addClickRow(quick, "Default discovery category", "Choose the category shown when opening the feed.") {
-            val categories = arrayOf("For You", "Nature", "Forest", "Mountains", "Wildlife", "Architecture", "Travel", "Ocean", "Abstract")
-            androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Default category")
-                .setSingleChoiceItems(categories, categories.indexOf(prefs.getString("default_category", "For You"))) { dialog, which ->
-                    prefs.edit().putString("default_category", categories[which]).apply()
-                    dialog.dismiss()
-                    recreate()
-                }.setNegativeButton("Cancel", null).show()
+            showCategoryPicker(categorySummary)
         }
         content.addView(quick, match())
 
@@ -370,43 +364,52 @@ class BrowsingActivity : AppCompatActivity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
         row.addView(label(title, 13f, R.color.fg, 0, 2, true))
         row.addView(label(subtitle, 11f, R.color.mute, 0, 8))
-        // Use a two-row, two-column segmented layout for four-way choices so
-        // every option gets a generous horizontal target, matching Appearance's Motion control.
+        // Motion-style segmented choices. Update the selected segment in place:
+        // never recreate the Activity or reset the user's current scroll position.
         val rows = if (choices.size == 4) choices.toList().chunked(2) else listOf(choices.toList())
+        val optionViews = mutableListOf<TextView>()
+        fun selectedBackground(): android.graphics.drawable.Drawable =
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
+                cornerRadius = dp(999).toFloat()
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+            }
+        fun paintSelection(value: String, animate: Boolean) {
+            optionViews.forEach { option ->
+                val active = option.tag == value
+                option.animate().cancel()
+                option.background = if (active) selectedBackground() else null
+                option.setTextColor(c(if (active) R.color.bg else R.color.fg))
+                option.alpha = if (animate) 0.88f else 1f
+                if (animate) option.animate().alpha(1f).setDuration(220L).start()
+            }
+        }
         rows.forEachIndexed { rowIndex, rowChoices ->
             val choicesRow = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(4), dp(4), dp(4), dp(4))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(999).toFloat()
-                    setColor(c(R.color.glassFill))
-                    setStroke(dp(1), c(R.color.glassStroke))
-                }
+                background = pillBackground()
             }
             rowChoices.forEachIndexed { index, choice ->
-                val selected = choice == current
                 val item = TextView(this).apply {
                     text = choice
+                    tag = choice
                     textSize = 13f
                     isSingleLine = true
                     includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setTextColor(c(if (selected) R.color.bg else R.color.mute))
-                    background = if (selected) GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                        intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
-                        cornerRadius = dp(999).toFloat()
-                        setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
-                    } else null
                     setPadding(dp(8), dp(12), dp(8), dp(12))
                     isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
+                        if ((tag as String) == (prefs.getString(key, default) ?: default)) return@setOnClickListener
                         prefs.edit().putString(key, choice).apply()
-                        recreate()
+                        paintSelection(choice, true)
                     }
                 }
+                optionViews.add(item)
                 choicesRow.addView(item, LinearLayout.LayoutParams(0, -2, 1f).apply {
                     if (index > 0) leftMargin = dp(4)
                 })
@@ -415,8 +418,79 @@ class BrowsingActivity : AppCompatActivity() {
                 if (rowIndex > 0) topMargin = dp(6)
             })
         }
+        paintSelection(current, false)
         parent.addView(row)
     }
+    private fun showCategoryPicker(summary: TextView) {
+        val categories = listOf("For You", "Nature", "Wildlife", "Forest", "Mountains", "Ocean", "Travel", "Architecture", "Abstract")
+        val selected = prefs.getString("default_category", "For You") ?: "For You"
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(16), dp(20), dp(14))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(26).toFloat()
+                setColor(c(R.color.glassDialog))
+                setStroke(dp(1), c(R.color.glassStroke))
+            }
+        }
+        panel.addView(label("Default category", 20f, R.color.fg, 0, 4, true))
+        panel.addView(label("Choose your starting point", 12f, R.color.mute, 0, 12))
+        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        categories.chunked(2).forEachIndexed { rowIndex, pair ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            pair.forEachIndexed { index, category ->
+                val active = category == selected
+                val option = TextView(this).apply {
+                    text = category
+                    textSize = 13f
+                    gravity = Gravity.CENTER
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+                    setTextColor(c(if (active) R.color.bg else R.color.fg))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(16).toFloat()
+                        setColor(c(if (active) R.color.accent else R.color.surface))
+                        setStroke(dp(1), c(R.color.glassStroke))
+                    }
+                    setPadding(dp(8), dp(13), dp(8), dp(13))
+                    isClickable = true; isFocusable = true
+                    pressFx()
+                    setOnClickListener {
+                        prefs.edit().putString("default_category", category).apply()
+                        summary.text = "Currently selected: $category"
+                        (tag as? androidx.appcompat.app.AlertDialog)?.dismiss()
+                    }
+                }
+                row.addView(option, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    if (index > 0) leftMargin = dp(8)
+                })
+            }
+            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
+            grid.addView(row, LinearLayout.LayoutParams(-1, -2).apply {
+                if (rowIndex > 0) topMargin = dp(8)
+            })
+        }
+        panel.addView(grid)
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(panel)
+            .setNegativeButton("Cancel", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            val width = (resources.displayMetrics.widthPixels - dp(40)).coerceAtMost(dp(420))
+            dialog.window?.setLayout(width, -2)
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
+                setTextColor(c(R.color.accent))
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+            }
+            // Give each option access to the dialog for its click callback.
+            for (i in 0 until grid.childCount) {
+                val row = grid.getChildAt(i) as LinearLayout
+                for (j in 0 until row.childCount) row.getChildAt(j).tag = dialog
+            }
+        }
+        dialog.show()
+    }
+
     private fun addClickRow(parent: LinearLayout, title: String, subtitle: String, action: () -> Unit) {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
