@@ -99,6 +99,12 @@ class BrowsingActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
             content.setPadding(dp(20), top + dp(32), dp(20), dp(150))
+            root.findViewWithTag<View>("browsing-back")?.let { button ->
+                (button.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+                    lp.topMargin = top + dp(36)
+                    button.layoutParams = lp
+                }
+            }
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
@@ -106,6 +112,7 @@ class BrowsingActivity : AppCompatActivity() {
         // Match the Settings/Appearance floating Back control exactly: 48dp,
         // borderless glass circle, same anchored position and touch treatment.
         val back = ImageView(this).apply {
+            tag = "browsing-back"
             setImageResource(R.drawable.ic_back)
             imageTintList = android.content.res.ColorStateList.valueOf(c(R.color.fg))
             scaleType = ImageView.ScaleType.CENTER
