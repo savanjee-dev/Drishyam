@@ -785,6 +785,7 @@ class MainActivity : AppCompatActivity() {
         Thread {
             val added = ArrayList<Photo>()
             var nextAfter = after
+            var nextCommonsPage = page
             var finished = false
             var error: String? = null
             val providerErrors = ArrayList<String>()
@@ -819,11 +820,16 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
-                        val (photos, last) = Api.commons(commonsQuery, page)
-                        val unseen = photos.filter { it.id !in s.seenIds }
-                        if (unseen.isNotEmpty()) {
-                            added.addAll(unseen)
+                        // A Commons page can overlap earlier results. Skip duplicate-only
+                        // pages in this same request instead of failing the whole refresh.
+                        var attempts = 0
+                        while (added.isEmpty() && attempts < 6 && !finished) {
+                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage)
+                            val unseen = photos.filter { it.id !in s.seenIds }
+                            nextCommonsPage++
+                            attempts++
                             finished = last
+                            if (unseen.isNotEmpty()) added.addAll(unseen)
                         }
                     } catch (e: Exception) {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
@@ -868,6 +874,8 @@ class MainActivity : AppCompatActivity() {
                 if (added.isEmpty()) {
                     error = if (providerErrors.isNotEmpty()) {
                         "Home feed couldn't load. " + providerErrors.joinToString(" · ")
+                    } else if (useWikimedia && !useOpenverse && !useUnsplash) {
+                        "Wikimedia Commons has no more unseen photos for this category. Try another category or refresh later."
                     } else {
                         "Enabled photo sources returned no matching photos. Try another category or refresh."
                     }
@@ -883,7 +891,7 @@ class MainActivity : AppCompatActivity() {
                     statusPill.setTag(R.id.statusPill, null)
                 } else {
                     s.after = nextAfter
-                    s.page = page + 1
+                    s.page = if (useWikimedia) nextCommonsPage else page + 1
                     if (finished) s.done = true
                 }
                 val fresh = added.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
