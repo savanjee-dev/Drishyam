@@ -23,14 +23,29 @@ class BrowsingActivity : AppCompatActivity() {
     private fun dp(value: Int) = (value * density).toInt()
     private fun c(id: Int) = ContextCompat.getColor(this, id)
     private var backgroundLayer: UniversalBackgroundView? = null
+    private val ambientGlows = mutableListOf<View>()
+    private val glassCards = mutableListOf<View>()
+    private val toggleRefreshers = mutableListOf<() -> Unit>()
     private val glassPreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "glass_level" || key == "low_fx" || key == "motion" || key == "motion_reduced") {
             refreshAtmosphere()
+            refreshGlassComponents()
         }
     }
 
     private fun refreshAtmosphere() {
         backgroundLayer?.refreshGlassLevel()
+        val factor = when (glassLevel(this)) { "off" -> 0f; "subtle" -> 0.45f; else -> 1f }
+        ambientGlows.forEach { glow ->
+            val base = glow.tag as? Float ?: 1f
+            glow.alpha = base * factor
+            glow.visibility = if (factor > 0f) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun refreshGlassComponents() {
+        glassCards.forEach { it.background = cardBackground() }
+        toggleRefreshers.forEach { it.invoke() }
     }
 
     override fun onResume() {
@@ -61,9 +76,10 @@ class BrowsingActivity : AppCompatActivity() {
             setBackgroundColor(c(R.color.bg))
             clipChildren = false
         }
-        // Reuse the same animated ambient background layer used by Appearance.
+        // Reuse Appearance's live background plus the same three drifting ambient glows as Settings.
         UniversalBackgroundView.attach(root)
         backgroundLayer = root.findViewWithTag("drishyam-universal-background")
+        addBrowsingGlows(root)
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             isVerticalScrollBarEnabled = false
@@ -100,7 +116,7 @@ class BrowsingActivity : AppCompatActivity() {
             isClickable = true
             isFocusable = true
             contentDescription = getString(R.string.back_desc)
-            attachBrowsingPress(glassLevel != "off" && !reduced)
+            pressFx()
             setOnClickListener { view -> PortalTransition.close(this@BrowsingActivity, view) }
         }
         content.addView(View(this).apply {
@@ -189,35 +205,64 @@ class BrowsingActivity : AppCompatActivity() {
         content.addView(label("Your choices are saved on this device.", 11f, R.color.mute, 0, 16))
     }
 
-    private fun attachBrowsingPress(enabled: Boolean) {
-        foreground = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(Color.TRANSPARENT)
-        }
-        setOnTouchListener { view, event ->
-            when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_DOWN -> {
-                    view.animate().cancel()
-                    view.animate().scaleX(0.94f).scaleY(0.94f).alpha(if (enabled) 0.82f else 1f).setDuration(90).start()
+    private fun addBrowsingGlows(root: FrameLayout) {
+        val light = Color.luminance(c(R.color.bg)) > 0.5f
+        val specs = listOf(
+            floatArrayOf(-70f, -90f, -28f, 118f, 5600f),
+            floatArrayOf(240f, 88f, -92f, 62f, 7200f),
+            floatArrayOf(0f, -92f, 72f, -104f, 9000f)
+        )
+        specs.forEachIndexed { index, g ->
+            val tint = if (light) intArrayOf(0xFF89945A.toInt(), 0xFFB7A879.toInt(), 0xFFD5C9A5.toInt())[index]
+                else intArrayOf(c(R.color.accent2), c(R.color.hero), c(R.color.accent))[index]
+            val baseAlpha = if (light) floatArrayOf(0.88f, 0.82f, 0.68f)[index]
+                else floatArrayOf(0.52f, 0.48f, 0.32f)[index]
+            val glow = View(this).apply {
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    gradientType = GradientDrawable.RADIAL_GRADIENT
+                    colors = intArrayOf(tint, withAlpha(tint, 0f))
+                    gradientRadius = dp(if (light) 250 else 140).toFloat()
                 }
-                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                    view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).start()
+                tag = baseAlpha
+            }
+            ambientGlows.add(glow)
+            root.addView(glow, 0, FrameLayout.LayoutParams(dp(280), dp(280),
+                intArrayOf(Gravity.TOP or Gravity.START, Gravity.TOP or Gravity.END, Gravity.BOTTOM or Gravity.START)[index]).apply {
+                topMargin = dp(g[0].toInt())
+                if (index == 1) rightMargin = dp(-110) else if (index == 0) leftMargin = dp(-90)
+                if (index == 2) bottomMargin = dp(60)
+            })
+            if (motionEnabled(this)) {
+                android.animation.ObjectAnimator.ofPropertyValuesHolder(glow,
+                    android.animation.PropertyValuesHolder.ofFloat(View.TRANSLATION_X, dp(g[1].toInt()).toFloat(), dp(g[1].toInt() * -1).toFloat()),
+                    android.animation.PropertyValuesHolder.ofFloat(View.TRANSLATION_Y, dp(g[2].toInt()).toFloat(), dp(g[3].toInt()).toFloat()),
+                    android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.24f),
+                    android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.24f)).apply {
+                    duration = g[4].toLong()
+                    repeatCount = android.animation.ValueAnimator.INFINITE
+                    repeatMode = android.animation.ValueAnimator.REVERSE
+                    interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+                    start()
                 }
             }
-            false
         }
+        refreshAtmosphere()
     }
+
+    private fun cardBackground(): android.graphics.drawable.Drawable =
+        GradientDrawable().apply {
+            cornerRadius = dp(28).toFloat()
+            setColor(c(R.color.glassFill))
+            setStroke(dp(1), c(R.color.glassStroke))
+        }
 
     private fun match() = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(0) }
     private fun card() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(14), dp(16), dp(14))
-        // Same surface fill, radius and border as Appearance's glassCard().
-        background = GradientDrawable().apply {
-            cornerRadius = dp(28).toFloat()
-            setColor(c(R.color.glassFill))
-            setStroke(dp(1), c(R.color.glassStroke))
-        }
+        background = cardBackground()
+        glassCards.add(this)
     }
     private fun pillBackground() = GradientDrawable().apply {
         cornerRadius = dp(999).toFloat()
@@ -285,6 +330,8 @@ class BrowsingActivity : AppCompatActivity() {
         }
         track.addView(thumb, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
         thumb.translationX = if (checked) dp(22).toFloat() else 0f
+        toggleRefreshers.add { track.background = toggleTrack(checked) }
+        track.pressFx()
         return track
     }
 
@@ -292,7 +339,7 @@ class BrowsingActivity : AppCompatActivity() {
         val glassOn = glassLevel(this) != "off"
         val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(
-                if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.accent2), 0.28f),
+                if (checked) withAlpha(c(R.color.accent), 0.88f) else withAlpha(c(R.color.accent2), 0.28f),
                 if (checked) c(R.color.accent) else withAlpha(c(R.color.accent2), 0.30f),
                 if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.accent2), 0.32f)
             )).apply {
