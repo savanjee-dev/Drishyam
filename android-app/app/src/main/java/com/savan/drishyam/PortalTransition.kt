@@ -127,8 +127,8 @@ object PortalTransition {
         content.clipToOutline = true
         // Lift the rounded portal above the Activity underneath it.
         // The same rounded outline is used to shape the page and its elevation shadow.
-        content.elevation = 12f * density
-        content.translationZ = 12f * density
+        content.elevation = 18f * density
+        content.translationZ = 0f
         fun animateCornerRadius(targetRadius: Float, durationMs: Long) {
             ValueAnimator.ofFloat(currentCornerRadius, targetRadius).apply {
                 duration = durationMs
@@ -145,7 +145,7 @@ object PortalTransition {
                 // Android supports edge-back from either side. Move the page away
                 // from the edge that received the gesture instead of silently
                 // discarding right-edge gestures.
-                direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
+                direction = 1f
                 startTranslation = content.translationX
             }
 
@@ -160,9 +160,9 @@ object PortalTransition {
             override fun onBackCancelled() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
-                animateCornerRadius(minCornerRadius, 700L)
+                animateCornerRadius(minCornerRadius, 900L)
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
-                    duration = 700L
+                    duration = 900L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     start()
                 }
@@ -171,10 +171,10 @@ object PortalTransition {
             override fun onBackInvoked() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
-                animateCornerRadius(maxCornerRadius, 450L)
+                animateCornerRadius(maxCornerRadius, 950L)
                 val targetX = startTranslation + direction * content.width.toFloat()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
-                    duration = 450L
+                    duration = 950L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         private var cancelled = false
