@@ -764,37 +764,59 @@ class MainActivity : AppCompatActivity() {
             var nextAfter = after
             var finished = false
             var error: String? = null
-            var unsplashError: String? = null
             val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
             val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
-            try {
-                val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
-                if (list.isNotEmpty()) {
-                    finished = last
-                    added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
-                } else {
-                    // HTTP 200 with an empty results array is still a feed failure; try the backup source.
-                    unsplashError = "Unsplash returned no photos."
-                }
-            } catch (e: Exception) {
-                unsplashError = e.message ?: "Photo service unavailable."
-            }
+            val browsingPrefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
+            val useWikimedia = browsingPrefs.getBoolean("source_wikimedia", true)
+            val useOpenverse = browsingPrefs.getBoolean("source_openverse", true)
+            val useUnsplash = browsingPrefs.getBoolean("source_unsplash", true)
 
-            // Try Wikimedia Commons both when Unsplash errors and when it returns an empty feed.
-            if (added.isEmpty()) {
-                try {
-                    val (fallbackPhotos, fallbackLast) = Api.commons(fallbackQuery, page)
-                    if (fallbackPhotos.isEmpty()) throw Exception("No backup photos returned.")
-                    added.addAll(fallbackPhotos)
-                    finished = fallbackLast
-                } catch (fallbackError: Exception) {
-                    val m = unsplashError ?: "Unsplash returned no photos."
-                    error = when {
-                        m.contains("429") -> "Unsplash is temporarily rate-limiting requests and backup photos are unavailable. Please retry."
-                        m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied the request and backup photos could not load. Check the connection and retry."
-                        m.contains("404") -> "This feed was not found and backup photos could not load."
-                        m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet and retry."
-                        else -> "Photo services are temporarily unavailable ($m). Please retry."
+            if (!useWikimedia && !useOpenverse && !useUnsplash) {
+                error = "No photo sources are enabled. Enable at least one source in Settings → Browsing."
+            } else {
+                // MilkyWay provider order: Wikimedia Commons → Openverse → Unsplash.
+                // A disabled provider is never queried, including as a fallback.
+                if (useWikimedia && added.isEmpty()) {
+                    try {
+                        val (photos, last) = Api.commons(fallbackQuery, page)
+                        if (photos.isNotEmpty()) {
+                            added.addAll(photos)
+                            finished = last
+                        }
+                    } catch (_: Exception) { }
+                }
+
+                if (useOpenverse && added.isEmpty() && page <= 5) {
+                    try {
+                        val (photos, last) = Api.openverse(fallbackQuery, page)
+                        if (photos.isNotEmpty()) {
+                            added.addAll(photos)
+                            finished = last
+                        }
+                    } catch (_: Exception) { }
+                }
+
+                if (useUnsplash && added.isEmpty()) {
+                    try {
+                        val (photos, last) = Api.unsplash(
+                            query, page,
+                            orderBy = if (sort == "new") "latest" else "relevant",
+                            forceFresh = forceFresh,
+                            indiaOnly = sort == "india" && s.name != "Search",
+                            popular = sort == "hot"
+                        )
+                        if (photos.isNotEmpty()) {
+                            finished = last
+                            added.addAll(if (sort == "top") photos.sortedByDescending { it.likes } else photos)
+                        }
+                    } catch (_: Exception) { }
+                }
+
+                if (added.isEmpty()) {
+                    error = if (useOpenverse && !useWikimedia && !useUnsplash && page > 5) {
+                        "Openverse's anonymous browsing limit has been reached. Choose another enabled source or refresh."
+                    } else {
+                        "Enabled photo sources are temporarily unavailable or returned no results. Please retry."
                     }
                 }
             }
