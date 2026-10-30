@@ -366,36 +366,44 @@ class BrowsingActivity : AppCompatActivity() {
     }
 
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
-        val current = prefs.getString(key, default) ?: default
+        var selected = prefs.getString(key, default) ?: default
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
         row.addView(label(title, 13f, R.color.fg, 0, 2, true))
         row.addView(label(subtitle, 11f, R.color.mute, 0, 8))
-        // Motion-style segmented choices. Update the selected segment in place:
-        // never recreate the Activity or reset the user's current scroll position.
-        val rows = if (choices.size == 4) choices.toList().chunked(2) else listOf(choices.toList())
-        val optionViews = mutableListOf<TextView>()
-        fun selectedBackground(): android.graphics.drawable.Drawable =
-            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
-                cornerRadius = dp(999).toFloat()
-                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
-            }
-        fun paintSelection(value: String, animate: Boolean) {
-            optionViews.forEach { option ->
-                val active = option.tag == value
-                option.animate().cancel()
-                option.background = if (active) selectedBackground() else null
-                option.setTextColor(c(if (active) R.color.bg else R.color.fg))
-                option.alpha = if (animate) 0.88f else 1f
-                if (animate) option.animate().alpha(1f).setDuration(220L).start()
-            }
-        }
-        rows.forEachIndexed { rowIndex, rowChoices ->
-            val choicesRow = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(4), dp(4), dp(4), dp(4))
+
+        // Match Appearance's segmented control: one moving/stretching glass indicator
+        // per visual row, with labels layered above it. Four options use two rows.
+        val optionRows = if (choices.size == 4) choices.toList().chunked(2) else listOf(choices.toList())
+        optionRows.forEachIndexed { rowIndex, rowChoices ->
+            val segment = FrameLayout(this).apply {
                 background = pillBackground()
+                clipChildren = false
+                clipToPadding = false
+            }
+            val optionsLine = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(dp(4), dp(4), dp(4), dp(4))
+            }
+            val indicator = View(this).apply {
+                background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
+                    cornerRadius = dp(999).toFloat()
+                    setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+                }
+                elevation = dp(1).toFloat()
+            }
+            val buttons = mutableListOf<TextView>()
+            fun boundsOf(button: TextView): Pair<Float, Float> =
+                Pair((optionsLine.left + button.left).toFloat(), button.width.toFloat())
+            fun paintLabels() {
+                buttons.forEach { button ->
+                    val active = button.tag == selected
+                    button.setTextColor(c(if (active) R.color.bg else R.color.mute))
+                    button.setTypeface(
+                        androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                        if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                    )
+                }
             }
             rowChoices.forEachIndexed { index, choice ->
                 val item = TextView(this).apply {
@@ -406,25 +414,35 @@ class BrowsingActivity : AppCompatActivity() {
                     includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(8), dp(12), dp(8), dp(12))
-                    isClickable = true; isFocusable = true
+                    setTextColor(c(if (choice == selected) R.color.bg else R.color.mute))
+                    setPadding(dp(8), dp(10), dp(8), dp(10))
+                    isClickable = true
+                    isFocusable = true
                     pressFx()
                     setOnClickListener {
-                        if ((tag as String) == (prefs.getString(key, default) ?: default)) return@setOnClickListener
+                        if (choice == selected) return@setOnClickListener
+                        selected = choice
                         prefs.edit().putString(key, choice).apply()
-                        paintSelection(choice, true)
+                        paintLabels()
+                        SegmentStretch.animate(indicator, boundsOf(this), density, !motionEnabled(this@BrowsingActivity))
                     }
                 }
-                optionViews.add(item)
-                choicesRow.addView(item, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    if (index > 0) leftMargin = dp(4)
-                })
+                buttons.add(item)
+                optionsLine.addView(item, LinearLayout.LayoutParams(0, -2, 1f))
             }
-            row.addView(choicesRow, LinearLayout.LayoutParams(-1, -2).apply {
+            segment.addView(indicator, FrameLayout.LayoutParams(0, -1).apply {
+                topMargin = dp(4)
+                bottomMargin = dp(4)
+            })
+            segment.addView(optionsLine, FrameLayout.LayoutParams(-1, -2))
+            row.addView(segment, LinearLayout.LayoutParams(-1, -2).apply {
                 if (rowIndex > 0) topMargin = dp(6)
             })
+            segment.post {
+                val active = buttons.firstOrNull { it.tag == selected }
+                if (active != null) SegmentStretch.place(indicator, boundsOf(active).first, boundsOf(active).second)
+            }
         }
-        paintSelection(current, false)
         parent.addView(row)
     }
     private fun showCategoryPicker(summary: TextView) {
