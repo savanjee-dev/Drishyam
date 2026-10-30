@@ -20,13 +20,15 @@ data class Photo(
     val credit: String, val link: String, val dl: String, val color: Int,
     val width: Int = 0, val height: Int = 0, val published: String = "", val publishedAt: Long = 0L, val likes: Int = 0,
     val camera: String = "", val aperture: String = "", val focalLength: String = "",
-    val shutterSpeed: String = "", val iso: String = "", val downloads: String = ""
+    val shutterSpeed: String = "", val iso: String = "", val downloads: String = "",
+    val license: String = "", val licenseUrl: String = "", val creatorUrl: String = "", val source: String = ""
 ) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("thumb", thumb).put("full", full)
         .put("title", title).put("credit", credit).put("link", link).put("dl", dl).put("color", color)
         .put("width", width).put("height", height).put("published", published).put("publishedAt", publishedAt).put("likes", likes).put("camera", camera)
         .put("aperture", aperture).put("focalLength", focalLength).put("shutterSpeed", shutterSpeed)
-        .put("iso", iso).put("downloads", downloads)
+        .put("iso", iso).put("downloads", downloads).put("license", license)
+        .put("licenseUrl", licenseUrl).put("creatorUrl", creatorUrl).put("source", source)
 
     companion object {
         fun from(o: JSONObject) = Photo(
@@ -34,7 +36,8 @@ data class Photo(
             o.optString("credit"), o.optString("link"), o.optString("dl"), o.optInt("color", 0xFF222222.toInt()),
             o.optInt("width"), o.optInt("height"), o.optString("published"), o.optLong("publishedAt"), o.optInt("likes"), o.optString("camera"),
             o.optString("aperture"), o.optString("focalLength"), o.optString("shutterSpeed"),
-            o.optString("iso"), o.optString("downloads")
+            o.optString("iso"), o.optString("downloads"), o.optString("license"),
+            o.optString("licenseUrl"), o.optString("creatorUrl"), o.optString("source")
         )
     }
 }
@@ -216,18 +219,64 @@ object Api {
             val thumb = info.optString("thumburl", original)
             if (!original.startsWith("https://") || !thumb.startsWith("https://")) continue
             val meta = info.optJSONObject("extmetadata")
-            val artist = meta?.optJSONObject("Artist")?.optString("value", "")
-                ?.replace(Regex("<[^>]*>"), "")?.take(100).orEmpty()
+            fun metadata(name: String): String = meta?.optJSONObject(name)?.optString("value", "")
+                ?.replace(Regex("<[^>]*>"), "")?.replace("&amp;", "&")?.trim().orEmpty()
+            val artistHtml = meta?.optJSONObject("Artist")?.optString("value", "").orEmpty()
+            val artist = metadata("Artist").take(100)
             val title = pageObj.optString("title", "Wallpaper").removePrefix("File:")
             val width = info.optInt("width", 0)
             val height = info.optInt("height", 0)
+            val pageUrl = "https://commons.wikimedia.org/wiki/" + java.net.URLEncoder.encode(pageObj.optString("title"), "UTF-8")
             out.add(Photo(pageObj.optString("pageid", title), thumb, original, title,
                 if (artist.isBlank()) "Wikimedia Commons" else artist,
-                "https://commons.wikimedia.org/wiki/" + java.net.URLEncoder.encode(pageObj.optString("title"), "UTF-8"),
-                "", 0xFF222222.toInt(), width, height))
+                pageUrl, "", 0xFF222222.toInt(), width, height,
+                license = metadata("LicenseShortName"),
+                licenseUrl = metadata("LicenseUrl"),
+                creatorUrl = Regex("href=[\\\"']([^\\\"']+)").find(artistHtml)?.groupValues?.getOrNull(1) ?: "",
+                source = "Wikimedia Commons"))
         }
         return Pair(out, pages.length() == 0 || out.isEmpty())
     }
+
+    /**
+     * Openverse anonymous image search. Only broadly reusable licences are requested;
+     * each result retains its licence and attribution links for the app's credit UI.
+     * Anonymous API pagination is intentionally capped to avoid excessive requests.
+     */
+    fun openverse(query: String, page: Int): Pair<List<Photo>, Boolean> {
+        require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
+        require(page in 1..5) { "Openverse anonymous pagination limit reached." }
+        val url = "https://api.openverse.org/v1/images/?q=" +
+            java.net.URLEncoder.encode(query, "UTF-8") +
+            "&page_size=20&page=$page&license=cc0,pdm,by,by-sa"
+        val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/3.1 (https://github.com/savanjee-dev/Drishyam)")))
+        val results = root.optJSONArray("results") ?: JSONArray()
+        val out = ArrayList<Photo>()
+        for (i in 0 until results.length()) {
+            val item = results.optJSONObject(i) ?: continue
+            val image = item.optString("url", "")
+            val thumb = item.optString("thumbnail", image)
+            val landing = item.optString("foreign_landing_url", "")
+            if (!image.startsWith("https://") || !thumb.startsWith("https://") || !landing.startsWith("https://")) continue
+            val creator = item.optString("creator", "").ifBlank { "Unknown creator" }
+            val creatorUrl = item.optString("creator_url", "")
+            val license = item.optString("license", "").uppercase()
+            val licenseUrl = item.optString("license_url", "")
+            if (license !in setOf("CC0", "PDM", "BY", "BY-SA") || licenseUrl.isBlank()) continue
+            val title = item.optString("title", "Untitled image").replace(Regex("<[^>]*>"), "").take(180)
+            out.add(Photo(
+                id = "openverse:" + item.optString("id", "$page-$i"),
+                thumb = thumb, full = image, title = title, credit = creator,
+                link = landing, dl = "", color = 0xFF222222.toInt(),
+                width = item.optInt("width", 0), height = item.optInt("height", 0),
+                license = license, licenseUrl = licenseUrl, creatorUrl = creatorUrl,
+                source = item.optString("source", "Openverse")
+            ))
+        }
+        val next = root.optString("next", "")
+        return Pair(out, next.isBlank() || next == "null" || page >= 5)
+    }
+
 
     /** Returns photos and whether this was the last page. */
     fun unsplash(query: String, page: Int, orderBy: String = "relevant", forceFresh: Boolean = false, indiaOnly: Boolean = false, popular: Boolean = false): Pair<List<Photo>, Boolean> {
