@@ -167,10 +167,16 @@ class BrowsingActivity : AppCompatActivity() {
         addDivider(quick)
         addPreferenceSwitch(quick, "Avoid previously seen images", "Reduce repeated photographs where the feed can identify them.", "avoid_seen", true)
         addDivider(quick)
-        val categorySummary = label("Choose the category shown when opening the feed.", 11f, R.color.mute)
-        addClickRow(quick, "Default discovery category", "Choose the category shown when opening the feed.") {
-            showCategoryPicker(categorySummary)
+        val categorySummary = label("Currently selected: ${prefs.getString("default_category", "For You") ?: "For You"}", 11f, R.color.mute)
+        val categoryRow = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(10), 0, dp(10))
+            isClickable = true; isFocusable = true
+            setOnClickListener { showCategoryPicker(categorySummary) }
         }
+        categoryRow.addView(label("Default discovery category", 13f, R.color.fg, 0, 2, true))
+        categoryRow.addView(categorySummary)
+        quick.addView(categoryRow)
         content.addView(quick, match())
 
         content.addView(sectionTitle("Advanced browsing"))
