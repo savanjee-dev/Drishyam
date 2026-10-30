@@ -22,6 +22,29 @@ class BrowsingActivity : AppCompatActivity() {
     private val density get() = resources.displayMetrics.density
     private fun dp(value: Int) = (value * density).toInt()
     private fun c(id: Int) = ContextCompat.getColor(this, id)
+    private var backgroundLayer: UniversalBackgroundView? = null
+    private val glassPreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "glass_level" || key == "low_fx" || key == "motion" || key == "motion_reduced") {
+            refreshAtmosphere()
+        }
+    }
+
+    private fun refreshAtmosphere() {
+        backgroundLayer?.refreshGlassLevel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(glassPreferenceListener)
+        refreshAtmosphere()
+    }
+
+    override fun onPause() {
+        getSharedPreferences(PREFS_SETTINGS, MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(glassPreferenceListener)
+        super.onPause()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         MainActivity.applyTheme(this)
@@ -40,6 +63,7 @@ class BrowsingActivity : AppCompatActivity() {
         }
         // Reuse the same animated ambient background layer used by Appearance.
         UniversalBackgroundView.attach(root)
+        backgroundLayer = root.findViewWithTag("drishyam-universal-background")
         val scroll = ScrollView(this).apply {
             isFillViewport = true
             isVerticalScrollBarEnabled = false
@@ -188,6 +212,7 @@ class BrowsingActivity : AppCompatActivity() {
     private fun card() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(14), dp(16), dp(14))
+        // Same surface fill, radius and border as Appearance's glassCard().
         background = GradientDrawable().apply {
             cornerRadius = dp(28).toFloat()
             setColor(c(R.color.glassFill))
@@ -263,14 +288,24 @@ class BrowsingActivity : AppCompatActivity() {
         return track
     }
 
-    private fun toggleTrack(checked: Boolean) = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-        intArrayOf(
-            if (checked) Color.argb(235, 137, 148, 90) else Color.argb(85, 137, 148, 90),
-            if (checked) Color.argb(220, 137, 148, 90) else Color.argb(75, 137, 148, 90),
-            if (checked) Color.argb(235, 137, 148, 90) else Color.argb(90, 137, 148, 90)
-        )).apply {
-        cornerRadius = dp(999).toFloat()
-        setStroke(dp(1), 0x99FFFFFF.toInt())
+    private fun toggleTrack(checked: Boolean): android.graphics.drawable.Drawable {
+        val glassOn = glassLevel(this) != "off"
+        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(
+                if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.accent2), 0.28f),
+                if (checked) c(R.color.accent) else withAlpha(c(R.color.accent2), 0.30f),
+                if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.accent2), 0.32f)
+            )).apply {
+            cornerRadius = dp(999).toFloat()
+            setStroke(dp(1), withAlpha(Color.WHITE, if (glassOn) 0.72f else 0.24f))
+        }
+        if (!glassOn) return base
+        // A restrained top-edge sheen gives the switch the same glass depth as Appearance.
+        val sheen = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(withAlpha(Color.WHITE, 0.24f), withAlpha(Color.WHITE, 0.035f), Color.TRANSPARENT)).apply {
+            cornerRadius = dp(999).toFloat()
+        }
+        return android.graphics.drawable.LayerDrawable(arrayOf(base, sheen))
     }
 
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
