@@ -798,6 +798,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            if (added.isEmpty()) {
+                try {
+                    val (morePhotos, lastPage) = Api.openverse(fallbackQuery, page.coerceAtMost(5))
+                    if (morePhotos.isEmpty()) throw Exception("Openverse returned no photos.")
+                    added.addAll(morePhotos)
+                    finished = lastPage
+                    error = null
+                } catch (_: Exception) { }
+            }
+
             runOnUiThread {
                 if (gen != s.gen) return@runOnUiThread   // sort or refresh happened meanwhile
                 s.loading = false
