@@ -354,22 +354,22 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun aboutPreview(): View = FrameLayout(this).apply {
-        // Solid outer disc avoids a stroked oval being clipped at its bounds;
-        // the smaller centred gradient disc leaves a perfectly even circular rim.
+        // Keep the complete circular preview within the 26dp preview slot
+        // used by the tile row; the rim and centre remain concentric and unclipped.
         val ring = View(this@SettingsHubActivity).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(withAlpha(color(R.color.accent2), 0.22f))
             }
         }
-        addView(ring, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.CENTER))
+        addView(ring, FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER))
         addView(View(this@SettingsHubActivity).apply {
             background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
                 intArrayOf(color(R.color.accent2), color(R.color.accent))
             ).apply { shape = GradientDrawable.OVAL }
-        }, FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER))
-        layoutParams = FrameLayout.LayoutParams(dp(32), dp(32), Gravity.CENTER_VERTICAL or Gravity.START)
+        }, FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER))
+        layoutParams = FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER_VERTICAL or Gravity.START)
     }
 
     // ================= Quick action rows =================
@@ -1033,23 +1033,16 @@ private class HubSplitSwatchDrawable(private val density: Float, private val bor
     override fun draw(canvas: Canvas) {
         val b = bounds
         val l = b.left.toFloat(); val t = b.top.toFloat(); val r = b.right.toFloat(); val btm = b.bottom.toFloat()
-        // Render the split fill into an antialiased rounded mask so neither
-        // diagonal half can fringe beyond the swatch silhouette.
+        // Clip both diagonal fills to the rounded silhouette. Draw the outline
+        // slightly inside the bounds so its stroke is never cut off at the edge.
         val clip = Path().apply { addRoundRect(l, t, r, btm, radius, radius, Path.Direction.CW) }
-        val save = canvas.saveLayer(l, t, r, btm, null)
+        canvas.save()
+        canvas.clipPath(clip)
         val topLeft = Path().apply { moveTo(l, t); lineTo(r, t); lineTo(l, btm); close() }
         val bottomRight = Path().apply { moveTo(r, t); lineTo(r, btm); lineTo(l, btm); close() }
         canvas.drawPath(topLeft, light)
         canvas.drawPath(bottomRight, dark)
-        val mask = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
-        }
-        canvas.drawRoundRect(l, t, r, btm, radius, radius, mask)
-        mask.xfermode = null
-        canvas.restoreToCount(save)
-        // Keep the outline wholly inside the drawable bounds; this prevents
-        // stroke clipping and keeps the dark fill cleanly contained.
+        canvas.restore()
         val halfStroke = stroke.strokeWidth / 2f
         val outline = Path().apply {
             addRoundRect(l + halfStroke, t + halfStroke, r - halfStroke, btm - halfStroke,
