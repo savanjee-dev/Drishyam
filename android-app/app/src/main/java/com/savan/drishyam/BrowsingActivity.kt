@@ -370,31 +370,51 @@ class BrowsingActivity : AppCompatActivity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
         row.addView(label(title, 13f, R.color.fg, 0, 2, true))
         row.addView(label(subtitle, 11f, R.color.mute, 0, 8))
-        val choicesRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        choices.forEach { choice ->
-            val selected = choice == current
-            val item = TextView(this).apply {
-                text = choice
-                textSize = 10f
-                isSingleLine = true
-                includeFontPadding = false
-                gravity = Gravity.CENTER
-                setTextColor(c(if (selected) R.color.surface else R.color.fg))
+        // Use a two-row, two-column segmented layout for four-way choices so
+        // every option gets a generous horizontal target, matching Appearance's Motion control.
+        val rows = if (choices.size == 4) choices.toList().chunked(2) else listOf(choices.toList())
+        rows.forEachIndexed { rowIndex, rowChoices ->
+            val choicesRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(4), dp(4), dp(4), dp(4))
                 background = GradientDrawable().apply {
                     cornerRadius = dp(999).toFloat()
-                    setColor(c(if (selected) R.color.accent else R.color.glassFill))
+                    setColor(c(R.color.glassFill))
                     setStroke(dp(1), c(R.color.glassStroke))
                 }
-                setPadding(dp(5), dp(9), dp(5), dp(9))
-                isClickable = true; isFocusable = true
-                setOnClickListener {
-                    prefs.edit().putString(key, choice).apply()
-                    recreate()
-                }
             }
-            choicesRow.addView(item, LinearLayout.LayoutParams(0, -2, 1f).apply { if (choicesRow.childCount > 0) leftMargin = dp(5) })
+            rowChoices.forEachIndexed { index, choice ->
+                val selected = choice == current
+                val item = TextView(this).apply {
+                    text = choice
+                    textSize = 13f
+                    isSingleLine = true
+                    includeFontPadding = false
+                    gravity = Gravity.CENTER
+                    typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+                    setTextColor(c(if (selected) R.color.bg else R.color.mute))
+                    background = if (selected) GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                        intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
+                        cornerRadius = dp(999).toFloat()
+                        setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+                    } else null
+                    setPadding(dp(8), dp(12), dp(8), dp(12))
+                    isClickable = true; isFocusable = true
+                    pressFx()
+                    setOnClickListener {
+                        prefs.edit().putString(key, choice).apply()
+                        recreate()
+                    }
+                }
+                choicesRow.addView(item, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    if (index > 0) leftMargin = dp(4)
+                })
+            }
+            row.addView(choicesRow, LinearLayout.LayoutParams(-1, -2).apply {
+                if (rowIndex > 0) topMargin = dp(6)
+            })
         }
-        row.addView(choicesRow)
         parent.addView(row)
     }
     private fun addClickRow(parent: LinearLayout, title: String, subtitle: String, action: () -> Unit) {
