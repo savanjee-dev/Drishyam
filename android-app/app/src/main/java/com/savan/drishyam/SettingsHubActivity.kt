@@ -140,7 +140,7 @@ class SettingsHubActivity : AppCompatActivity() {
             content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
             settingsBackButton?.let { button ->
                 (button.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
-                    lp.topMargin = topInset + dp(18)
+                    lp.topMargin = topInset + dp(36)
                     button.layoutParams = lp
                 }
             }
@@ -148,15 +148,14 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
 
-        // ---- Back button: shared cream/olive circular style used on every Settings page ----
+        // ---- Back button: match Appearance's 48dp borderless glass circle ----
         val back = ImageView(this).apply {
             setImageResource(R.drawable.ic_back)
             imageTintList = android.content.res.ColorStateList.valueOf(color(R.color.fg))
             scaleType = ImageView.ScaleType.CENTER
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(color(R.color.surface))
-                setStroke(dp(1), 0xFFC9C9B4.toInt())
+                setColor(color(R.color.glassFill))
             }
             isClickable = true
             isFocusable = true
@@ -166,13 +165,13 @@ class SettingsHubActivity : AppCompatActivity() {
         }
         // Reserve the original layout space, but anchor the Back button above the fade.
         content.addView(View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(64))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         })
         settingsBackButton = back
-        root.addView(back, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.TOP or Gravity.START).apply {
+        root.addView(back, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
             leftMargin = dp(20)
-            topMargin = dp(42)
+            topMargin = dp(36)
         })
         scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
             val fadeProgress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
