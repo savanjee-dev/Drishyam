@@ -455,118 +455,6 @@ class BrowsingActivity : AppCompatActivity() {
         animator.start()
     }
 
-    /**
-     * Jelly Motion interaction: each option captures the gesture so the selected glass
-     * pill can track the finger across sibling options without replacing the existing
-     * glide-and-stretch position animator.
-     */
-    private fun attachJellyMotion(
-        grid: FrameLayout,
-        buttons: List<TextView>,
-        indicator: View,
-        onSelectionChanged: (TextView) -> Unit
-    ) {
-        fun optionAt(rawX: Float, rawY: Float): TextView? =
-            buttons.firstOrNull { option ->
-                val location = IntArray(2)
-                option.getLocationOnScreen(location)
-                rawX >= location[0] && rawX <= location[0] + option.width &&
-                    rawY >= location[1] && rawY <= location[1] + option.height
-            }
-
-        fun settleJelly(peakX: Float, peakY: Float) {
-            val startX = indicator.scaleX
-            val startY = indicator.scaleY
-            android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
-                duration = 430L
-                interpolator = android.view.animation.LinearInterpolator()
-                addUpdateListener { frame ->
-                    val t = frame.animatedValue as Float
-                    // Damped spring: a soft overshoot followed by a few quickly fading ripples.
-                    val spring = kotlin.math.exp(-5.2f * t) * kotlin.math.cos(13.5f * t)
-                    indicator.scaleX = 1f + (startX - 1f) * spring + peakX * spring * 0.22f
-                    indicator.scaleY = 1f + (startY - 1f) * spring + peakY * spring * 0.22f
-                }
-                start()
-            }
-        }
-
-        buttons.forEach { origin ->
-            var tracker: android.view.VelocityTracker? = null
-            var lastRawX = 0f
-            var lastRawY = 0f
-            origin.setOnTouchListener { _, event ->
-                when (event.actionMasked) {
-                    android.view.MotionEvent.ACTION_DOWN -> {
-                        // A selector gesture owns the touch stream: prevent the parent
-                        // ScrollView from interpreting vertical/diagonal finger travel as page scroll.
-                        grid.parent?.requestDisallowInterceptTouchEvent(true)
-                        tracker?.recycle()
-                        tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
-                        lastRawX = event.rawX
-                        lastRawY = event.rawY
-                        segmentPositionAnimator?.cancel()
-                        indicator.animate().cancel()
-                        indicator.pivotX = indicator.width / 2f
-                        indicator.pivotY = indicator.height / 2f
-                        // A soft press: compress horizontally and swell vertically like gel.
-                        indicator.scaleX = 0.975f
-                        indicator.scaleY = 1.045f
-                        optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
-                        true
-                    }
-                    android.view.MotionEvent.ACTION_MOVE -> {
-                        tracker?.addMovement(event)
-                        optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
-                        val dx = event.rawX - lastRawX
-                        val dy = event.rawY - lastRawY
-                        lastRawX = event.rawX
-                        lastRawY = event.rawY
-                        tracker?.computeCurrentVelocity(1000)
-                        val vx = tracker?.xVelocity ?: 0f
-                        val vy = tracker?.yVelocity ?: 0f
-                        val speedX = (kotlin.math.abs(vx) / 9000f).coerceIn(0f, 0.105f)
-                        val speedY = (kotlin.math.abs(vy) / 9000f).coerceIn(0f, 0.105f)
-                        val directionX = if (kotlin.math.abs(dx) > 0.5f) kotlin.math.sign(dx) else kotlin.math.sign(vx)
-                        val directionY = if (kotlin.math.abs(dy) > 0.5f) kotlin.math.sign(dy) else kotlin.math.sign(vy)
-                        // Anchor the trailing edge so the leading edge stretches toward the finger.
-                        indicator.pivotX = if (directionX >= 0f) 0f else indicator.width.toFloat()
-                        indicator.pivotY = if (directionY >= 0f) 0f else indicator.height.toFloat()
-                        indicator.scaleX = (1.015f + speedX - speedY * 0.22f).coerceIn(0.985f, 1.105f)
-                        indicator.scaleY = (1.025f + speedY - speedX * 0.22f).coerceIn(0.985f, 1.105f)
-                        true
-                    }
-                    android.view.MotionEvent.ACTION_UP -> {
-                        grid.parent?.requestDisallowInterceptTouchEvent(false)
-                        tracker?.addMovement(event)
-                        tracker?.computeCurrentVelocity(1000)
-                        val vx = tracker?.xVelocity ?: 0f
-                        val vy = tracker?.yVelocity ?: 0f
-                        val peakX = (kotlin.math.abs(vx) / 12000f).coerceIn(0f, 0.07f)
-                        val peakY = (kotlin.math.abs(vy) / 12000f).coerceIn(0f, 0.07f)
-                        val target = optionAt(event.rawX, event.rawY)
-                        target?.let(onSelectionChanged)
-                        tracker?.recycle()
-                        tracker = null
-                        indicator.animate().cancel()
-                        settleJelly(peakX, peakY)
-                        target?.performClick()
-                        true
-                    }
-                    android.view.MotionEvent.ACTION_CANCEL -> {
-                        grid.parent?.requestDisallowInterceptTouchEvent(false)
-                        tracker?.recycle()
-                        tracker = null
-                        indicator.animate().cancel()
-                        settleJelly(0.015f, 0.02f)
-                        true
-                    }
-                    else -> true
-                }
-            }
-        }
-    }
-
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
         var selected = prefs.getString(key, default) ?: default
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
@@ -616,7 +504,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(14), dp(5)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(if (choices.size == 3) 4 else 14), dp(5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         val buttonRows = choices.toList().chunked(columns)
@@ -661,14 +549,13 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = insetTarget(targetFor(active, parentLine, column), dp(if (choices.size == 3) 8 else 16), dp(5))
+            val target = insetTarget(targetFor(active, parentLine, column), dp(if (choices.size == 3) 4 else 16), dp(5))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
             indicator.layoutParams = lp
         }
         paintChoiceLabels()
-        attachJellyMotion(grid, buttons, indicator, ::selectChoice)
         grid.post { placeInitial() }
         row.addView(grid, LinearLayout.LayoutParams(-1, -2))
         parent.addView(row)
@@ -777,7 +664,6 @@ class BrowsingActivity : AppCompatActivity() {
             }
         }
         paintCategoryLabels()
-        attachJellyMotion(grid, buttons, indicator, ::selectCategory)
         grid.post {
             buttons.firstOrNull { it.tag == selected }?.let { active ->
                 val line = active.parent as LinearLayout
@@ -789,13 +675,105 @@ class BrowsingActivity : AppCompatActivity() {
             }
         }
         panel.addView(grid)
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setView(panel).create()
-        dialog.setOnShowListener {
-            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-            val width = (resources.displayMetrics.widthPixels - dp(40)).coerceAtMost(dp(420))
-            dialog.window?.setLayout(width, -2)
+        // Use a full-screen transparent dialog surface so outside taps can animate
+        // the panel back to the exact control that opened it.
+        val dialog = android.app.Dialog(this)
+        val overlay = FrameLayout(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            isClickable = true
+            isFocusable = true
+        }
+        val panelFrame = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+            isClickable = true
+            isFocusable = true
+            addView(panel, FrameLayout.LayoutParams(-1, -2))
+        }
+        val width = (resources.displayMetrics.widthPixels - dp(40)).coerceAtMost(dp(420))
+        overlay.addView(panelFrame, FrameLayout.LayoutParams(width, -2, Gravity.CENTER))
+        overlay.setOnClickListener { closeCategoryPopup() }
+        panelFrame.setOnClickListener { /* Consume taps inside the popup. */ }
+        dialog.setContentView(overlay)
+        dialog.setCancelable(false)
+        dialog.window?.let { window ->
+            window.setBackgroundDrawableResource(android.R.color.transparent)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window.setDimAmount(0.46f)
+            window.setLayout(-1, -1)
+        }
+
+        var closing = false
+        fun originInPanel(): Pair<Float, Float> {
+            val source = IntArray(2)
+            val target = IntArray(2)
+            summary.getLocationOnScreen(source)
+            panel.getLocationOnScreen(target)
+            return Pair(
+                (source[0] + summary.width / 2f - target[0]).coerceIn(0f, panel.width.toFloat()),
+                (source[1] + summary.height / 2f - target[1]).coerceIn(0f, panel.height.toFloat())
+            )
+        }
+        fun revealRadius(x: Float, y: Float): Float {
+            val w = panel.width.toFloat()
+            val h = panel.height.toFloat()
+            return maxOf(
+                kotlin.math.hypot(x.toDouble(), y.toDouble()),
+                kotlin.math.hypot((w - x).toDouble(), y.toDouble()),
+                kotlin.math.hypot(x.toDouble(), (h - y).toDouble()),
+                kotlin.math.hypot((w - x).toDouble(), (h - y).toDouble())
+            ).toFloat()
+        }
+        fun closeCategoryPopup() {
+            if (closing || !dialog.isShowing) return
+            closing = true
+            if (!motionEnabled(this@BrowsingActivity) || panel.width <= 0 || panel.height <= 0) {
+                dialog.dismiss()
+                return
+            }
+            val (x, y) = originInPanel()
+            val radius = revealRadius(x, y)
+            val animation = android.view.ViewAnimationUtils.createCircularReveal(panel,
+                x.toInt(), y.toInt(), radius, 0f)
+            animation.duration = 300L
+            animation.interpolator = android.view.animation.PathInterpolator(0.4f, 0f, 1f, 1f)
+            animation.addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) { dialog.dismiss() }
+            })
+            animation.start()
+        }
+        overlay.setOnClickListener { closeCategoryPopup() }
+        dialog.setOnKeyListener { _, keyCode, event ->
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK &&
+                event.action == android.view.KeyEvent.ACTION_UP) {
+                closeCategoryPopup()
+                true
+            } else keyCode == android.view.KeyEvent.KEYCODE_BACK
         }
         dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setLayout(-1, -1)
+        panel.post {
+            if (!motionEnabled(this@BrowsingActivity) || panel.width <= 0 || panel.height <= 0) return@post
+            val (x, y) = originInPanel()
+            val radius = revealRadius(x, y)
+            panel.visibility = View.INVISIBLE
+            val animation = android.view.ViewAnimationUtils.createCircularReveal(panel,
+                x.toInt(), y.toInt(), 0f, radius)
+            panel.visibility = View.VISIBLE
+            animation.duration = 380L
+            animation.interpolator = android.view.animation.PathInterpolator(0.16f, 1f, 0.3f, 1f)
+            animation.start()
+        }
+        // Match Appearance's soft touch compression and spring-back on the launch control.
+        if (motionEnabled(this)) {
+            summary.animate().cancel()
+            summary.animate().scaleX(0.96f).scaleY(0.96f).setDuration(80L)
+                .withEndAction {
+                    summary.animate().scaleX(1f).scaleY(1f).setDuration(420L)
+                        .setInterpolator(android.view.animation.OvershootInterpolator(0.8f)).start()
+                }.start()
+        }
     }
 
     private fun addClickRow(parent: LinearLayout, title: String, subtitle: String, action: () -> Unit) {
