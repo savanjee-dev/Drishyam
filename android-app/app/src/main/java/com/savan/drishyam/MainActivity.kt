@@ -886,12 +886,12 @@ class MainActivity : AppCompatActivity() {
                 if (gen != s.gen) return@runOnUiThread   // sort or refresh happened meanwhile
                 s.loading = false
                 swipe.isRefreshing = false
+                s.page = if (useWikimedia) nextCommonsPage else page + 1
                 if (error != null) {
                     s.err = error
                     statusPill.setTag(R.id.statusPill, null)
                 } else {
                     s.after = nextAfter
-                    s.page = if (useWikimedia) nextCommonsPage else page + 1
                     if (finished) s.done = true
                 }
                 val fresh = added.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
