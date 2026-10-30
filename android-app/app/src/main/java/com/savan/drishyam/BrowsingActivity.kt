@@ -175,11 +175,7 @@ class BrowsingActivity : AppCompatActivity() {
             setTextColor(c(R.color.fg))
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(9), dp(16), dp(9))
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(withAlpha(c(R.color.surface), 0.96f), c(R.color.glassFill))).apply {
-                cornerRadius = dp(999).toFloat()
-                setStroke(dp(1), withAlpha(c(R.color.glassStroke), 0.85f))
-            }
+            background = elevatedSelectorBackground()
             elevation = dp(5).toFloat()
             translationZ = dp(1).toFloat()
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
@@ -201,9 +197,12 @@ class BrowsingActivity : AppCompatActivity() {
         categoryValueRow.addView(label("Currently selected", 11f, R.color.mute, 0, 0).apply {
             setPadding(0, 0, dp(10), 0)
         })
+        val openCategoryPicker = { showCategoryPicker(categoryValue) }
+        categoryValue.setOnClickListener { openCategoryPicker() }
         categoryValueRow.addView(categoryValue, LinearLayout.LayoutParams(-2, -2))
         categoryRow.addView(categoryValueRow)
-        categoryRow.setOnClickListener { showCategoryPicker(categoryValue) }
+        categoryValueRow.setOnClickListener { openCategoryPicker() }
+        categoryRow.setOnClickListener { openCategoryPicker() }
         quick.addView(categoryRow)
         content.addView(quick, match())
 
@@ -306,10 +305,31 @@ class BrowsingActivity : AppCompatActivity() {
         background = cardBackground()
         glassCards.add(this)
     }
-    private fun pillBackground() = GradientDrawable().apply {
-        cornerRadius = dp(999).toFloat()
-        setColor(c(R.color.glassFill))
-        setStroke(dp(1), c(R.color.glassStroke))
+    private fun pillBackground() : android.graphics.drawable.Drawable {
+        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(withAlpha(Color.WHITE, 0.22f), c(R.color.glassFill), withAlpha(c(R.color.accent2), 0.12f))).apply {
+            cornerRadius = dp(999).toFloat()
+            setStroke(dp(1), withAlpha(Color.WHITE, 0.58f))
+        }
+        return android.graphics.drawable.LayerDrawable(arrayOf(base)).apply {
+            setLayerInset(0, 0, 0, 0, dp(2))
+        }
+    }
+
+    private fun elevatedSelectorBackground(): android.graphics.drawable.Drawable {
+        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(withAlpha(Color.WHITE, 0.34f), c(R.color.glassFill), withAlpha(c(R.color.accent2), 0.16f))).apply {
+            cornerRadius = dp(999).toFloat()
+            setStroke(dp(1), withAlpha(Color.WHITE, 0.66f))
+        }
+        val lowerRim = GradientDrawable().apply {
+            cornerRadius = dp(999).toFloat()
+            setColor(Color.TRANSPARENT)
+            setStroke(dp(1), withAlpha(c(R.color.accent2), 0.22f))
+        }
+        return android.graphics.drawable.LayerDrawable(arrayOf(lowerRim, base)).apply {
+            setLayerInset(0, 0, dp(2), 0, 0)
+        }
     }
     private fun label(textValue: String, size: Float, colorId: Int, top: Int = 0, bottom: Int = 0, bold: Boolean = false) = TextView(this).apply {
         text = textValue
@@ -434,11 +454,11 @@ class BrowsingActivity : AppCompatActivity() {
         val twoRows = choices.size == 4
         val columns = if (twoRows) 2 else choices.size
         val grid = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                cornerRadius = dp(if (choices.size == 4) 24 else 999).toFloat()
-                setColor(c(R.color.glassFill))
-                setStroke(dp(1), c(R.color.glassStroke))
-            }
+            background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedSelectorBackground() else pillBackground()
+            elevation = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(5).toFloat() else dp(2).toFloat()
+            translationZ = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(1).toFloat() else 0f
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+            clipToOutline = false
             clipChildren = false
             clipToPadding = false
         }
@@ -467,7 +487,8 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(8), dp(17), dp(8), dp(17))
+                    setPadding(dp(8), dp(22), dp(8), dp(22))
+                    minHeight = dp(68)
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
@@ -523,13 +544,7 @@ class BrowsingActivity : AppCompatActivity() {
         }
         paintChoiceLabels()
         grid.post { placeInitial() }
-        row.addView(grid, LinearLayout.LayoutParams(-1, -2).apply {
-            // Let the three-option quality selector use more of the card width.
-            if (choices.size == 3) {
-                leftMargin = -dp(8)
-                rightMargin = -dp(8)
-            }
-        })
+        row.addView(grid, LinearLayout.LayoutParams(-1, -2))
         parent.addView(row)
     }
 
