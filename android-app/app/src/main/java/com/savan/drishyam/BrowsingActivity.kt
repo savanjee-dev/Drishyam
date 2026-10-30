@@ -461,7 +461,149 @@ class BrowsingActivity : AppCompatActivity() {
         animator.start()
     }
 
+    /**
+     * Premium cinematic orientation picker: four independent image-led tiles.
+     * Selection is stored under the existing preference key; no feed behaviour changes.
+     */
+    private fun addOrientationCards(
+        parent: LinearLayout,
+        title: String,
+        subtitle: String,
+        key: String,
+        choices: Array<String>,
+        default: String
+    ) {
+        var selected = prefs.getString(key, default) ?: default
+        val section = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        section.addView(label(title, 13f, R.color.fg, 0, 2, true))
+        section.addView(label(subtitle, 11f, R.color.mute, 0, 10))
+
+        val tiles = linkedMapOf<String, Pair<LinearLayout, Pair<View, TextView>>>()
+        fun tileBackground(active: Boolean): android.graphics.drawable.Drawable =
+            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                if (active) intArrayOf(0xFF929B65.toInt(), 0xFF737F4C.toInt())
+                else intArrayOf(0xFF293020.toInt(), 0xFF20271B.toInt())).apply {
+                cornerRadius = dp(18).toFloat()
+                setStroke(dp(if (active) 1.5f else 1f),
+                    if (active) 0xFFD1D7AD.toInt() else 0x665F694C)
+            }
+
+        fun updateSelection(next: String, animate: Boolean) {
+            if (next == selected && tiles.isNotEmpty()) return
+            selected = next
+            prefs.edit().putString(key, next).apply()
+            tiles.forEach { (name, parts) ->
+                val active = name == selected
+                val card = parts.first
+                val icon = parts.second.first
+                val text = parts.second.second
+                card.background = tileBackground(active)
+                text.setTextColor(if (active) 0xFF202719.toInt() else c(R.color.fg))
+                icon.tag = active
+                icon.invalidate()
+                card.contentDescription = name + if (active) ", selected" else ""
+                if (animate && name == next && motionEnabled(this@BrowsingActivity)) {
+                    card.animate().cancel()
+                    card.scaleX = 0.97f
+                    card.scaleY = 0.97f
+                    card.alpha = 0.88f
+                    card.animate().scaleX(1f).scaleY(1f).alpha(1f)
+                        .setDuration(260L)
+                        .setInterpolator(android.view.animation.OvershootInterpolator(0.7f))
+                        .start()
+                } else {
+                    card.scaleX = 1f
+                    card.scaleY = 1f
+                    card.alpha = 1f
+                }
+            }
+        }
+
+        choices.toList().chunked(2).forEachIndexed { rowIndex, pair ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                if (rowIndex > 0) setPadding(0, dp(8), 0, 0)
+            }
+            pair.forEachIndexed { columnIndex, choice ->
+                val active = choice == selected
+                val icon = object : View(this) {
+                    private val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                        style = android.graphics.Paint.Style.STROKE
+                        strokeWidth = dp(2).toFloat()
+                        strokeCap = android.graphics.Paint.Cap.ROUND
+                        strokeJoin = android.graphics.Paint.Join.ROUND
+                    }
+                    override fun onDraw(canvas: android.graphics.Canvas) {
+                        super.onDraw(canvas)
+                        paint.color = if (tag == true) 0xFF202719.toInt() else 0xFFE5E8D8.toInt()
+                        val cx = width / 2f
+                        val cy = height / 2f
+                        when (choice) {
+                            "Portrait" -> canvas.drawRoundRect(
+                                android.graphics.RectF(cx - dp(12), cy - dp(18), cx + dp(12), cy + dp(18)),
+                                dp(4).toFloat(), dp(4).toFloat(), paint)
+                            "Landscape" -> canvas.drawRoundRect(
+                                android.graphics.RectF(cx - dp(20), cy - dp(13), cx + dp(20), cy + dp(13)),
+                                dp(4).toFloat(), dp(4).toFloat(), paint)
+                            "Square" -> canvas.drawRoundRect(
+                                android.graphics.RectF(cx - dp(16), cy - dp(16), cx + dp(16), cy + dp(16)),
+                                dp(4).toFloat(), dp(4).toFloat(), paint)
+                            else -> {
+                                val path = android.graphics.Path()
+                                for (i in 0 until 8) {
+                                    val angle = Math.PI * i / 4.0 - Math.PI / 2.0
+                                    val radius = if (i % 2 == 0) dp(19).toFloat() else dp(8).toFloat()
+                                    val x = cx + (kotlin.math.cos(angle) * radius).toFloat()
+                                    val y = cy + (kotlin.math.sin(angle) * radius).toFloat()
+                                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                                }
+                                path.close()
+                                canvas.drawPath(path, paint)
+                                canvas.drawCircle(cx + dp(20), cy - dp(17), dp(2).toFloat(), paint)
+                            }
+                        }
+                    }
+                }.apply {
+                    tag = active
+                    contentDescription = choice + " orientation icon"
+                    layoutParams = LinearLayout.LayoutParams(dp(48), dp(48))
+                }
+                val name = label(choice, 13f, R.color.fg, 7, 0, true).apply {
+                    gravity = Gravity.CENTER
+                    setTextColor(if (active) 0xFF202719.toInt() else c(R.color.fg))
+                }
+                val card = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    gravity = Gravity.CENTER
+                    setPadding(dp(8), dp(12), dp(8), dp(12))
+                    background = tileBackground(active)
+                    isClickable = true
+                    isFocusable = true
+                    contentDescription = choice + if (active) ", selected" else ""
+                    pressFx()
+                    setOnClickListener { updateSelection(choice, true) }
+                }
+                card.addView(icon)
+                card.addView(name)
+                tiles[choice] = card to (icon to name)
+                row.addView(card, LinearLayout.LayoutParams(0, dp(104), 1f).apply {
+                    if (columnIndex > 0) leftMargin = dp(8)
+                })
+            }
+            if (pair.size < 2) row.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
+            section.addView(row, LinearLayout.LayoutParams(-1, -2))
+        }
+        parent.addView(section)
+    }
+
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
+        if (key == "orientation" && choices.contentEquals(arrayOf("Portrait", "Landscape", "Random", "Square"))) {
+            addOrientationCards(parent, title, subtitle, key, choices, default)
+            return
+        }
         var selected = prefs.getString(key, default) ?: default
         val compactFourWay = choices.size == 4
         val row = LinearLayout(this).apply {
