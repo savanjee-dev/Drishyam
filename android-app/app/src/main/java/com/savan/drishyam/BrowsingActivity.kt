@@ -30,6 +30,7 @@ class BrowsingActivity : AppCompatActivity() {
     private val glassCards = mutableListOf<View>()
     private val toggleRefreshers = mutableListOf<() -> Unit>()
     private val selectorRefreshers = mutableListOf<() -> Unit>()
+    private var segmentPositionAnimator: android.animation.ValueAnimator? = null
     private val glassPreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "glass_level" || key == "low_fx" || key == "motion" || key == "motion_reduced") {
             refreshAtmosphere()
@@ -427,6 +428,7 @@ class BrowsingActivity : AppCompatActivity() {
     private data class SegmentTarget(val left: Int, val top: Int, val width: Int, val height: Int)
 
     private fun moveSegmentIndicator(indicator: View, target: SegmentTarget, reduced: Boolean) {
+        segmentPositionAnimator?.cancel()
         val lp = indicator.layoutParams as FrameLayout.LayoutParams
         val from = SegmentTarget(lp.leftMargin, lp.topMargin, lp.width, lp.height)
         indicator.animate().cancel()
@@ -449,6 +451,7 @@ class BrowsingActivity : AppCompatActivity() {
                 indicator.layoutParams = params
             }
         }
+        segmentPositionAnimator = animator
         animator.start()
     }
 
