@@ -125,6 +125,7 @@ class MainActivity : AppCompatActivity() {
         applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
+        if (savedInstanceState == null) SplashOverlay.show(this)
         // Let Android own predictive Back when this is the task's launcher/home instance.
         // That allows the real launcher (wallpaper and icons) to be previewed on exit.
         // A MainActivity opened from Our Story keeps the existing in-app back gesture.
