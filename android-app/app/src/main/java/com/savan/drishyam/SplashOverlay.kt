@@ -30,7 +30,7 @@ import androidx.core.content.res.ResourcesCompat
 
 /**
  * Launch splash (Phase H1). Built to match Drishyam_Home_Prototype_v10_Fade.html (section "Launch splash").
- * Shown once per cold start, holds for 4.5 s (SPLASH_MS), then dissolves into Home.
+ * Shown once per cold start, holds for 3.5 s (SPLASH_MS), then dissolves into Home.
  * If the Home header logo exists (id "headerLogo"), the logo glides into its position first.
  */
 class SplashOverlay private constructor(private val host: Activity) : FrameLayout(host) {
@@ -188,12 +188,12 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
             t.animate().alpha(1f).translationY(0f).setStartDelay(1050L + i * 80L).setDuration(620L)
                 .setInterpolator(SPRING).start()
         }
-        sig.animate().alpha(1f).translationY(0f).setStartDelay(2100L).setDuration(800L).setInterpolator(EASE).start()
-        tag.animate().alpha(1f).translationY(0f).setStartDelay(2700L).setDuration(900L).setInterpolator(EASE).start()
+        sig.animate().alpha(1f).translationY(0f).setStartDelay(1900L).setDuration(700L).setInterpolator(EASE).start()
+        tag.animate().alpha(1f).translationY(0f).setStartDelay(2350L).setDuration(700L).setInterpolator(EASE).start()
         bar.post {
             ValueAnimator.ofInt(0, dp(210)).apply {
                 startDelay = 350L
-                duration = 3500L
+                duration = 2800L
                 interpolator = PathInterpolator(0.4f, 0f, 0.2f, 1f)
                 addUpdateListener { a ->
                     fill.layoutParams = FrameLayout.LayoutParams(a.animatedValue as Int, -1)
@@ -203,7 +203,7 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
                 animators.add(this)
             }
         }
-        foot.animate().alpha(1f).translationY(0f).setStartDelay(3000L).setDuration(800L).setInterpolator(EASE).start()
+        foot.animate().alpha(1f).translationY(0f).setStartDelay(2550L).setDuration(650L).setInterpolator(EASE).start()
 
         if (Build.VERSION.SDK_INT >= 31) {
             letters.forEachIndexed { i, t ->
@@ -292,7 +292,7 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
     private fun withAlpha(c: Int, a: Float): Int = Color.argb((255 * a).toInt(), Color.red(c), Color.green(c), Color.blue(c))
 
     companion object {
-        const val SPLASH_MS = 4500L
+        const val SPLASH_MS = 3500L
         private var shownThisProcess = false
         private val SPRING = PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
         private val EASE = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
