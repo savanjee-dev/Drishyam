@@ -56,6 +56,12 @@ class SettingsHubActivity : AppCompatActivity() {
     private var motionAtCreate = true
     private var glassLevelAtCreate = "full"
     private var settingsBackButton: ImageView? = null
+    private var glassBackgroundSurface: FrameLayout? = null
+    private var universalBackground: UniversalBackgroundView? = null
+    private val settingsPrefs by lazy { getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE) }
+    private val glassPreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "glass_level" || key == "low_fx") applyGlassEffectsLive()
+    }
     private val glassFactor: Float get() = when (glassLevel(this)) { "off" -> 0f; "subtle" -> 0.45f; else -> 1f }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,6 +103,8 @@ class SettingsHubActivity : AppCompatActivity() {
             clipChildren = false
         }
         UniversalBackgroundView.attach(backgroundSurface)
+        glassBackgroundSurface = backgroundSurface
+        universalBackground = backgroundSurface.findViewWithTag("drishyam-universal-background")
         if (visualEffectsEnabled(this)) {
             val animateVisuals = animate && motionEnabled(this)
             addGlows(backgroundSurface, animateVisuals)
@@ -582,12 +590,31 @@ class SettingsHubActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        settingsPrefs.registerOnSharedPreferenceChangeListener(glassPreferenceListener)
+        applyGlassEffectsLive()
         if (visualEffectsEnabled(this) != visualFxAtCreate ||
-            motionEnabled(this) != motionAtCreate ||
-            glassLevel(this) != glassLevelAtCreate ||
-            lowFx(this) != lowFx) {
+            motionEnabled(this) != motionAtCreate) {
             recreate()
         }
+    }
+
+    override fun onPause() {
+        settingsPrefs.unregisterOnSharedPreferenceChangeListener(glassPreferenceListener)
+        super.onPause()
+    }
+
+    /** Apply Glass Effects changes to the already-visible Settings background without recreating the Activity. */
+    private fun applyGlassEffectsLive() {
+        val factor = glassFactor
+        glassBackgroundSurface?.let { surface ->
+            for (index in 0 until surface.childCount) {
+                val child = surface.getChildAt(index)
+                if (child.tag is Float) child.alpha = (child.tag as Float) * factor
+                else if (child is SettingsAmbientLayer) child.alpha = factor
+            }
+            surface.invalidate()
+        }
+        universalBackground?.refreshGlassLevel()
     }
 
     // ================= Background glows =================
@@ -613,6 +640,7 @@ class SettingsHubActivity : AppCompatActivity() {
                     colors = intArrayOf(c, withAlpha(c, 0f))
                     gradientRadius = dpf(if (lightMode) 250 else 140)
                 }
+                tag = g.alpha
                 alpha = g.alpha * glassFactor
             }
             val lp = FrameLayout.LayoutParams(dp(280), dp(280), g.gravity).apply {
