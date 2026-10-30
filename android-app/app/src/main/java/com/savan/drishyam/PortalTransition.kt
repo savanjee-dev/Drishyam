@@ -115,8 +115,6 @@ object PortalTransition {
         val content = activity.findViewById<ViewGroup>(android.R.id.content) ?: return
         var direction = 1f
         var startTranslation = 0f
-        var latestProgress = 0f
-        val cancelThreshold = 0.10f
         val density = activity.resources.displayMetrics.density
         val minCornerRadius = 4f * density
         val maxCornerRadius = 32f * density
@@ -145,20 +143,17 @@ object PortalTransition {
                 // discarding right-edge gestures.
                 direction = if (backEvent.swipeEdge == android.window.BackEvent.EDGE_RIGHT) -1f else 1f
                 startTranslation = content.translationX
-                latestProgress = 0f
             }
 
             override fun onBackProgressed(backEvent: android.window.BackEvent) {
                 if (activity.isFinishing || activity.isDestroyed || content.width <= 0) return
                 val progress = backEvent.progress.coerceIn(0f, 1f)
-                latestProgress = progress
                 currentCornerRadius = minCornerRadius + (maxCornerRadius - minCornerRadius) * progress
                 content.invalidateOutline()
                 content.translationX = startTranslation + direction * content.width * progress
             }
 
             override fun onBackCancelled() {
-                latestProgress = 0f
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
                 animateCornerRadius(minCornerRadius, 700L)
@@ -172,22 +167,10 @@ object PortalTransition {
             override fun onBackInvoked() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
-                if (latestProgress <= cancelThreshold) {
-                    // A short edge pull is a cancelled gesture, not a navigation request.
-                    // Glide back to the current page and keep this Activity alive.
-                    animateCornerRadius(minCornerRadius, 700L)
-                    ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, startTranslation).apply {
-                        duration = 700L
-                        interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
-                        start()
-                    }
-                    latestProgress = 0f
-                    return
-                }
-                animateCornerRadius(maxCornerRadius, 160L)
+                animateCornerRadius(maxCornerRadius, 450L)
                 val targetX = startTranslation + direction * content.width.toFloat()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
-                    duration = 160L
+                    duration = 450L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         private var cancelled = false
