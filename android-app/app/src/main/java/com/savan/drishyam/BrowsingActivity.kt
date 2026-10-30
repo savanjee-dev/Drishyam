@@ -29,6 +29,7 @@ class BrowsingActivity : AppCompatActivity() {
     private val ambientGlows = mutableListOf<View>()
     private val glassCards = mutableListOf<View>()
     private val toggleRefreshers = mutableListOf<() -> Unit>()
+    private val selectorRefreshers = mutableListOf<() -> Unit>()
     private val glassPreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "glass_level" || key == "low_fx" || key == "motion" || key == "motion_reduced") {
             refreshAtmosphere()
@@ -49,6 +50,7 @@ class BrowsingActivity : AppCompatActivity() {
     private fun refreshGlassComponents() {
         glassCards.forEach { it.background = cardBackground() }
         toggleRefreshers.forEach { it.invoke() }
+        selectorRefreshers.forEach { it.invoke() }
     }
 
     override fun onResume() {
@@ -175,14 +177,16 @@ class BrowsingActivity : AppCompatActivity() {
             setTextColor(c(R.color.fg))
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(9), dp(16), dp(9))
-            background = elevatedSelectorBackground()
+            background = selectedCategoryButtonBackground()
             elevation = dp(5).toFloat()
             translationZ = dp(1).toFloat()
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             clipToOutline = false
             isClickable = true; isFocusable = true
             pressFx()
         }
+        selectorRefreshers.add { categoryValue.background = selectedCategoryButtonBackground() }
         val categoryRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(10), 0, dp(10))
@@ -317,19 +321,38 @@ class BrowsingActivity : AppCompatActivity() {
     }
 
     private fun elevatedSelectorBackground(): android.graphics.drawable.Drawable {
+        val level = glassLevel(this)
+        val light = Color.luminance(c(R.color.bg)) > 0.5f
+        val off = level == "off"
         val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(withAlpha(Color.WHITE, 0.34f), c(R.color.glassFill), withAlpha(c(R.color.accent2), 0.16f))).apply {
+            intArrayOf(
+                withAlpha(Color.WHITE, if (off) 0.06f else if (level == "subtle") 0.24f else 0.34f),
+                c(R.color.glassFill),
+                withAlpha(c(R.color.accent2), if (off) 0.02f else if (level == "subtle") 0.08f else 0.16f)
+            )).apply {
             cornerRadius = dp(999).toFloat()
-            setStroke(dp(1), withAlpha(Color.WHITE, 0.66f))
+            setStroke(dp(1), withAlpha(if (light) c(R.color.glassStroke) else Color.WHITE, if (off) 0.30f else 0.66f))
         }
+        if (off) return base
         val lowerRim = GradientDrawable().apply {
             cornerRadius = dp(999).toFloat()
             setColor(Color.TRANSPARENT)
-            setStroke(dp(1), withAlpha(c(R.color.accent2), 0.22f))
+            setStroke(dp(1), withAlpha(c(R.color.accent2), if (level == "subtle") 0.12f else 0.22f))
         }
         return android.graphics.drawable.LayerDrawable(arrayOf(lowerRim, base)).apply {
             setLayerInset(0, 0, dp(2), 0, 0)
         }
+    }
+
+    private fun selectedCategoryButtonBackground(): android.graphics.drawable.Drawable {
+        val level = glassLevel(this)
+        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(withAlpha(Color.WHITE, if (level == "off") 0.04f else 0.30f), c(R.color.glassFill),
+                withAlpha(c(R.color.accent2), if (level == "full") 0.16f else 0.06f))).apply {
+            cornerRadius = dp(999).toFloat()
+            setStroke(dp(1), withAlpha(c(R.color.glassStroke), if (level == "off") 0.65f else 0.90f))
+        }
+        return base
     }
     private fun label(textValue: String, size: Float, colorId: Int, top: Int = 0, bottom: Int = 0, bold: Boolean = false) = TextView(this).apply {
         text = textValue
@@ -462,6 +485,7 @@ class BrowsingActivity : AppCompatActivity() {
             clipChildren = false
             clipToPadding = false
         }
+        selectorRefreshers.add { grid.background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedSelectorBackground() else pillBackground() }
         val indicator = View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
