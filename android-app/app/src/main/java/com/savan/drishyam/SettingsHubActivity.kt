@@ -52,7 +52,6 @@ class SettingsHubActivity : AppCompatActivity() {
     private var lowFx = false
     private var reduced = false
     private var lightMode = false
-    private var visualFxAtCreate = true
     private var motionAtCreate = true
     private var glassLevelAtCreate = "full"
     private var settingsBackButton: ImageView? = null
@@ -74,11 +73,10 @@ class SettingsHubActivity : AppCompatActivity() {
 
         lowFx = lowFx(this)
         reduced = !motionEnabled(this)
-        visualFxAtCreate = visualEffectsEnabled(this)
         motionAtCreate = motionEnabled(this)
         glassLevelAtCreate = glassLevel(this)
         lightMode = Color.luminance(color(R.color.bg)) > 0.5f
-        val animate = !reduced && visualEffectsEnabled(this)
+        val animate = !reduced && motionEnabled(this)
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -105,11 +103,12 @@ class SettingsHubActivity : AppCompatActivity() {
         UniversalBackgroundView.attach(backgroundSurface)
         glassBackgroundSurface = backgroundSurface
         universalBackground = backgroundSurface.findViewWithTag("drishyam-universal-background")
-        if (visualEffectsEnabled(this)) {
-            val animateVisuals = animate && motionEnabled(this)
-            addGlows(backgroundSurface, animateVisuals)
-            backgroundSurface.addView(SettingsAmbientLayer(this, animateVisuals).apply { alpha = glassFactor }, FrameLayout.LayoutParams(-1, -1))
-        }
+        // Keep the live background layers attached even while Glass Effects is Off.
+        // Their alpha is controlled by the shared preference, so switching back to
+        // Subtle or Full never requires recreating this Activity.
+        val animateVisuals = animate && motionEnabled(this)
+        addGlows(backgroundSurface, animateVisuals)
+        backgroundSurface.addView(SettingsAmbientLayer(this, animateVisuals).apply { alpha = glassFactor }, FrameLayout.LayoutParams(-1, -1))
         root.addView(backgroundSurface, FrameLayout.LayoutParams(-1, -1))
         root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         // Keep the original fixed feather overlays above the scrolling content.
@@ -592,8 +591,7 @@ class SettingsHubActivity : AppCompatActivity() {
         super.onResume()
         settingsPrefs.registerOnSharedPreferenceChangeListener(glassPreferenceListener)
         applyGlassEffectsLive()
-        if (visualEffectsEnabled(this) != visualFxAtCreate ||
-            motionEnabled(this) != motionAtCreate) {
+        if (motionEnabled(this) != motionAtCreate) {
             recreate()
         }
     }
@@ -606,6 +604,7 @@ class SettingsHubActivity : AppCompatActivity() {
     /** Apply Glass Effects changes to the already-visible Settings background without recreating the Activity. */
     private fun applyGlassEffectsLive() {
         val factor = glassFactor
+        lowFx = factor == 0f
         glassBackgroundSurface?.let { surface ->
             for (index in 0 until surface.childCount) {
                 val child = surface.getChildAt(index)
