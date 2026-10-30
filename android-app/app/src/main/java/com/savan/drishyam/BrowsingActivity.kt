@@ -709,8 +709,8 @@ class BrowsingActivity : AppCompatActivity() {
             summary.getLocationOnScreen(source)
             panel.getLocationOnScreen(target)
             return Pair(
-                (source[0] + summary.width / 2f - target[0]).coerceIn(0f, panel.width.toFloat()),
-                (source[1] + summary.height / 2f - target[1]).coerceIn(0f, panel.height.toFloat())
+                (source[0] + summary.width / 2f - target[0]),
+                (source[1] + summary.height / 2f - target[1])
             )
         }
         fun revealRadius(x: Float, y: Float): Float {
