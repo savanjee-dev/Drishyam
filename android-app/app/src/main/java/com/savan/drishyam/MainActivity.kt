@@ -779,7 +779,7 @@ class MainActivity : AppCompatActivity() {
                 unsplashError = e.message ?: "Photo service unavailable."
             }
 
-            // Try Wikimedia Commons both when Unsplash errors and when it returns an empty feed.
+            // Try Wikimedia Commons and then Openverse when Unsplash errors or returns an empty feed.
             if (added.isEmpty()) {
                 try {
                     val (fallbackPhotos, fallbackLast) = Api.commons(fallbackQuery, page)
