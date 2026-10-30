@@ -376,8 +376,8 @@ class BrowsingActivity : AppCompatActivity() {
         val thumb = View(this).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.WHITE)
-                setStroke(dp(1), 0x66FFFFFF)
+                setColor(0xFFF0F0E8.toInt())
+                setStroke(dp(1), 0x55FFFFFF)
             }
             elevation = dp(2).toFloat()
         }
@@ -407,17 +407,23 @@ class BrowsingActivity : AppCompatActivity() {
 
     private fun toggleTrack(checked: Boolean): android.graphics.drawable.Drawable {
         val glassOn = glassLevel(this) != "off"
+        val darkTheme = Color.luminance(c(R.color.bg)) < 0.5f
+        // OFF should recede into the olive card instead of competing with the labels.
+        val offTop = if (darkTheme) 0xFF343A29.toInt() else withAlpha(c(R.color.mute), 0.34f)
+        val offMiddle = if (darkTheme) 0xFF292F21.toInt() else withAlpha(c(R.color.mute), 0.28f)
+        val offBottom = if (darkTheme) 0xFF242A1D.toInt() else withAlpha(c(R.color.mute), 0.24f)
         val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(
-                if (checked) withAlpha(c(R.color.accent), 0.88f) else withAlpha(c(R.color.mute), 0.68f),
-                if (checked) c(R.color.accent) else withAlpha(c(R.color.mute), 0.72f),
-                if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.mute), 0.78f)
+                if (checked) withAlpha(c(R.color.accent), 0.88f) else offTop,
+                if (checked) c(R.color.accent) else offMiddle,
+                if (checked) withAlpha(c(R.color.accent), 0.94f) else offBottom
             )).apply {
             cornerRadius = dp(999).toFloat()
-            setStroke(dp(1), withAlpha(Color.WHITE, if (glassOn) 0.72f else 0.24f))
+            setStroke(dp(1), if (checked) withAlpha(Color.WHITE, if (glassOn) 0.72f else 0.24f)
+                else if (darkTheme) withAlpha(c(R.color.accent2), 0.18f) else withAlpha(Color.WHITE, 0.16f))
         }
-        if (!glassOn) return base
-        // A restrained top-edge sheen gives the switch the same glass depth as Appearance.
+        // Keep OFF switches matte and quiet; reserve the glass sheen for the active state.
+        if (!glassOn || !checked) return base
         val sheen = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(withAlpha(Color.WHITE, 0.24f), withAlpha(Color.WHITE, 0.035f), Color.TRANSPARENT)).apply {
             cornerRadius = dp(999).toFloat()
@@ -457,9 +463,13 @@ class BrowsingActivity : AppCompatActivity() {
 
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
         var selected = prefs.getString(key, default) ?: default
-        val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
+        val compactFourWay = choices.size == 4
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(if (compactFourWay) 6 else 8), 0, dp(if (compactFourWay) 6 else 8))
+        }
         row.addView(label(title, 13f, R.color.fg, 0, 2, true))
-        row.addView(label(subtitle, 11f, R.color.mute, 0, 8))
+        row.addView(label(subtitle, 11f, R.color.mute, 0, if (compactFourWay) 6 else 8))
 
         val twoRows = choices.size == 4
         val columns = if (twoRows) 2 else choices.size
@@ -483,7 +493,8 @@ class BrowsingActivity : AppCompatActivity() {
         }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(dp(if (compactFourWay) 3 else 4), dp(if (compactFourWay) 3 else 4),
+                dp(if (compactFourWay) 3 else 4), dp(if (compactFourWay) 3 else 4))
             // Keep option labels above the moving glass pill without adding
             // permanent borders or shadows to unselected options.
             elevation = dp(4).toFloat()
@@ -504,7 +515,9 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(if (choices.size == 3) 4 else 14), dp(5)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column),
+                    dp(if (choices.size == 4) 12 else if (choices.size == 3) 4 else 14),
+                    dp(if (choices.size == 4) 6 else 5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         val buttonRows = choices.toList().chunked(columns)
@@ -516,7 +529,7 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(6), dp(if (choices.size == 4) 16 else 20), dp(6), dp(if (choices.size == 4) 16 else 20))
+                    setPadding(dp(6), dp(if (choices.size == 4) 11 else 20), dp(6), dp(if (choices.size == 4) 11 else 20))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
@@ -531,7 +544,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             if (rowChoices.size < columns) line.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
             column.addView(line, LinearLayout.LayoutParams(-1, -2).apply {
-                if (rowIndex > 0) topMargin = dp(2)
+                if (rowIndex > 0) topMargin = dp(if (choices.size == 4) 0 else 2)
             })
         }
         grid.addView(indicator, FrameLayout.LayoutParams(0, 0))
@@ -549,7 +562,9 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = insetTarget(targetFor(active, parentLine, column), dp(if (choices.size == 3) 4 else 16), dp(5))
+            val target = insetTarget(targetFor(active, parentLine, column),
+                dp(if (choices.size == 4) 12 else if (choices.size == 3) 4 else 16),
+                dp(if (choices.size == 4) 6 else 5))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
