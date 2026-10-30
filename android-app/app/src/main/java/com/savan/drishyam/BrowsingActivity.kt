@@ -172,7 +172,7 @@ class BrowsingActivity : AppCompatActivity() {
         val selectedCategory = prefs.getString("default_category", "For You") ?: "For You"
         val categoryValue = TextView(this).apply {
             text = selectedCategory
-            textSize = 11f
+            textSize = 12f
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
             setTextColor(c(R.color.fg))
             gravity = Gravity.CENTER
@@ -181,7 +181,6 @@ class BrowsingActivity : AppCompatActivity() {
             background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedGlassPill() else glassPill()
             elevation = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(5).toFloat() else dp(2).toFloat()
             translationZ = dp(1).toFloat()
-            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             clipToOutline = false
             isClickable = true; isFocusable = true
@@ -337,40 +336,8 @@ class BrowsingActivity : AppCompatActivity() {
         if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedGlassPill() else glassPill()
 
 
-    private fun elevatedSelectorBackground(): android.graphics.drawable.Drawable {
-        val level = glassLevel(this)
-        val light = Color.luminance(c(R.color.bg)) > 0.5f
-        val off = level == "off"
-        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(
-                withAlpha(Color.WHITE, if (off) 0.06f else if (level == "subtle") 0.24f else 0.34f),
-                c(R.color.glassFill),
-                withAlpha(c(R.color.accent2), if (off) 0.02f else if (level == "subtle") 0.08f else 0.16f)
-            )).apply {
-            cornerRadius = dp(999).toFloat()
-            setStroke(dp(1), withAlpha(if (light) c(R.color.glassStroke) else Color.WHITE, if (off) 0.30f else 0.66f))
-        }
-        if (off) return base
-        val lowerRim = GradientDrawable().apply {
-            cornerRadius = dp(999).toFloat()
-            setColor(Color.TRANSPARENT)
-            setStroke(dp(1), withAlpha(c(R.color.accent2), if (level == "subtle") 0.12f else 0.22f))
-        }
-        return android.graphics.drawable.LayerDrawable(arrayOf(lowerRim, base)).apply {
-            setLayerInset(0, 0, dp(2), 0, 0)
-        }
-    }
 
-    private fun selectedCategoryButtonBackground(): android.graphics.drawable.Drawable {
-        val level = glassLevel(this)
-        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(withAlpha(Color.WHITE, if (level == "off") 0.04f else 0.30f), c(R.color.glassFill),
-                withAlpha(c(R.color.accent2), if (level == "full") 0.16f else 0.06f))).apply {
-            cornerRadius = dp(999).toFloat()
-            setStroke(dp(1), withAlpha(c(R.color.glassStroke), if (level == "off") 0.65f else 0.90f))
-        }
-        return base
-    }
+
     private fun label(textValue: String, size: Float, colorId: Int, top: Int = 0, bottom: Int = 0, bold: Boolean = false) = TextView(this).apply {
         text = textValue
         textSize = size
