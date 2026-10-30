@@ -104,6 +104,8 @@ class ViewerActivity : AppCompatActivity() {
 
         // One tidy line of details, showing only what the source actually provides.
         val parts = listOf(
+            p.source.takeIf { it.isNotBlank() }?.let { "Source: $it" }.orEmpty(),
+            p.license.takeIf { it.isNotBlank() }?.let { "Licence: $it" }.orEmpty(),
             p.camera, p.aperture, p.focalLength, p.shutterSpeed,
             if (p.iso.isNotBlank()) "ISO ${p.iso}" else "",
             if (p.width > 0 && p.height > 0) "${p.width} × ${p.height}" else ""
