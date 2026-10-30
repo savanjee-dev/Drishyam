@@ -167,15 +167,43 @@ class BrowsingActivity : AppCompatActivity() {
         addDivider(quick)
         addPreferenceSwitch(quick, "Avoid previously seen images", "Reduce repeated photographs where the feed can identify them.", "avoid_seen", true)
         addDivider(quick)
-        val categorySummary = label("Currently selected: ${prefs.getString("default_category", "For You") ?: "For You"}", 11f, R.color.mute)
+        val selectedCategory = prefs.getString("default_category", "For You") ?: "For You"
+        val categoryValue = TextView(this).apply {
+            text = selectedCategory
+            textSize = 11f
+            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+            setTextColor(c(R.color.fg))
+            gravity = Gravity.CENTER
+            setPadding(dp(16), dp(9), dp(16), dp(9))
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(withAlpha(c(R.color.surface), 0.96f), c(R.color.glassFill))).apply {
+                cornerRadius = dp(999).toFloat()
+                setStroke(dp(1), withAlpha(c(R.color.glassStroke), 0.85f))
+            }
+            elevation = dp(5).toFloat()
+            translationZ = dp(1).toFloat()
+            outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
+            clipToOutline = false
+            isClickable = true; isFocusable = true
+            pressFx()
+        }
         val categoryRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(10), 0, dp(10))
             isClickable = true; isFocusable = true
-            setOnClickListener { showCategoryPicker(categorySummary) }
         }
-        categoryRow.addView(label("Default discovery category", 13f, R.color.fg, 0, 2, true))
-        categoryRow.addView(categorySummary)
+        categoryRow.addView(label("Default discovery category", 13f, R.color.fg, 0, 7, true))
+        val categoryValueRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setOnClickListener { showCategoryPicker(categoryValue) }
+        }
+        categoryValueRow.addView(label("Currently selected", 11f, R.color.mute, 0, 0).apply {
+            setPadding(0, 0, dp(10), 0)
+        })
+        categoryValueRow.addView(categoryValue, LinearLayout.LayoutParams(-2, -2))
+        categoryRow.addView(categoryValueRow)
+        categoryRow.setOnClickListener { showCategoryPicker(categoryValue) }
         quick.addView(categoryRow)
         content.addView(quick, match())
 
@@ -460,7 +488,7 @@ class BrowsingActivity : AppCompatActivity() {
                             )
                         }
                         grid.post {
-                            moveSegmentIndicator(indicator, insetTarget(targetFor(this, line, column), dp(5), dp(4)), !motionEnabled(this@BrowsingActivity))
+                            moveSegmentIndicator(indicator, insetTarget(targetFor(this, line, column), dp(2), dp(4)), !motionEnabled(this@BrowsingActivity))
                         }
                     }
                 }
@@ -487,7 +515,7 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = insetTarget(targetFor(active, parentLine, column), dp(5), dp(4))
+            val target = insetTarget(targetFor(active, parentLine, column), dp(2), dp(4))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
@@ -495,7 +523,13 @@ class BrowsingActivity : AppCompatActivity() {
         }
         paintChoiceLabels()
         grid.post { placeInitial() }
-        row.addView(grid, LinearLayout.LayoutParams(-1, -2))
+        row.addView(grid, LinearLayout.LayoutParams(-1, -2).apply {
+            // Let the three-option quality selector use more of the card width.
+            if (choices.size == 3) {
+                leftMargin = -dp(8)
+                rightMargin = -dp(8)
+            }
+        })
         parent.addView(row)
     }
 
@@ -562,7 +596,7 @@ class BrowsingActivity : AppCompatActivity() {
                         if (category == selected) return@setOnClickListener
                         selected = category
                         prefs.edit().putString("default_category", category).apply()
-                        summary.text = "Currently selected: $category"
+                        summary.text = category
                         buttons.forEach { b ->
                             val active = b.tag == selected
                             b.setTextColor(c(if (active) R.color.bg else R.color.fg))
