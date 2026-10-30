@@ -511,7 +511,7 @@ class BrowsingActivity : AppCompatActivity() {
                             }
                             start()
                         }
-                        origin.performClick()
+                        optionAt(event.rawX, event.rawY)?.performClick()
                         true
                     }
                     android.view.MotionEvent.ACTION_CANCEL -> {
