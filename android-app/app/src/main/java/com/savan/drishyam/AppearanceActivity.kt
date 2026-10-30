@@ -1275,7 +1275,7 @@ private class AppearanceBoundedRadialGlow(private val density: Float) : Drawable
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 }
 
-private class FineGlassTextureDrawable(private val density: Float) : Drawable() {
+internal class FineGlassTextureDrawable(private val density: Float) : Drawable() {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val rect = android.graphics.RectF()
     private val path = android.graphics.Path()
