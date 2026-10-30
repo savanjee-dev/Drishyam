@@ -223,7 +223,7 @@ class SettingsHubActivity : AppCompatActivity() {
             PortalTransition.launch(this@SettingsHubActivity, row1.getChildAt(0), Intent(this@SettingsHubActivity, AppearanceActivity::class.java))
         }, tileParams(left = true))
         row1.addView(tile(R.drawable.ic_tile_browsing, "Browsing", "Hot · India on", browsingPreview()) {
-            toast("Browsing page: next prototype step")
+            PortalTransition.launch(this@SettingsHubActivity, row1.getChildAt(1), Intent(this@SettingsHubActivity, BrowsingActivity::class.java))
         }, tileParams(left = false))
         content.addView(row1, matchWrap(0))
 
