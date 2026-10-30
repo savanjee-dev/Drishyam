@@ -163,7 +163,7 @@ class BrowsingActivity : AppCompatActivity() {
         content.addView(sectionTitle("Quick preferences"))
         val quick = card()
         addChoiceRow(quick, "Image quality", "Choose the preferred image size.", "image_quality",
-            arrayOf("Standard", "High"), "High")
+            arrayOf("Standard", "High", "Raw"), "High")
         addDivider(quick)
         addPreferenceSwitch(quick, "Avoid previously seen images", "Reduce repeated photographs where the feed can identify them.", "avoid_seen", true)
         addDivider(quick)
