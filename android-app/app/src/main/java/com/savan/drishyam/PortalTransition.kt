@@ -116,8 +116,8 @@ object PortalTransition {
         var direction = 1f
         var startTranslation = 0f
         val density = activity.resources.displayMetrics.density
-        val minCornerRadius = 4f * density
-        val maxCornerRadius = 32f * density
+        val minCornerRadius = 24f * density
+        val maxCornerRadius = 30f * density
         var currentCornerRadius = minCornerRadius
         content.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
@@ -125,6 +125,10 @@ object PortalTransition {
             }
         }
         content.clipToOutline = true
+        // Lift the rounded portal above the Activity underneath it.
+        // The same rounded outline is used to shape the page and its elevation shadow.
+        content.elevation = 12f * density
+        content.translationZ = 12f * density
         fun animateCornerRadius(targetRadius: Float, durationMs: Long) {
             ValueAnimator.ofFloat(currentCornerRadius, targetRadius).apply {
                 duration = durationMs
