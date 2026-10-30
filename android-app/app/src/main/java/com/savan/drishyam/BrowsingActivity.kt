@@ -5,12 +5,13 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.android.material.materialswitch.MaterialSwitch
 
 /**
  * Browsing preferences for Plan - MilkyWay.
@@ -27,48 +28,75 @@ class BrowsingActivity : AppCompatActivity() {
         setTheme(R.style.Theme_Drishyam_Portal)
         super.onCreate(savedInstanceState)
         applyActivityTransitionPreference(this)
+        val reduced = !motionEnabled(this)
+        val glassLevel = glassLevel(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        window.navigationBarColor = Color.TRANSPARENT
+
+        val root = FrameLayout(this).apply {
             setBackgroundColor(c(R.color.bg))
+            clipChildren = false
         }
+        // Reuse the same animated ambient background layer used by Appearance.
+        UniversalBackgroundView.attach(root)
         val scroll = ScrollView(this).apply {
+            isFillViewport = true
             isVerticalScrollBarEnabled = false
+            clipChildren = false
             clipToPadding = false
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(28), dp(20), dp(40))
+            setPadding(dp(20), dp(18), dp(20), dp(150))
             clipChildren = false
             clipToPadding = false
         }
         scroll.addView(content)
-        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(scroll, FrameLayout.LayoutParams(-1, -1))
         setContentView(root)
         PortalTransition.enter(this)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-            content.setPadding(dp(20), top + dp(22), dp(20), dp(40))
+            content.setPadding(dp(20), top + dp(32), dp(20), dp(150))
             insets
         }
         androidx.core.view.ViewCompat.requestApplyInsets(root)
 
-        val back = TextView(this).apply {
-            text = "‹   Settings"
-            textSize = 15f
-            setTextColor(c(R.color.fg))
-            typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), 0, dp(14), 0)
-            background = pillBackground()
+        // Match the Settings/Appearance floating Back control exactly: 48dp,
+        // borderless glass circle, same anchored position and touch treatment.
+        val back = ImageView(this).apply {
+            setImageResource(R.drawable.ic_back)
+            imageTintList = android.content.res.ColorStateList.valueOf(c(R.color.fg))
+            scaleType = ImageView.ScaleType.CENTER
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(c(R.color.glassFill))
+            }
             isClickable = true
             isFocusable = true
-            pressFx()
-            setOnClickListener { PortalTransition.close(this@BrowsingActivity, this) }
+            contentDescription = getString(R.string.back_desc)
+            attachBrowsingPress(glassLevel != "off" && !reduced)
+            setOnClickListener { view -> PortalTransition.close(this@BrowsingActivity, view) }
         }
-        content.addView(back, LinearLayout.LayoutParams(-2, dp(44)))
-        content.addView(label("PERSONALISE YOUR DISCOVERY", 11f, R.color.accent, 18, 5))
+        content.addView(View(this).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(dp(48), dp(64)))
+        root.addView(back, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.START).apply {
+            leftMargin = dp(20)
+            topMargin = dp(36)
+        })
+        root.bringChildToFront(back)
+        scroll.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            val progress = (scrollY.toFloat() / dp(84f)).coerceIn(0f, 1f)
+            back.alpha = 1f - progress
+            back.isClickable = progress < 0.95f
+            back.isFocusable = progress < 0.95f
+            back.scaleX = 1f - 0.08f * progress
+            back.scaleY = 1f - 0.08f * progress
+        }
+
+        content.addView(label("PERSONALISE YOUR DISCOVERY", 11f, R.color.accent, 10, 5))
         content.addView(label("Browsing", 36f, R.color.fg, 0, 2, true))
         content.addView(label("Choose where Drishyam discovers photographs and how it explores them.", 14f, R.color.mute, 0, 18))
 
@@ -137,11 +165,35 @@ class BrowsingActivity : AppCompatActivity() {
         content.addView(label("Your choices are saved on this device.", 11f, R.color.mute, 0, 16))
     }
 
+    private fun attachBrowsingPress(enabled: Boolean) {
+        val glow = BrowsingTouchGlow()
+        foreground = glow
+        setOnTouchListener { view, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    glow.x = event.x
+                    glow.y = event.y
+                    glow.alpha = if (enabled) 0.55f else 0f
+                    view.animate().scaleX(0.94f).scaleY(0.94f).setDuration(90).start()
+                }
+                android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                    view.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
+                    glow.alpha = 0f
+                }
+            }
+            false
+        }
+    }
+
     private fun match() = LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(0) }
     private fun card() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(16), dp(14), dp(16), dp(14))
-        background = ContextCompat.getDrawable(this@BrowsingActivity, R.drawable.glass_card)
+        background = GradientDrawable().apply {
+            cornerRadius = dp(28).toFloat()
+            setColor(c(R.color.glassFill))
+            setStroke(dp(1), c(R.color.glassStroke))
+        }
     }
     private fun pillBackground() = GradientDrawable().apply {
         cornerRadius = dp(999).toFloat()
@@ -162,13 +214,11 @@ class BrowsingActivity : AppCompatActivity() {
         val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
         text.addView(label(title, 14f, R.color.fg, 0, 2, true))
         text.addView(label("$role  ·  $subtitle", 11f, R.color.mute))
-        val toggle = MaterialSwitch(this).apply {
-            isChecked = prefs.getBoolean(key, default)
-            contentDescription = "Enable $title"
-            setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean(key, checked).apply() }
+        val toggle = glassToggle(prefs.getBoolean(key, default), "Enable $title") { checked ->
+            prefs.edit().putBoolean(key, checked).apply()
         }
         row.addView(text)
-        row.addView(toggle)
+        row.addView(toggle, LinearLayout.LayoutParams(dp(52), dp(30)))
         parent.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
     }
     private fun addPreferenceSwitch(parent: LinearLayout, title: String, subtitle: String, key: String, default: Boolean) {
@@ -176,13 +226,54 @@ class BrowsingActivity : AppCompatActivity() {
         val text = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
         text.addView(label(title, 13f, R.color.fg, 0, 2, true))
         text.addView(label(subtitle, 11f, R.color.mute))
-        val toggle = MaterialSwitch(this).apply {
-            isChecked = prefs.getBoolean(key, default)
-            setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean(key, checked).apply() }
+        val toggle = glassToggle(prefs.getBoolean(key, default), title) { checked ->
+            prefs.edit().putBoolean(key, checked).apply()
         }
-        row.addView(text); row.addView(toggle)
+        row.addView(text); row.addView(toggle, LinearLayout.LayoutParams(dp(52), dp(30)))
         parent.addView(row, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8); bottomMargin = dp(8) })
     }
+    private fun glassToggle(initial: Boolean, description: String, onChanged: (Boolean) -> Unit): FrameLayout {
+        var checked = initial
+        val thumb = View(this).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.WHITE)
+                setStroke(dp(1), 0x66FFFFFF)
+            }
+            elevation = dp(2).toFloat()
+        }
+        val track = FrameLayout(this).apply {
+            clipChildren = true
+            clipToPadding = true
+            contentDescription = "$description: ${if (checked) "On" else "Off"}"
+            isClickable = true
+            isFocusable = true
+            background = toggleTrack(checked)
+            setOnClickListener {
+                checked = !checked
+                background = toggleTrack(checked)
+                contentDescription = "$description: ${if (checked) "On" else "Off"}"
+                thumb.animate().cancel()
+                thumb.animate().translationX(if (checked) dp(22).toFloat() else 0f)
+                    .setDuration(300).setInterpolator(android.view.animation.OvershootInterpolator(0.8f)).start()
+                onChanged(checked)
+            }
+        }
+        track.addView(thumb, FrameLayout.LayoutParams(dp(24), dp(24), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(3) })
+        thumb.translationX = if (checked) dp(22).toFloat() else 0f
+        return track
+    }
+
+    private fun toggleTrack(checked: Boolean) = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+        intArrayOf(
+            if (checked) Color.argb(235, 137, 148, 90) else Color.argb(85, 137, 148, 90),
+            if (checked) Color.argb(220, 137, 148, 90) else Color.argb(75, 137, 148, 90),
+            if (checked) Color.argb(235, 137, 148, 90) else Color.argb(90, 137, 148, 90)
+        )).apply {
+        cornerRadius = dp(999).toFloat()
+        setStroke(dp(1), 0x99FFFFFF.toInt())
+    }
+
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
         val current = prefs.getString(key, default) ?: default
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
