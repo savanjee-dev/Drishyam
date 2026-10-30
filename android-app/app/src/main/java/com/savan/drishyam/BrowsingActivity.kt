@@ -150,7 +150,7 @@ class BrowsingActivity : AppCompatActivity() {
         content.addView(label("Browsing", 36f, R.color.fg, 0, 2, true))
         content.addView(label("Choose where Drishyam discovers photographs and how it explores them.", 14f, R.color.mute, 0, 18))
 
-        content.addView(sectionTitle("Photo sources"))
+        content.addView(sectionTitle("Photo Sources"))
         val sourcesCard = card()
         sourcesCard.addView(label("Choose which providers Drishyam may use. Disabled providers must never be used as fallbacks.", 12f, R.color.mute, 0, 10))
         addSourceSwitch(sourcesCard, "Wikimedia Commons", "Openly licensed photographs from Wikimedia Commons.", "source_wikimedia", true, "Primary")
@@ -160,7 +160,7 @@ class BrowsingActivity : AppCompatActivity() {
         addSourceSwitch(sourcesCard, "Unsplash", "An additional photography source.", "source_unsplash", true, "Backup")
         content.addView(sourcesCard, match())
 
-        content.addView(sectionTitle("Quick preferences"))
+        content.addView(sectionTitle("Quick Preferences"))
         val quick = card()
         addChoiceRow(quick, "Image quality", "Choose the preferred image size.", "image_quality",
             arrayOf("Standard", "High", "Raw"), "High")
@@ -207,7 +207,7 @@ class BrowsingActivity : AppCompatActivity() {
         quick.addView(categoryRow)
         content.addView(quick, match())
 
-        content.addView(sectionTitle("Advanced browsing"))
+        content.addView(sectionTitle("Advanced Browsing"))
         val advancedCard = card()
         val advancedToggle = TextView(this).apply {
             text = if (prefs.getBoolean("advanced_expanded", false)) "Advanced controls   ▴" else "Advanced controls   ▾"
@@ -467,7 +467,7 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(8), dp(10), dp(8), dp(10))
+                    setPadding(dp(8), dp(17), dp(8), dp(17))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
