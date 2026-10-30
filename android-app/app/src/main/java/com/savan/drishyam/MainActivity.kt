@@ -778,6 +778,7 @@ class MainActivity : AppCompatActivity() {
             var nextAfter = after
             var finished = false
             var error: String? = null
+            val providerErrors = ArrayList<String>()
             val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
             val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
             val browsingPrefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
@@ -792,12 +793,31 @@ class MainActivity : AppCompatActivity() {
                 // A disabled provider is never queried, including as a fallback.
                 if (useWikimedia && added.isEmpty()) {
                     try {
-                        val (photos, last) = Api.commons(fallbackQuery, page)
+                        val commonsQuery = when (s.name) {
+                            "For You" -> "nature landscape photograph"
+                            "Forest" -> "forest woodland photograph"
+                            "Nature" -> "nature photograph"
+                            "Earth" -> "earth landscape photograph"
+                            "Hiking" -> "hiking trail photograph"
+                            "Mountains" -> "mountain landscape photograph"
+                            "Wildlife" -> "wildlife animal photograph"
+                            "Architecture" -> "architecture photograph"
+                            "Abstract" -> "abstract photography"
+                            "Minimalism" -> "minimalist photograph"
+                            "Travel" -> "travel landscape photograph"
+                            "Street" -> "street photography"
+                            "Ocean" -> "ocean sea photograph"
+                            "Night Sky" -> "night sky photograph"
+                            else -> fallbackQuery
+                        }
+                        val (photos, last) = Api.commons(commonsQuery, page)
                         if (photos.isNotEmpty()) {
                             added.addAll(photos)
                             finished = last
                         }
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) {
+                        providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
+                    }
                 }
 
                 if (useOpenverse && added.isEmpty() && page <= 5) {
@@ -807,7 +827,9 @@ class MainActivity : AppCompatActivity() {
                             added.addAll(photos)
                             finished = last
                         }
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) {
+                        providerErrors.add("Openverse: " + (e.message ?: "request failed").take(120))
+                    }
                 }
 
                 if (useUnsplash && added.isEmpty()) {
@@ -823,14 +845,18 @@ class MainActivity : AppCompatActivity() {
                             finished = last
                             added.addAll(if (sort == "top") photos.sortedByDescending { it.likes } else photos)
                         }
-                    } catch (_: Exception) { }
+                    } catch (e: Exception) {
+                        providerErrors.add("Unsplash: " + (e.message ?: "request failed").take(120))
+                    }
                 }
 
                 if (added.isEmpty()) {
                     error = if (useOpenverse && !useWikimedia && !useUnsplash && page > 5) {
                         "Openverse's anonymous browsing limit has been reached. Choose another enabled source or refresh."
+                    } else if (providerErrors.isNotEmpty()) {
+                        "Home feed couldn't load. " + providerErrors.joinToString(" · ")
                     } else {
-                        "Enabled photo sources are temporarily unavailable or returned no results. Please retry."
+                        "Enabled photo sources returned no matching photos. Try another category or refresh."
                     }
                 }
             }
@@ -854,7 +880,6 @@ class MainActivity : AppCompatActivity() {
                     adapter.notifyItemRangeInserted(start, fresh.size)
                     if (error != null) {
                         showTransientStatus(error + " " + getString(R.string.retry_suffix))
-                        statusPill.postDelayed({ if (s === cur && s.err != null) { statusPill.setTag(R.id.statusPill, "dismissed"); statusPill.visibility = View.GONE } }, 3500L)
                     } else {
                         val message = when {
                             fresh.isNotEmpty() -> "Loaded ${fresh.size} photos"
