@@ -215,7 +215,8 @@ class BrowsingActivity : AppCompatActivity() {
         content.addView(label("Your choices are saved on this device.", 11f, R.color.mute, 0, 16).apply {
             gravity = Gravity.CENTER
             textAlignment = View.TEXT_ALIGNMENT_CENTER
-        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16); leftMargin = dp(8) })
+            translationX = dp(8).toFloat()
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16) })
     }
 
     private fun addBrowsingGlows(root: FrameLayout) {
