@@ -176,9 +176,10 @@ class BrowsingActivity : AppCompatActivity() {
             typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
             setTextColor(c(R.color.fg))
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(9), dp(16), dp(9))
-            background = selectedCategoryButtonBackground()
-            elevation = dp(5).toFloat()
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            minWidth = dp(64)
+            background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedGlassPill() else glassPill()
+            elevation = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(5).toFloat() else dp(2).toFloat()
             translationZ = dp(1).toFloat()
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
@@ -186,7 +187,7 @@ class BrowsingActivity : AppCompatActivity() {
             isClickable = true; isFocusable = true
             pressFx()
         }
-        selectorRefreshers.add { categoryValue.background = selectedCategoryButtonBackground() }
+        selectorRefreshers.add { categoryValue.background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedGlassPill() else glassPill() }
         val categoryRow = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(10), 0, dp(10))
@@ -309,16 +310,32 @@ class BrowsingActivity : AppCompatActivity() {
         background = cardBackground()
         glassCards.add(this)
     }
-    private fun pillBackground() : android.graphics.drawable.Drawable {
-        val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(withAlpha(Color.WHITE, 0.22f), c(R.color.glassFill), withAlpha(c(R.color.accent2), 0.12f))).apply {
+    // Match AppearanceActivity's Glass Effects segmented-control surfaces exactly.
+    private fun glassPill(): android.graphics.drawable.Drawable =
+        GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(withAlpha(Color.WHITE, 0.10f), c(R.color.glassFill), withAlpha(c(R.color.accent2), 0.10f))).apply {
             cornerRadius = dp(999).toFloat()
-            setStroke(dp(1), withAlpha(Color.WHITE, 0.58f))
+            setStroke(dp(1), withAlpha(Color.WHITE, 0.52f))
         }
-        return android.graphics.drawable.LayerDrawable(arrayOf(base)).apply {
-            setLayerInset(0, 0, 0, 0, dp(2))
+
+    private fun elevatedGlassPill(): android.graphics.drawable.Drawable {
+        val light = GradientDrawable().apply {
+            cornerRadius = dp(999).toFloat()
+            setColor(withAlpha(c(R.color.accent), 0.16f))
+            setStroke(dp(1), withAlpha(c(R.color.accent2), 0.26f))
+        }
+        val surface = glassPill()
+        val texture = FineGlassTextureDrawable(density)
+        return android.graphics.drawable.LayerDrawable(arrayOf(light, surface, texture)).apply {
+            setLayerInset(0, 0, 0, 0, 0)
+            setLayerInset(1, 0, 0, 0, dp(3))
+            setLayerInset(2, dp(1), dp(1), dp(1), dp(4))
         }
     }
+
+    private fun selectorSurface(): android.graphics.drawable.Drawable =
+        if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedGlassPill() else glassPill()
+
 
     private fun elevatedSelectorBackground(): android.graphics.drawable.Drawable {
         val level = glassLevel(this)
@@ -477,7 +494,7 @@ class BrowsingActivity : AppCompatActivity() {
         val twoRows = choices.size == 4
         val columns = if (twoRows) 2 else choices.size
         val grid = FrameLayout(this).apply {
-            background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedSelectorBackground() else pillBackground()
+            background = selectorSurface()
             elevation = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(5).toFloat() else dp(2).toFloat()
             translationZ = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(1).toFloat() else 0f
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
@@ -485,7 +502,7 @@ class BrowsingActivity : AppCompatActivity() {
             clipChildren = false
             clipToPadding = false
         }
-        selectorRefreshers.add { grid.background = if (Color.luminance(c(R.color.bg)) > 0.5f) elevatedSelectorBackground() else pillBackground() }
+        selectorRefreshers.add { grid.background = selectorSurface() }
         val indicator = View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
@@ -511,8 +528,7 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(8), dp(22), dp(8), dp(22))
-                    minHeight = dp(68)
+                    setPadding(dp(6), dp(10), dp(6), dp(10))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
