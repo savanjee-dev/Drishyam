@@ -209,9 +209,13 @@ class SettingsAmbientLayer(context: Context, private val motionEnabled: Boolean)
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         setLayerType(LAYER_TYPE_HARDWARE, null)
     }
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        if (motionEnabled && animator == null) {
+    private val glassPreferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "glass_level" || key == "low_fx") updateAnimationState()
+    }
+
+    private fun updateAnimationState() {
+        val shouldAnimate = motionEnabled && glassLevel(context) != "off" && isAttachedToWindow
+        if (shouldAnimate && animator == null) {
             animator = ValueAnimator.ofFloat(0f, 1f).apply {
                 duration = 26000L
                 repeatCount = ValueAnimator.INFINITE
@@ -220,9 +224,22 @@ class SettingsAmbientLayer(context: Context, private val motionEnabled: Boolean)
                 addUpdateListener { phase = it.animatedValue as Float; invalidate() }
                 start()
             }
+        } else if (!shouldAnimate) {
+            animator?.cancel()
+            animator = null
+            invalidate()
         }
     }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        context.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+            .registerOnSharedPreferenceChangeListener(glassPreferenceListener)
+        updateAnimationState()
+    }
     override fun onDetachedFromWindow() {
+        context.getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
+            .unregisterOnSharedPreferenceChangeListener(glassPreferenceListener)
         animator?.cancel()
         animator = null
         super.onDetachedFromWindow()
