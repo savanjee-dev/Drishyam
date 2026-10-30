@@ -137,7 +137,9 @@ class SettingsHubActivity : AppCompatActivity() {
         PortalTransition.enter(this)
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val topInset = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.statusBars()).top
-            content.setPadding(dp(20), topInset + dp(18), dp(20), dp(150))
+            // Match Appearance's header inset so the anchored Back control
+            // has a consistent, comfortable gap above the page heading.
+            content.setPadding(dp(20), topInset + dp(32), dp(20), dp(150))
             settingsBackButton?.let { button ->
                 (button.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
                     lp.topMargin = topInset + dp(36)
