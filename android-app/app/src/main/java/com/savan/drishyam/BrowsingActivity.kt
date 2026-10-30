@@ -565,7 +565,7 @@ class BrowsingActivity : AppCompatActivity() {
                             )
                         }
                         grid.post {
-                            moveSegmentIndicator(indicator, targetFor(this, line, column), !motionEnabled(this@BrowsingActivity))
+                            moveSegmentIndicator(indicator, insetTarget(targetFor(this, line, column), dp(5), dp(4)), !motionEnabled(this@BrowsingActivity))
                         }
                     }
                 }
