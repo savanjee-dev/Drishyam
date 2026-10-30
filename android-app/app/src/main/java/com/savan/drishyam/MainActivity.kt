@@ -760,7 +760,7 @@ class MainActivity : AppCompatActivity() {
         statusGeneration++
         // Rotate through provider pages on each manual refresh (Openverse supports
         // five anonymous pages). The next refresh wraps back to page one.
-        cur.refreshPage = if (cur.refreshPage >= 5) 1 else cur.refreshPage + 1
+        cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page).let { if (it > 5) 1 else it }
         cur.reset()
         cur.page = cur.refreshPage
         cur.forceFresh = true
