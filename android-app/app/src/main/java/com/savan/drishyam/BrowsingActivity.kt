@@ -201,7 +201,7 @@ class BrowsingActivity : AppCompatActivity() {
         addDivider(advancedCard)
         advancedCard.addView(advancedBody)
         addChoiceRow(advancedBody, "Preferred orientation", "Choose the shape of photographs to prioritise.", "orientation",
-            arrayOf("Portrait", "Landscape", "Any", "Square"), "Portrait")
+            arrayOf("Portrait", "Landscape", "Random", "Square"), "Portrait")
         addDivider(advancedBody)
         addPreferenceSwitch(advancedBody, "Allow mature-content results", "Keep disabled to avoid sources that classify content as mature.", "allow_mature", false)
         addDivider(advancedBody)
