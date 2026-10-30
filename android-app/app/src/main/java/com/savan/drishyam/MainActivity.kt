@@ -39,6 +39,10 @@ import android.content.res.ColorStateList
 class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false) {
     val items = ArrayList<Photo>()
     val ids = HashSet<String>()
+    // Keep recently displayed IDs across pull-to-refresh so repeated refreshes
+    // can skip overlapping provider results instead of showing the same photos.
+    val seenIds = HashSet<String>()
+    var refreshPage = 1
     var after = ""
     var page = 1
     var done = false
@@ -48,8 +52,9 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     var extra = false    // searched photo topics, removed when the next search runs
     var forceFresh = false
 
-    fun reset() {
+    fun reset(clearHistory: Boolean = false) {
         items.clear(); ids.clear()
+        if (clearHistory) { seenIds.clear(); refreshPage = 1 }
         after = ""; page = 1; done = false; err = null; loading = false; forceFresh = false
         gen++
     }
@@ -655,7 +660,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetAll() {
-        sources.forEach { it.reset() }
+        sources.forEach { it.reset(clearHistory = true) }
         if (tab == 0) {
             adapter.data = cur.items
             adapter.notifyDataSetChanged()
@@ -753,7 +758,11 @@ class MainActivity : AppCompatActivity() {
         if (tab != 0 || cur.loading) { swipe.isRefreshing = false; return }
         transientStatus = null
         statusGeneration++
+        // Rotate through provider pages on each manual refresh (Openverse supports
+        // five anonymous pages). The next refresh wraps back to page one.
+        cur.refreshPage = if (cur.refreshPage >= 5) 1 else cur.refreshPage + 1
         cur.reset()
+        cur.page = cur.refreshPage
         cur.forceFresh = true
         adapter.data = cur.items
         adapter.notifyDataSetChanged()
@@ -811,8 +820,9 @@ class MainActivity : AppCompatActivity() {
                             else -> fallbackQuery
                         }
                         val (photos, last) = Api.commons(commonsQuery, page)
-                        if (photos.isNotEmpty()) {
-                            added.addAll(photos)
+                        val unseen = photos.filter { it.id !in s.seenIds }
+                        if (unseen.isNotEmpty()) {
+                            added.addAll(unseen)
                             finished = last
                         }
                     } catch (e: Exception) {
@@ -823,8 +833,9 @@ class MainActivity : AppCompatActivity() {
                 if (useOpenverse && added.isEmpty() && page <= 5) {
                     try {
                         val (photos, last) = Api.openverse(fallbackQuery, page)
-                        if (photos.isNotEmpty()) {
-                            added.addAll(photos)
+                        val unseen = photos.filter { it.id !in s.seenIds }
+                        if (unseen.isNotEmpty()) {
+                            added.addAll(unseen)
                             finished = last
                         }
                     } catch (e: Exception) {
@@ -841,9 +852,10 @@ class MainActivity : AppCompatActivity() {
                             indiaOnly = sort == "india" && s.name != "Search",
                             popular = sort == "hot"
                         )
-                        if (photos.isNotEmpty()) {
+                        val unseen = photos.filter { it.id !in s.seenIds }
+                        if (unseen.isNotEmpty()) {
                             finished = last
-                            added.addAll(if (sort == "top") photos.sortedByDescending { it.likes } else photos)
+                            added.addAll(if (sort == "top") unseen.sortedByDescending { it.likes } else unseen)
                         }
                     } catch (e: Exception) {
                         providerErrors.add("Unsplash: " + (e.message ?: "request failed").take(120))
@@ -873,7 +885,7 @@ class MainActivity : AppCompatActivity() {
                     s.page = page + 1
                     if (finished) s.done = true
                 }
-                val fresh = added.filter { s.ids.add(it.id) }
+                val fresh = added.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
                 val start = s.items.size
                 s.items.addAll(fresh)
                 if (s === cur && tab == 0) {
