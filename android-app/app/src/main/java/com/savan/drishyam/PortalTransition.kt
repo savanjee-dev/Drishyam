@@ -171,10 +171,10 @@ object PortalTransition {
             override fun onBackInvoked() {
                 if (activity.isFinishing || activity.isDestroyed) return
                 content.animate().cancel()
-                animateCornerRadius(maxCornerRadius, 950L)
+                animateCornerRadius(maxCornerRadius, 500L)
                 val targetX = startTranslation + direction * content.width.toFloat()
                 ObjectAnimator.ofFloat(content, View.TRANSLATION_X, content.translationX, targetX).apply {
-                    duration = 950L
+                    duration = 500L
                     interpolator = PathInterpolator(0.10f, 0.84f, 0.16f, 1f)
                     addListener(object : android.animation.AnimatorListenerAdapter() {
                         private var cancelled = false
