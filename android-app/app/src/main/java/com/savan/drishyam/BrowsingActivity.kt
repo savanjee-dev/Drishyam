@@ -406,7 +406,11 @@ class BrowsingActivity : AppCompatActivity() {
         val twoRows = choices.size == 4
         val columns = if (twoRows) 2 else choices.size
         val grid = FrameLayout(this).apply {
-            background = pillBackground()
+            background = GradientDrawable().apply {
+                cornerRadius = dp(if (choices.size == 4) 24 else 999).toFloat()
+                setColor(c(R.color.glassFill))
+                setStroke(dp(1), c(R.color.glassStroke))
+            }
             clipChildren = false
             clipToPadding = false
         }
@@ -421,7 +425,9 @@ class BrowsingActivity : AppCompatActivity() {
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(4), dp(4), dp(4), dp(4))
-            elevation = dp(2).toFloat()
+            // Keep option labels above the moving glass pill without adding
+            // permanent borders or shadows to unselected options.
+            elevation = dp(4).toFloat()
         }
         val buttons = mutableListOf<TextView>()
         val buttonRows = choices.toList().chunked(columns)
@@ -436,10 +442,9 @@ class BrowsingActivity : AppCompatActivity() {
                     setPadding(dp(8), dp(10), dp(8), dp(10))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
-                        setColor(withAlpha(c(R.color.surface), 0.18f))
-                        setStroke(dp(1), withAlpha(c(R.color.glassStroke), 0.72f))
+                        setColor(Color.TRANSPARENT)
                     }
-                    elevation = dp(1).toFloat()
+                    elevation = 0f
                     isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
@@ -521,7 +526,10 @@ class BrowsingActivity : AppCompatActivity() {
         }
         panel.addView(label("Default category", 20f, R.color.fg, 0, 4, true))
         panel.addView(label("Choose your starting point", 12f, R.color.mute, 0, 12))
-        val grid = FrameLayout(this).apply { clipChildren = false; clipToPadding = false }
+        val grid = FrameLayout(this).apply {
+            clipChildren = false
+            clipToPadding = false
+        }
         val indicator = View(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(withAlpha(c(R.color.accent), 0.92f), c(R.color.accent), withAlpha(c(R.color.accent), 0.96f))).apply {
@@ -532,7 +540,7 @@ class BrowsingActivity : AppCompatActivity() {
         }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            elevation = dp(2).toFloat()
+            elevation = dp(4).toFloat()
         }
         val buttons = mutableListOf<TextView>()
         categories.chunked(2).forEachIndexed { rowIndex, pair ->
@@ -544,11 +552,10 @@ class BrowsingActivity : AppCompatActivity() {
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
                     setPadding(dp(8), dp(14), dp(8), dp(14))
                     background = GradientDrawable().apply {
-                        cornerRadius = dp(16).toFloat()
-                        setColor(withAlpha(c(R.color.surface), 0.12f))
-                        setStroke(dp(1), withAlpha(c(R.color.glassStroke), 0.72f))
+                        cornerRadius = dp(18).toFloat()
+                        setColor(Color.TRANSPARENT)
                     }
-                    elevation = dp(1).toFloat()
+                    elevation = 0f
                     isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
