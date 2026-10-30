@@ -498,6 +498,9 @@ class BrowsingActivity : AppCompatActivity() {
             origin.setOnTouchListener { _, event ->
                 when (event.actionMasked) {
                     android.view.MotionEvent.ACTION_DOWN -> {
+                        // A selector gesture owns the touch stream: prevent the parent
+                        // ScrollView from interpreting vertical/diagonal finger travel as page scroll.
+                        grid.parent?.requestDisallowInterceptTouchEvent(true)
                         tracker?.recycle()
                         tracker = android.view.VelocityTracker.obtain().also { it.addMovement(event) }
                         lastRawX = event.rawX
@@ -534,6 +537,7 @@ class BrowsingActivity : AppCompatActivity() {
                         true
                     }
                     android.view.MotionEvent.ACTION_UP -> {
+                        grid.parent?.requestDisallowInterceptTouchEvent(false)
                         tracker?.addMovement(event)
                         tracker?.computeCurrentVelocity(1000)
                         val vx = tracker?.xVelocity ?: 0f
@@ -550,6 +554,7 @@ class BrowsingActivity : AppCompatActivity() {
                         true
                     }
                     android.view.MotionEvent.ACTION_CANCEL -> {
+                        grid.parent?.requestDisallowInterceptTouchEvent(false)
                         tracker?.recycle()
                         tracker = null
                         indicator.animate().cancel()
@@ -611,7 +616,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(14), dp(5)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(if (choices.size == 3) 8 else 16), dp(5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         val buttonRows = choices.toList().chunked(columns)
@@ -623,7 +628,7 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(6), dp(20), dp(6), dp(20))
+                    setPadding(dp(6), dp(if (choices.size == 4) 16 else 20), dp(6), dp(if (choices.size == 4) 16 else 20))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
@@ -638,7 +643,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             if (rowChoices.size < columns) line.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
             column.addView(line, LinearLayout.LayoutParams(-1, -2).apply {
-                if (rowIndex > 0) topMargin = dp(6)
+                if (rowIndex > 0) topMargin = dp(2)
             })
         }
         grid.addView(indicator, FrameLayout.LayoutParams(0, 0))
@@ -656,7 +661,7 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = insetTarget(targetFor(active, parentLine, column), dp(14), dp(5))
+            val target = insetTarget(targetFor(active, parentLine, column), dp(if (choices.size == 3) 8 else 16), dp(5))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
@@ -729,7 +734,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(14), dp(5)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(if (choices.size == 3) 8 else 16), dp(5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         categories.chunked(2).forEachIndexed { rowIndex, pair ->
