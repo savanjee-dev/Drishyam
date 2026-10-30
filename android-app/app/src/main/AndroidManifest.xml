@@ -28,6 +28,7 @@
         <!-- These Activities must be translucent at window creation time so the
              Back closing reveal exposes the previous Activity instead of a black surface. -->
         <activity android:name=".SettingsHubActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
+        <activity android:name=".BrowsingActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
         <activity android:name=".AppearanceActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
         <activity android:name=".SettingsActivity" android:exported="false" />
         <activity android:name=".UpdatesActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
