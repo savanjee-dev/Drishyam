@@ -354,11 +354,12 @@ class SettingsHubActivity : AppCompatActivity() {
     }
 
     private fun aboutPreview(): View = FrameLayout(this).apply {
+        // Solid outer disc avoids a stroked oval being clipped at its bounds;
+        // the smaller centred gradient disc leaves a perfectly even circular rim.
         val ring = View(this@SettingsHubActivity).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.TRANSPARENT)
-                setStroke(dp(3), withAlpha(color(R.color.accent2), 0.22f))
+                setColor(withAlpha(color(R.color.accent2), 0.22f))
             }
         }
         addView(ring, FrameLayout.LayoutParams(dp(32), dp(32), Gravity.CENTER))
@@ -1032,15 +1033,30 @@ private class HubSplitSwatchDrawable(private val density: Float, private val bor
     override fun draw(canvas: Canvas) {
         val b = bounds
         val l = b.left.toFloat(); val t = b.top.toFloat(); val r = b.right.toFloat(); val btm = b.bottom.toFloat()
+        // Render the split fill into an antialiased rounded mask so neither
+        // diagonal half can fringe beyond the swatch silhouette.
         val clip = Path().apply { addRoundRect(l, t, r, btm, radius, radius, Path.Direction.CW) }
-        canvas.save()
-        canvas.clipPath(clip)
+        val save = canvas.saveLayer(l, t, r, btm, null)
         val topLeft = Path().apply { moveTo(l, t); lineTo(r, t); lineTo(l, btm); close() }
         val bottomRight = Path().apply { moveTo(r, t); lineTo(r, btm); lineTo(l, btm); close() }
         canvas.drawPath(topLeft, light)
         canvas.drawPath(bottomRight, dark)
-        canvas.restore()
-        canvas.drawPath(clip, stroke)
+        val mask = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_IN)
+        }
+        canvas.drawRoundRect(l, t, r, btm, radius, radius, mask)
+        mask.xfermode = null
+        canvas.restoreToCount(save)
+        // Keep the outline wholly inside the drawable bounds; this prevents
+        // stroke clipping and keeps the dark fill cleanly contained.
+        val halfStroke = stroke.strokeWidth / 2f
+        val outline = Path().apply {
+            addRoundRect(l + halfStroke, t + halfStroke, r - halfStroke, btm - halfStroke,
+                (radius - halfStroke).coerceAtLeast(0f), (radius - halfStroke).coerceAtLeast(0f),
+                Path.Direction.CW)
+        }
+        canvas.drawPath(outline, stroke)
     }
     override fun setAlpha(alpha: Int) {}
     override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
