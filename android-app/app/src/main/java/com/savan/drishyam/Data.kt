@@ -199,11 +199,19 @@ object Api {
 
     /** Public Wikimedia Commons search used for broad text searches and invalid custom photo topic names. */
     fun commons(query: String, page: Int): Pair<List<Photo>, Boolean> {
-        val search = when (query.lowercase()) {
-            "incredibleindia" -> "India landscape monument architecture"
-            "amoledbackgrounds" -> "dark abstract wallpaper"
-            "mobilewallpaper", "verticalwallpapers", "wallpapers" -> "mobile wallpaper nature landscape"
-            else -> query.replace(Regex("[^a-zA-Z0-9 ]"), " ") + " wallpaper"
+        // Commons' bitmap filter includes drawings and illustrations. Bias feed
+        // discovery toward files explicitly described as photographs, and avoid
+        // appending the overly restrictive "wallpaper" term to every category query.
+        val cleanQuery = query.replace(Regex("[^a-zA-Z0-9 ]"), " ").trim()
+        val search = when (query.lowercase().trim()) {
+            "incredibleindia" -> "India landscape photograph"
+            "amoledbackgrounds" -> "dark abstract photograph"
+            "mobilewallpaper", "verticalwallpapers", "wallpapers" -> "mobile nature landscape photograph"
+            else -> {
+                val terms = cleanQuery.split(Regex("\\s+")).filter { it.isNotBlank() }.take(3)
+                (terms + if (terms.none { it.equals("photograph", true) || it.equals("photography", true) }) listOf("photograph") else emptyList())
+                    .joinToString(" ")
+            }
         }
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
             java.net.URLEncoder.encode("filetype:bitmap $search", "UTF-8") +
