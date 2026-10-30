@@ -325,12 +325,11 @@ class MainActivity : AppCompatActivity() {
         val sourcesSignature = browsingSourcesSignature()
         val previousSourcesSignature = lastBrowsingSourcesSignature
         lastBrowsingSourcesSignature = sourcesSignature
-        if (previousSourcesSignature != null && sourcesSignature != previousSourcesSignature && tab == 0) {
-            resetAll()
-        }
+        var shouldResetFeed = previousSourcesSignature != null && sourcesSignature != previousSourcesSignature
         // Settings may have changed the default sort while this screen was paused.
         val s = currentSort()
-        if (s != shownSort) { shownSort = s; styleSort(); resetAll() }
+        if (s != shownSort) { shownSort = s; styleSort(); shouldResetFeed = true }
+        if (shouldResetFeed) resetAll()
         if (tab == 1) refreshSaved() else adapter.notifyDataSetChanged()
     }
 
