@@ -596,9 +596,9 @@ class SettingsHubActivity : AppCompatActivity() {
         }
     }
 
-    override fun onPause() {
+    override fun onDestroy() {
         settingsPrefs.unregisterOnSharedPreferenceChangeListener(glassPreferenceListener)
-        super.onPause()
+        super.onDestroy()
     }
 
     /** Apply Glass Effects changes to the already-visible Settings background without recreating the Activity. */
