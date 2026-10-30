@@ -452,6 +452,80 @@ class BrowsingActivity : AppCompatActivity() {
         animator.start()
     }
 
+    /**
+     * Jelly Motion interaction: each option captures the gesture so the selected glass
+     * pill can track the finger across sibling options without replacing the existing
+     * glide-and-stretch position animator.
+     */
+    private fun attachJellyMotion(
+        grid: FrameLayout,
+        buttons: List<TextView>,
+        indicator: View,
+        onSelectionChanged: (TextView) -> Unit
+    ) {
+        fun optionAt(rawX: Float, rawY: Float): TextView? {
+            return buttons.firstOrNull { option ->
+                val location = IntArray(2)
+                option.getLocationOnScreen(location)
+                rawX >= location[0] && rawX <= location[0] + option.width &&
+                    rawY >= location[1] && rawY <= location[1] + option.height
+            }
+        }
+
+        buttons.forEach { origin ->
+            origin.setOnTouchListener { _, event ->
+                when (event.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        indicator.animate().cancel()
+                        indicator.pivotX = indicator.width / 2f
+                        indicator.pivotY = indicator.height / 2f
+                        indicator.animate().scaleX(1.035f).scaleY(0.965f)
+                            .setDuration(90L).setInterpolator(android.view.animation.DecelerateInterpolator())
+                            .start()
+                        optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
+                        true
+                    }
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
+                        val dx = event.x / origin.width.coerceAtLeast(1) - 0.5f
+                        val dy = event.y / origin.height.coerceAtLeast(1) - 0.5f
+                        // Soft velocity-like deformation: stretch along the gesture axis,
+                        // with a restrained squash across it. Position glide remains unchanged.
+                        val stretchX = (kotlin.math.abs(dx) * 0.10f).coerceIn(0f, 0.055f)
+                        val stretchY = (kotlin.math.abs(dy) * 0.10f).coerceIn(0f, 0.055f)
+                        indicator.scaleX = 1.025f + stretchX - stretchY * 0.35f
+                        indicator.scaleY = 0.975f + stretchY - stretchX * 0.35f
+                        true
+                    }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        optionAt(event.rawX, event.rawY)?.let(onSelectionChanged)
+                        indicator.animate().cancel()
+                        android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+                            duration = 230L
+                            interpolator = android.view.animation.OvershootInterpolator(0.75f)
+                            addUpdateListener { animator ->
+                                val t = animator.animatedValue as Float
+                                val settle = 1f - t
+                                indicator.scaleX = 1f + 0.045f * settle
+                                indicator.scaleY = 1f - 0.035f * settle
+                            }
+                            start()
+                        }
+                        origin.performClick()
+                        true
+                    }
+                    android.view.MotionEvent.ACTION_CANCEL -> {
+                        indicator.animate().cancel()
+                        indicator.animate().scaleX(1f).scaleY(1f).setDuration(150L)
+                            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+                        true
+                    }
+                    else -> true
+                }
+            }
+        }
+    }
+
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
         var selected = prefs.getString(key, default) ?: default
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
@@ -465,9 +539,9 @@ class BrowsingActivity : AppCompatActivity() {
             elevation = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(5).toFloat() else dp(2).toFloat()
             translationZ = if (Color.luminance(c(R.color.bg)) > 0.5f) dp(1).toFloat() else 0f
             outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-            clipToOutline = false
-            clipChildren = false
-            clipToPadding = false
+            clipToOutline = true
+            clipChildren = true
+            clipToPadding = true
         }
         selectorRefreshers.add { grid.background = selectorSurface() }
         val indicator = View(this).apply {
@@ -486,6 +560,24 @@ class BrowsingActivity : AppCompatActivity() {
             elevation = dp(4).toFloat()
         }
         val buttons = mutableListOf<TextView>()
+        fun selectChoice(option: TextView) {
+            val choice = option.tag as? String ?: return
+            if (choice == selected) return
+            selected = choice
+            prefs.edit().putString(key, choice).apply()
+            buttons.forEach { b ->
+                val active = b.tag == selected
+                b.setTextColor(c(if (active) R.color.bg else R.color.mute))
+                b.setTypeface(
+                    androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                    if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                )
+            }
+            val line = option.parent as? LinearLayout ?: return
+            grid.post {
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(8), dp(2)), !motionEnabled(this@BrowsingActivity))
+            }
+        }
         val buttonRows = choices.toList().chunked(columns)
         buttonRows.forEachIndexed { rowIndex, rowChoices ->
             val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
@@ -495,7 +587,7 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setPadding(dp(6), dp(10), dp(6), dp(10))
+                    setPadding(dp(6), dp(13), dp(6), dp(13))
                     background = GradientDrawable().apply {
                         cornerRadius = dp(999).toFloat()
                         setColor(Color.TRANSPARENT)
@@ -503,22 +595,7 @@ class BrowsingActivity : AppCompatActivity() {
                     elevation = 0f
                     isClickable = true; isFocusable = true
                     pressFx()
-                    setOnClickListener {
-                        if (choice == selected) return@setOnClickListener
-                        selected = choice
-                        prefs.edit().putString(key, choice).apply()
-                        buttons.forEach { b ->
-                            val active = b.tag == selected
-                            b.setTextColor(c(if (active) R.color.bg else R.color.mute))
-                            b.setTypeface(
-                                androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
-                                if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
-                            )
-                        }
-                        grid.post {
-                            moveSegmentIndicator(indicator, insetTarget(targetFor(this, line, column), dp(2), dp(4)), !motionEnabled(this@BrowsingActivity))
-                        }
-                    }
+                    setOnClickListener { selectChoice(this) }
                 }
                 buttons.add(button)
                 line.addView(button, LinearLayout.LayoutParams(0, -2, 1f))
@@ -543,13 +620,14 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = insetTarget(targetFor(active, parentLine, column), dp(2), dp(4))
+            val target = insetTarget(targetFor(active, parentLine, column), dp(8), dp(2))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
             indicator.layoutParams = lp
         }
         paintChoiceLabels()
+        attachJellyMotion(grid, buttons, indicator, ::selectChoice)
         grid.post { placeInitial() }
         row.addView(grid, LinearLayout.LayoutParams(-1, -2))
         parent.addView(row)
@@ -599,6 +677,25 @@ class BrowsingActivity : AppCompatActivity() {
             elevation = dp(4).toFloat()
         }
         val buttons = mutableListOf<TextView>()
+        fun selectCategory(option: TextView) {
+            val category = option.tag as? String ?: return
+            if (category == selected) return
+            selected = category
+            prefs.edit().putString("default_category", category).apply()
+            summary.text = category
+            buttons.forEach { b ->
+                val active = b.tag == selected
+                b.setTextColor(c(if (active) R.color.bg else R.color.fg))
+                b.setTypeface(
+                    androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                    if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                )
+            }
+            val line = option.parent as? LinearLayout ?: return
+            grid.post {
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(8), dp(3)), !motionEnabled(this@BrowsingActivity))
+            }
+        }
         categories.chunked(2).forEachIndexed { rowIndex, pair ->
             val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
             pair.forEach { category ->
@@ -614,23 +711,7 @@ class BrowsingActivity : AppCompatActivity() {
                     elevation = 0f
                     isClickable = true; isFocusable = true
                     pressFx()
-                    setOnClickListener {
-                        if (category == selected) return@setOnClickListener
-                        selected = category
-                        prefs.edit().putString("default_category", category).apply()
-                        summary.text = category
-                        buttons.forEach { b ->
-                            val active = b.tag == selected
-                            b.setTextColor(c(if (active) R.color.bg else R.color.fg))
-                            b.setTypeface(
-                                androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
-                                if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
-                            )
-                        }
-                        grid.post {
-                            moveSegmentIndicator(indicator, insetTarget(targetFor(this, line, column), dp(5), dp(4)), !motionEnabled(this@BrowsingActivity))
-                        }
-                    }
+                    setOnClickListener { selectCategory(this) }
                 }
                 buttons.add(option)
                 line.addView(option, LinearLayout.LayoutParams(0, -2, 1f).apply {
@@ -655,10 +736,11 @@ class BrowsingActivity : AppCompatActivity() {
             }
         }
         paintCategoryLabels()
+        attachJellyMotion(grid, buttons, indicator, ::selectCategory)
         grid.post {
             buttons.firstOrNull { it.tag == selected }?.let { active ->
                 val line = active.parent as LinearLayout
-                val target = insetTarget(targetFor(active, line, column), dp(5), dp(4))
+                val target = insetTarget(targetFor(active, line, column), dp(8), dp(3))
                 val lp = indicator.layoutParams as FrameLayout.LayoutParams
                 lp.leftMargin = target.left; lp.topMargin = target.top
                 lp.width = target.width; lp.height = target.height
