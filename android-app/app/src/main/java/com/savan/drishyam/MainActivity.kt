@@ -308,11 +308,26 @@ class MainActivity : AppCompatActivity() {
         return 0
     }
 
+    private var lastBrowsingSourcesSignature: String? = null
+
+    private fun browsingSourcesSignature(): String {
+        val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
+        return listOf("source_wikimedia", "source_openverse", "source_unsplash")
+            .joinToString("|") { key -> prefs.getBoolean(key, true).toString() }
+    }
+
     override fun onResume() {
         super.onResume()
         if (lowFx(this) != lowFxAtCreate ||
             visualEffectsEnabled(this) != visualFxAtCreate ||
             motionEnabled(this) != motionAtCreate) { recreate(); return }
+        // Rebuild the feed when the user changes enabled providers in Browsing.
+        val sourcesSignature = browsingSourcesSignature()
+        val previousSourcesSignature = lastBrowsingSourcesSignature
+        lastBrowsingSourcesSignature = sourcesSignature
+        if (previousSourcesSignature != null && sourcesSignature != previousSourcesSignature && tab == 0) {
+            resetAll()
+        }
         // Settings may have changed the default sort while this screen was paused.
         val s = currentSort()
         if (s != shownSort) { shownSort = s; styleSort(); resetAll() }
