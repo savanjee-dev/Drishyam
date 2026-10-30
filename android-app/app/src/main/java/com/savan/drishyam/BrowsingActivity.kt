@@ -212,7 +212,10 @@ class BrowsingActivity : AppCompatActivity() {
         addInfoRow(advancedBody, "Licences and attribution", "Each photograph should retain its source, creator and licence details. Open the photo details to review attribution before reuse.")
         content.addView(advancedCard, match())
 
-        content.addView(label("Your choices are saved on this device.", 11f, R.color.mute, 0, 16))
+        content.addView(label("Your choices are saved on this device.", 11f, R.color.mute, 0, 16).apply {
+            gravity = Gravity.CENTER
+            textAlignment = View.TEXT_ALIGNMENT_CENTER
+        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(16); leftMargin = dp(8) })
     }
 
     private fun addBrowsingGlows(root: FrameLayout) {
@@ -349,9 +352,9 @@ class BrowsingActivity : AppCompatActivity() {
         val glassOn = glassLevel(this) != "off"
         val base = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(
-                if (checked) withAlpha(c(R.color.accent), 0.88f) else withAlpha(c(R.color.accent2), 0.28f),
-                if (checked) c(R.color.accent) else withAlpha(c(R.color.accent2), 0.30f),
-                if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.accent2), 0.32f)
+                if (checked) withAlpha(c(R.color.accent), 0.88f) else withAlpha(c(R.color.mute), 0.68f),
+                if (checked) c(R.color.accent) else withAlpha(c(R.color.mute), 0.72f),
+                if (checked) withAlpha(c(R.color.accent), 0.94f) else withAlpha(c(R.color.mute), 0.78f)
             )).apply {
             cornerRadius = dp(999).toFloat()
             setStroke(dp(1), withAlpha(Color.WHITE, if (glassOn) 0.72f else 0.24f))
@@ -365,89 +368,135 @@ class BrowsingActivity : AppCompatActivity() {
         return android.graphics.drawable.LayerDrawable(arrayOf(base, sheen))
     }
 
+    private data class SegmentTarget(val left: Int, val top: Int, val width: Int, val height: Int)
+
+    private fun moveSegmentIndicator(indicator: View, target: SegmentTarget, reduced: Boolean) {
+        val lp = indicator.layoutParams as FrameLayout.LayoutParams
+        val from = SegmentTarget(lp.leftMargin, lp.topMargin, lp.width, lp.height)
+        indicator.animate().cancel()
+        if (reduced) {
+            lp.leftMargin = target.left; lp.topMargin = target.top
+            lp.width = target.width; lp.height = target.height
+            indicator.layoutParams = lp
+            return
+        }
+        val animator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 340L
+            interpolator = android.view.animation.PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
+            addUpdateListener { value ->
+                val t = value.animatedValue as Float
+                val params = indicator.layoutParams as FrameLayout.LayoutParams
+                params.leftMargin = (from.left + (target.left - from.left) * t).toInt()
+                params.topMargin = (from.top + (target.top - from.top) * t).toInt()
+                params.width = (from.width + (target.width - from.width) * t).toInt()
+                params.height = (from.height + (target.height - from.height) * t).toInt()
+                indicator.layoutParams = params
+            }
+        }
+        animator.start()
+    }
+
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
         var selected = prefs.getString(key, default) ?: default
         val row = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, dp(8)) }
         row.addView(label(title, 13f, R.color.fg, 0, 2, true))
         row.addView(label(subtitle, 11f, R.color.mute, 0, 8))
 
-        // Match Appearance's segmented control: one moving/stretching glass indicator
-        // per visual row, with labels layered above it. Four options use two rows.
-        val optionRows = if (choices.size == 4) choices.toList().chunked(2) else listOf(choices.toList())
-        optionRows.forEachIndexed { rowIndex, rowChoices ->
-            val segment = FrameLayout(this).apply {
-                background = pillBackground()
-                clipChildren = false
-                clipToPadding = false
+        val twoRows = choices.size == 4
+        val columns = if (twoRows) 2 else choices.size
+        val grid = FrameLayout(this).apply {
+            background = pillBackground()
+            clipChildren = false
+            clipToPadding = false
+        }
+        val indicator = View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
+                cornerRadius = dp(999).toFloat()
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
             }
-            val optionsLine = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                setPadding(dp(4), dp(4), dp(4), dp(4))
-            }
-            val indicator = View(this).apply {
-                background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
-                    cornerRadius = dp(999).toFloat()
-                    setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
-                }
-                elevation = dp(1).toFloat()
-            }
-            val buttons = mutableListOf<TextView>()
-            fun boundsOf(button: TextView): Pair<Float, Float> =
-                Pair((optionsLine.left + button.left).toFloat(), button.width.toFloat())
-            fun paintLabels() {
-                buttons.forEach { button ->
-                    val active = button.tag == selected
-                    button.setTextColor(c(if (active) R.color.bg else R.color.mute))
-                    button.setTypeface(
-                        androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
-                        if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
-                    )
-                }
-            }
-            rowChoices.forEachIndexed { index, choice ->
-                val item = TextView(this).apply {
-                    text = choice
-                    tag = choice
-                    textSize = 13f
-                    isSingleLine = true
-                    includeFontPadding = false
+        }
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            elevation = dp(2).toFloat()
+        }
+        val buttons = mutableListOf<TextView>()
+        val buttonRows = choices.toList().chunked(columns)
+        buttonRows.forEachIndexed { rowIndex, rowChoices ->
+            val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            rowChoices.forEach { choice ->
+                val button = TextView(this).apply {
+                    text = choice; tag = choice
+                    textSize = 13f; isSingleLine = true; includeFontPadding = false
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setTextColor(c(if (choice == selected) R.color.bg else R.color.mute))
                     setPadding(dp(8), dp(10), dp(8), dp(10))
-                    isClickable = true
-                    isFocusable = true
+                    isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
                         if (choice == selected) return@setOnClickListener
                         selected = choice
                         prefs.edit().putString(key, choice).apply()
-                        paintLabels()
-                        SegmentStretch.animate(indicator, boundsOf(this), density, !motionEnabled(this@BrowsingActivity))
+                        buttons.forEach { b ->
+                            val active = b.tag == selected
+                            b.setTextColor(c(if (active) R.color.bg else R.color.mute))
+                            b.setTypeface(
+                                androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                                if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                            )
+                        }
+                        grid.post {
+                            moveSegmentIndicator(indicator, targetFor(button, line, column), !motionEnabled(this@BrowsingActivity))
+                        }
                     }
                 }
-                buttons.add(item)
-                optionsLine.addView(item, LinearLayout.LayoutParams(0, -2, 1f))
+                buttons.add(button)
+                line.addView(button, LinearLayout.LayoutParams(0, -2, 1f))
             }
-            segment.addView(indicator, FrameLayout.LayoutParams(0, -1).apply {
-                topMargin = dp(4)
-                bottomMargin = dp(4)
-            })
-            segment.addView(optionsLine, FrameLayout.LayoutParams(-1, -2))
-            row.addView(segment, LinearLayout.LayoutParams(-1, -2).apply {
+            if (rowChoices.size < columns) line.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
+            column.addView(line, LinearLayout.LayoutParams(-1, -2).apply {
                 if (rowIndex > 0) topMargin = dp(6)
             })
-            segment.post {
-                val active = buttons.firstOrNull { it.tag == selected }
-                if (active != null) SegmentStretch.place(indicator, boundsOf(active).first, boundsOf(active).second)
+        }
+        grid.addView(indicator, FrameLayout.LayoutParams(0, 0))
+        grid.addView(column, FrameLayout.LayoutParams(-1, -2))
+        fun paintChoiceLabels() {
+            buttons.forEach { b ->
+                val active = b.tag == selected
+                b.setTextColor(c(if (active) R.color.bg else R.color.mute))
+                b.setTypeface(
+                    androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                    if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                )
             }
         }
+        fun placeInitial() {
+            val active = buttons.firstOrNull { it.tag == selected } ?: return
+            val parentLine = active.parent as LinearLayout
+            val target = targetFor(active, parentLine, column)
+            val lp = indicator.layoutParams as FrameLayout.LayoutParams
+            lp.leftMargin = target.left; lp.topMargin = target.top
+            lp.width = target.width; lp.height = target.height
+            indicator.layoutParams = lp
+        }
+        paintChoiceLabels()
+        grid.post { placeInitial() }
+        row.addView(grid, LinearLayout.LayoutParams(-1, -2))
         parent.addView(row)
     }
+
+    private fun targetFor(button: View, line: View, column: View): SegmentTarget =
+        SegmentTarget(
+            column.left + line.left + button.left,
+            column.top + line.top + button.top,
+            button.width,
+            button.height
+        )
+
     private fun showCategoryPicker(summary: TextView) {
         val categories = listOf("For You", "Nature", "Wildlife", "Forest", "Mountains", "Ocean", "Travel", "Architecture", "Abstract")
-        val selected = prefs.getString("default_category", "For You") ?: "For You"
+        var selected = prefs.getString("default_category", "For You") ?: "For You"
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(16), dp(20), dp(14))
@@ -459,58 +508,86 @@ class BrowsingActivity : AppCompatActivity() {
         }
         panel.addView(label("Default category", 20f, R.color.fg, 0, 4, true))
         panel.addView(label("Choose your starting point", 12f, R.color.mute, 0, 12))
-        val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val grid = FrameLayout(this).apply { clipChildren = false; clipToPadding = false }
+        val indicator = View(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(withAlpha(c(R.color.accent), 0.92f), c(R.color.accent), withAlpha(c(R.color.accent), 0.96f))).apply {
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+            }
+        }
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            elevation = dp(2).toFloat()
+        }
+        val buttons = mutableListOf<TextView>()
         categories.chunked(2).forEachIndexed { rowIndex, pair ->
-            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-            pair.forEachIndexed { index, category ->
-                val active = category == selected
+            val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            pair.forEach { category ->
                 val option = TextView(this).apply {
-                    text = category
-                    textSize = 13f
-                    gravity = Gravity.CENTER
+                    text = category; tag = category
+                    textSize = 14f; gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-                    setTextColor(c(if (active) R.color.bg else R.color.fg))
-                    background = GradientDrawable().apply {
-                        cornerRadius = dp(16).toFloat()
-                        setColor(c(if (active) R.color.accent else R.color.surface))
-                        setStroke(dp(1), c(R.color.glassStroke))
-                    }
-                    setPadding(dp(8), dp(13), dp(8), dp(13))
+                    setPadding(dp(8), dp(14), dp(8), dp(14))
                     isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
+                        if (category == selected) return@setOnClickListener
+                        selected = category
                         prefs.edit().putString("default_category", category).apply()
                         summary.text = "Currently selected: $category"
-                        (tag as? androidx.appcompat.app.AlertDialog)?.dismiss()
+                        buttons.forEach { b ->
+                            val active = b.tag == selected
+                            b.setTextColor(c(if (active) R.color.bg else R.color.fg))
+                            b.setTypeface(
+                                androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                                if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                            )
+                        }
+                        grid.post {
+                            moveSegmentIndicator(indicator, targetFor(this, line, column), !motionEnabled(this@BrowsingActivity))
+                        }
                     }
                 }
-                row.addView(option, LinearLayout.LayoutParams(0, -2, 1f).apply {
-                    if (index > 0) leftMargin = dp(8)
+                buttons.add(option)
+                line.addView(option, LinearLayout.LayoutParams(0, -2, 1f).apply {
+                    if (line.childCount > 0) leftMargin = dp(8)
                 })
             }
-            if (pair.size == 1) row.addView(View(this), LinearLayout.LayoutParams(0, 1, 1f))
-            grid.addView(row, LinearLayout.LayoutParams(-1, -2).apply {
+            if (pair.size == 1) line.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
+            column.addView(line, LinearLayout.LayoutParams(-1, -2).apply {
                 if (rowIndex > 0) topMargin = dp(8)
             })
         }
+        grid.addView(indicator, FrameLayout.LayoutParams(0, 0))
+        grid.addView(column, FrameLayout.LayoutParams(-1, -2))
+        fun paintCategoryLabels() {
+            buttons.forEach { b ->
+                val active = b.tag == selected
+                b.setTextColor(c(if (active) R.color.bg else R.color.fg))
+                b.setTypeface(
+                    androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold),
+                    if (active) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL
+                )
+            }
+        }
+        paintCategoryLabels()
+        grid.post {
+            buttons.firstOrNull { it.tag == selected }?.let { active ->
+                val line = active.parent as LinearLayout
+                val target = targetFor(active, line, column)
+                val lp = indicator.layoutParams as FrameLayout.LayoutParams
+                lp.leftMargin = target.left; lp.topMargin = target.top
+                lp.width = target.width; lp.height = target.height
+                indicator.layoutParams = lp
+            }
+        }
         panel.addView(grid)
-        val dialog = androidx.appcompat.app.AlertDialog.Builder(this)
-            .setView(panel)
-            .setNegativeButton("Cancel", null)
-            .create()
+        val dialog = androidx.appcompat.app.AlertDialog.Builder(this).setView(panel).create()
         dialog.setOnShowListener {
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             val width = (resources.displayMetrics.widthPixels - dp(40)).coerceAtMost(dp(420))
             dialog.window?.setLayout(width, -2)
-            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_NEGATIVE)?.apply {
-                setTextColor(c(R.color.accent))
-                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
-            }
-            // Give each option access to the dialog for its click callback.
-            for (i in 0 until grid.childCount) {
-                val row = grid.getChildAt(i) as LinearLayout
-                for (j in 0 until row.childCount) row.getChildAt(j).tag = dialog
-            }
         }
         dialog.show()
     }
