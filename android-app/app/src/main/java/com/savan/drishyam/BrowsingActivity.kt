@@ -616,7 +616,7 @@ class BrowsingActivity : AppCompatActivity() {
             }
             val line = option.parent as? LinearLayout ?: return
             grid.post {
-                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(if (choices.size == 3) 8 else 16), dp(5)), !motionEnabled(this@BrowsingActivity))
+                moveSegmentIndicator(indicator, insetTarget(targetFor(option, line, column), dp(14), dp(5)), !motionEnabled(this@BrowsingActivity))
             }
         }
         val buttonRows = choices.toList().chunked(columns)
