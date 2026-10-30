@@ -692,7 +692,6 @@ class BrowsingActivity : AppCompatActivity() {
         }
         val width = (resources.displayMetrics.widthPixels - dp(40)).coerceAtMost(dp(420))
         overlay.addView(panelFrame, FrameLayout.LayoutParams(width, -2, Gravity.CENTER))
-        overlay.setOnClickListener { closeCategoryPopup() }
         panelFrame.setOnClickListener { /* Consume taps inside the popup. */ }
         dialog.setContentView(overlay)
         dialog.setCancelable(false)
