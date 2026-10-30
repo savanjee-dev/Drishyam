@@ -31,6 +31,16 @@ class UniversalBackgroundView @JvmOverloads constructor(context: Context, attrs:
         setWillNotDraw(false)
     }
 
+    /** Re-evaluate the shared Glass Effects preference immediately after it changes. */
+    fun refreshGlassLevel() {
+        if (!attached) { invalidate(); return }
+        Choreographer.getInstance().removeFrameCallback(this)
+        if (motionEnabled(context) && levelFactor() > 0f) {
+            Choreographer.getInstance().postFrameCallback(this)
+        }
+        invalidate()
+    }
+
     private fun levelFactor(): Float = when (glassLevel(context)) {
         "off" -> 0f
         "subtle" -> 0.42f
