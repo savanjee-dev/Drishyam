@@ -21,7 +21,10 @@ class BrowsingActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("drishyam_browsing", MODE_PRIVATE) }
     private val density get() = resources.displayMetrics.density
     private fun dp(value: Int) = (value * density).toInt()
+    private fun dp(value: Float) = (value * density).toInt()
     private fun c(id: Int) = ContextCompat.getColor(this, id)
+    private fun withAlpha(color: Int, alpha: Float): Int =
+        Color.argb((alpha.coerceIn(0f, 1f) * 255).toInt(), Color.red(color), Color.green(color), Color.blue(color))
     private var backgroundLayer: UniversalBackgroundView? = null
     private val ambientGlows = mutableListOf<View>()
     private val glassCards = mutableListOf<View>()
