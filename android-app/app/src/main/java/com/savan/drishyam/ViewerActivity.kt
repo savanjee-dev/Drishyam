@@ -210,7 +210,14 @@ class ViewerActivity : AppCompatActivity() {
         if (p.dl.isNotEmpty()) Thread { Api.ping(p.dl) }.start()
         Thread {
             try {
-                val bmp = Glide.with(applicationContext).asBitmap().load(p.full).submit(1440, 2960).get()
+                // Some Commons originals reject or time out on direct retrieval even
+                // when their preview is available. Retry the same image via its thumbnail.
+                val bmp = try {
+                    Glide.with(applicationContext).asBitmap().load(p.full).submit(1440, 2960).get()
+                } catch (originalError: Exception) {
+                    if (p.thumb.isBlank() || p.thumb == p.full) throw originalError
+                    Glide.with(applicationContext).asBitmap().load(p.thumb).submit(1440, 2960).get()
+                }
                 runOnUiThread { busy = false; done(bmp) }
             } catch (e: Exception) {
                 runOnUiThread { busy = false; toast(getString(R.string.download_fail)) }
