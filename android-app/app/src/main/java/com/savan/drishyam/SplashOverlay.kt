@@ -99,6 +99,14 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
             setImageResource(R.drawable.drishyam_logo)
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = "Drishyam"
+            // The source artwork has a rounded-square silhouette. Clip to that
+            // silhouette so transparent/antialiased edge pixels cannot form a dark fringe.
+            outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: android.graphics.Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dpf(24))
+                }
+            }
+            clipToOutline = true
             elevation = dpf(14)
             alpha = 0f
             scaleX = 0.55f
