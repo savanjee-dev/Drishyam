@@ -375,7 +375,9 @@ class BrowsingActivity : AppCompatActivity() {
             val selected = choice == current
             val item = TextView(this).apply {
                 text = choice
-                textSize = 11f
+                textSize = 10f
+                isSingleLine = true
+                includeFontPadding = false
                 gravity = Gravity.CENTER
                 setTextColor(c(if (selected) R.color.surface else R.color.fg))
                 background = GradientDrawable().apply {
@@ -383,7 +385,7 @@ class BrowsingActivity : AppCompatActivity() {
                     setColor(c(if (selected) R.color.accent else R.color.glassFill))
                     setStroke(dp(1), c(R.color.glassStroke))
                 }
-                setPadding(dp(10), dp(9), dp(10), dp(9))
+                setPadding(dp(5), dp(9), dp(5), dp(9))
                 isClickable = true; isFocusable = true
                 setOnClickListener {
                     prefs.edit().putString(key, choice).apply()
