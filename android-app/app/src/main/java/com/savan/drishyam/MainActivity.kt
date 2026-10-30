@@ -760,7 +760,7 @@ class MainActivity : AppCompatActivity() {
         statusGeneration++
         // Rotate through provider pages on each manual refresh (Openverse supports
         // five anonymous pages). The next refresh wraps back to page one.
-        cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page).let { if (it > 5) 1 else it }
+        cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page)
         cur.reset()
         cur.page = cur.refreshPage
         cur.forceFresh = true
@@ -830,9 +830,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                if (useOpenverse && added.isEmpty() && page <= 5) {
+                // Openverse anonymous pagination is capped at five pages. Keep its
+                // cursor independent from Wikimedia's longer-running search offset.
+                val openversePage = ((page - 1) % 5) + 1
+                if (useOpenverse && added.isEmpty()) {
                     try {
-                        val (photos, last) = Api.openverse(fallbackQuery, page)
+                        val (photos, last) = Api.openverse(fallbackQuery, openversePage)
                         val unseen = photos.filter { it.id !in s.seenIds }
                         if (unseen.isNotEmpty()) {
                             added.addAll(unseen)
@@ -863,9 +866,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 if (added.isEmpty()) {
-                    error = if (useOpenverse && !useWikimedia && !useUnsplash && page > 5) {
-                        "Openverse's anonymous browsing limit has been reached. Choose another enabled source or refresh."
-                    } else if (providerErrors.isNotEmpty()) {
+                    error = if (providerErrors.isNotEmpty()) {
                         "Home feed couldn't load. " + providerErrors.joinToString(" · ")
                     } else {
                         "Enabled photo sources returned no matching photos. Try another category or refresh."
