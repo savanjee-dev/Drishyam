@@ -166,19 +166,18 @@ class BrowsingActivity : AppCompatActivity() {
     }
 
     private fun attachBrowsingPress(enabled: Boolean) {
-        val glow = BrowsingTouchGlow()
-        foreground = glow
+        foreground = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.TRANSPARENT)
+        }
         setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 android.view.MotionEvent.ACTION_DOWN -> {
-                    glow.x = event.x
-                    glow.y = event.y
-                    glow.alpha = if (enabled) 0.55f else 0f
-                    view.animate().scaleX(0.94f).scaleY(0.94f).setDuration(90).start()
+                    view.animate().cancel()
+                    view.animate().scaleX(0.94f).scaleY(0.94f).alpha(if (enabled) 0.82f else 1f).setDuration(90).start()
                 }
                 android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                    view.animate().scaleX(1f).scaleY(1f).setDuration(220).start()
-                    glow.alpha = 0f
+                    view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(220).start()
                 }
             }
             false
