@@ -383,7 +383,7 @@ class BrowsingActivity : AppCompatActivity() {
         }
         val animator = android.animation.ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 340L
-            interpolator = android.view.animation.PathInterpolator(0.34f, 1.56f, 0.64f, 1f)
+            interpolator = android.view.animation.PathInterpolator(0.22f, 0.72f, 0.18f, 1f)
             addUpdateListener { value ->
                 val t = value.animatedValue as Float
                 val params = indicator.layoutParams as FrameLayout.LayoutParams
@@ -414,8 +414,9 @@ class BrowsingActivity : AppCompatActivity() {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(withAlpha(c(R.color.accent), 0.88f), c(R.color.accent), withAlpha(c(R.color.accent), 0.94f))).apply {
                 cornerRadius = dp(999).toFloat()
-                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.48f))
             }
+            elevation = dp(3).toFloat()
         }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -433,6 +434,12 @@ class BrowsingActivity : AppCompatActivity() {
                     gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
                     setPadding(dp(8), dp(10), dp(8), dp(10))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(999).toFloat()
+                        setColor(withAlpha(c(R.color.surface), 0.18f))
+                        setStroke(dp(1), withAlpha(c(R.color.glassStroke), 0.72f))
+                    }
+                    elevation = dp(1).toFloat()
                     isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
@@ -448,7 +455,7 @@ class BrowsingActivity : AppCompatActivity() {
                             )
                         }
                         grid.post {
-                            moveSegmentIndicator(indicator, targetFor(this, line, column), !motionEnabled(this@BrowsingActivity))
+                            moveSegmentIndicator(indicator, insetTarget(targetFor(this, line, column), dp(5), dp(4)), !motionEnabled(this@BrowsingActivity))
                         }
                     }
                 }
@@ -475,7 +482,7 @@ class BrowsingActivity : AppCompatActivity() {
         fun placeInitial() {
             val active = buttons.firstOrNull { it.tag == selected } ?: return
             val parentLine = active.parent as LinearLayout
-            val target = targetFor(active, parentLine, column)
+            val target = insetTarget(targetFor(active, parentLine, column), dp(5), dp(4))
             val lp = indicator.layoutParams as FrameLayout.LayoutParams
             lp.leftMargin = target.left; lp.topMargin = target.top
             lp.width = target.width; lp.height = target.height
@@ -486,6 +493,11 @@ class BrowsingActivity : AppCompatActivity() {
         row.addView(grid, LinearLayout.LayoutParams(-1, -2))
         parent.addView(row)
     }
+
+    private fun insetTarget(target: SegmentTarget, horizontal: Int, vertical: Int): SegmentTarget =
+        SegmentTarget(target.left + horizontal, target.top + vertical,
+            (target.width - horizontal * 2).coerceAtLeast(1),
+            (target.height - vertical * 2).coerceAtLeast(1))
 
     private fun targetFor(button: View, line: View, column: View): SegmentTarget =
         SegmentTarget(
@@ -514,8 +526,9 @@ class BrowsingActivity : AppCompatActivity() {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(withAlpha(c(R.color.accent), 0.92f), c(R.color.accent), withAlpha(c(R.color.accent), 0.96f))).apply {
                 cornerRadius = dp(16).toFloat()
-                setStroke(dp(1), withAlpha(Color.WHITE, 0.38f))
+                setStroke(dp(1), withAlpha(Color.WHITE, 0.48f))
             }
+            elevation = dp(3).toFloat()
         }
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -530,6 +543,12 @@ class BrowsingActivity : AppCompatActivity() {
                     textSize = 14f; gravity = Gravity.CENTER
                     typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
                     setPadding(dp(8), dp(14), dp(8), dp(14))
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(16).toFloat()
+                        setColor(withAlpha(c(R.color.surface), 0.12f))
+                        setStroke(dp(1), withAlpha(c(R.color.glassStroke), 0.72f))
+                    }
+                    elevation = dp(1).toFloat()
                     isClickable = true; isFocusable = true
                     pressFx()
                     setOnClickListener {
@@ -576,7 +595,7 @@ class BrowsingActivity : AppCompatActivity() {
         grid.post {
             buttons.firstOrNull { it.tag == selected }?.let { active ->
                 val line = active.parent as LinearLayout
-                val target = targetFor(active, line, column)
+                val target = insetTarget(targetFor(active, line, column), dp(5), dp(4))
                 val lp = indicator.layoutParams as FrameLayout.LayoutParams
                 lp.leftMargin = target.left; lp.topMargin = target.top
                 lp.width = target.width; lp.height = target.height
