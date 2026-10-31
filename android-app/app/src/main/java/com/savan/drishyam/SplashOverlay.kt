@@ -48,7 +48,7 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
         .getString("motion", "standard") == "reduced"
 
     private lateinit var centre: LinearLayout
-    private lateinit var logo: ImageView
+    private lateinit var logo: DrishyamLoaderView
     private lateinit var ring: View
     private lateinit var glow: View
     private lateinit var fill: View
@@ -94,27 +94,14 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
             }
             alpha = 0f
         }
-        wrap.addView(ring, FrameLayout.LayoutParams(dp(138), dp(138), Gravity.CENTER))
-        logo = ImageView(context).apply {
-            setImageResource(R.drawable.drishyam_logo)
-            scaleType = ImageView.ScaleType.FIT_CENTER
+        wrap.addView(ring, FrameLayout.LayoutParams(dp(138), dp(138), Gravity.        logo = DrishyamLoaderView(context).apply {
             contentDescription = "Drishyam"
-            // The source artwork has a rounded-square silhouette. Clip to that
-            // silhouette so transparent/antialiased edge pixels cannot form a dark fringe.
-            outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: android.graphics.Outline) {
-                    outline.setRoundRect(0, 0, view.width, view.height, dpf(24))
-                }
-            }
-            clipToOutline = true
-            elevation = dpf(14)
             alpha = 0f
             scaleX = 0.55f
             scaleY = 0.55f
-            rotation = -14f
         }
         wrap.addView(logo, FrameLayout.LayoutParams(dp(118), dp(118), Gravity.CENTER))
-        centre.addView(wrap, LinearLayout.LayoutParams(dp(138), dp(138)))
+        centre.addView(wrap, LinearLayout.LayoutParams(dp(138), dp(138)))dp(138)))
 
         val name = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         for (c in "Drishyam") {
@@ -181,7 +168,7 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
 
     private fun startAnimations() {
         if (reduced) {
-            logo.alpha = 1f; logo.scaleX = 1f; logo.scaleY = 1f; logo.rotation = 0f
+            logo.alpha = 1f; logo.scaleX = 1f; logo.scaleY = 1f
             letters.forEach { it.alpha = 1f; it.translationY = 0f }
             sig.alpha = 1f; tag.alpha = 1f; foot.alpha = 1f
             fill.layoutParams = FrameLayout.LayoutParams(dp(210), -1)
@@ -192,7 +179,7 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
             alpha = 0.6f + 0.4f * it
         }
         ringLoop()
-        logo.animate().alpha(1f).scaleX(1f).scaleY(1f).rotation(0f)
+        logo.animate().alpha(1f).scaleX(1f).scaleY(1f)
             .setStartDelay(200L).setDuration(1100L).setInterpolator(SPRING).start()
         letters.forEachIndexed { i, t ->
             t.animate().alpha(1f).translationY(0f).setStartDelay(1050L + i * 80L).setDuration(620L)
