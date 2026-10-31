@@ -810,7 +810,8 @@ class MainActivity : AppCompatActivity() {
         cur.done = false
         cur.after = ""
         cur.gen++
-        cur.page = if (cur.name == "For You") 1 else cur.refreshPage
+        // Every refresh restarts at the newest Commons results for this category.
+        cur.page = 1
         cur.forceFresh = true
         persistFeedCache(cur)
         adapter.data = cur.items
@@ -925,7 +926,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         fun publishRanked(limit: Int) {
                             val batch = candidates.withIndex()
-                                .sortedWith(compareBy<IndexedValue<Photo>> { orientationRank(it.value) }
+                                .sortedWith(compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                    .thenBy { orientationRank(it.value) }
                                     .thenBy { it.index })
                                 .take(limit)
                                 .map { it.value }
@@ -940,7 +942,8 @@ class MainActivity : AppCompatActivity() {
                                     // Re-rank the visible feed when new preferred-orientation
                                     // results arrive. Unknown dimensions remain fully eligible.
                                     val reordered = s.items.withIndex()
-                                        .sortedWith(compareBy<IndexedValue<Photo>> { orientationRank(it.value) }
+                                        .sortedWith(compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                            .thenBy { orientationRank(it.value) }
                                             .thenBy { it.index })
                                         .map { it.value }
                                     s.items.clear()
@@ -969,7 +972,8 @@ class MainActivity : AppCompatActivity() {
                             else if (attempts > 1 && candidates.isNotEmpty()) publishRanked(25)
                         }
                         val orderedCandidates = candidates.withIndex()
-                            .sortedWith(compareBy<IndexedValue<Photo>> { orientationRank(it.value) }
+                            .sortedWith(compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                .thenBy { orientationRank(it.value) }
                                 .thenBy { it.index })
                             .map { it.value }
                         for (photo in orderedCandidates) {
@@ -1040,11 +1044,13 @@ class MainActivity : AppCompatActivity() {
                     if (finished) s.done = true
                 }
                 val fresh = added.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
-                val start = s.items.size
                 s.items.addAll(fresh)
+                // Keep the entire feed in upload-date order, not provider-return order.
+                s.items.sortWith(compareByDescending<Photo> { it.publishedAt })
                 persistFeedCache(s)
                 if (s === cur && tab == 0) {
-                    adapter.notifyItemRangeInserted(start, fresh.size)
+                    adapter.data = s.items
+                    adapter.notifyDataSetChanged()
                     if (error != null) {
                         showTransientStatus(error + " " + getString(R.string.retry_suffix))
                     } else {
