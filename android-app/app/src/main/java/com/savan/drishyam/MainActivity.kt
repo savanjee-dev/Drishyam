@@ -319,8 +319,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun browsingSourcesSignature(): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
-        return listOf("source_wikimedia", "source_openverse", "source_unsplash")
+        val sources = listOf("source_wikimedia", "source_openverse", "source_unsplash")
             .joinToString("|") { key -> prefs.getBoolean(key, true).toString() }
+        return sources + "|" +
+            (prefs.getString("image_quality", "High") ?: "High") + "|" +
+            (prefs.getString("orientation", "Portrait") ?: "Portrait")
     }
 
     override fun onResume() {
@@ -839,11 +842,13 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
-                        // Build a diverse batch of up to 20. Limit each identified
-                        // photographer to two images; missing credits remain eligible.
-                        val photographerCounts = HashMap<String, Int>()
+                        // Prefer the selected orientation while retaining a small,
+                        // Resplash-style mix of other shapes. Unknown dimensions remain
+                        // eligible as secondary candidates instead of emptying the feed.
+                        val primaryPhotos = ArrayList<Photo>()
+                        val secondaryPhotos = ArrayList<Photo>()
                         var attempts = 0
-                        while (added.size < 20 && attempts < 6 && !finished) {
+                        while (primaryPhotos.size < 17 && attempts < 6 && !finished) {
                             val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality)
                             nextCommonsPage++
                             attempts++
@@ -855,32 +860,39 @@ class MainActivity : AppCompatActivity() {
                                 "Random" -> if ((s.discoveryIndex + attempts) % 2 == 0) "Portrait" else "Landscape"
                                 else -> "Portrait"
                             }
-                            val orientedPhotos = if (preferredOrientation == "Random") {
-                                photos.filter { photo ->
-                                    photo.width > 0 && photo.height > 0 &&
-                                        (if (orientationTarget == "Portrait") photo.height > photo.width
-                                         else photo.width > photo.height)
-                                }
-                            } else photos.filter { photo ->
-                                when (orientationTarget) {
-                                    "Portrait" -> photo.height > photo.width
-                                    "Landscape" -> photo.width > photo.height
+                            for (photo in photos) {
+                                if (photo.id in s.seenIds ||
+                                    primaryPhotos.any { it.id == photo.id } ||
+                                    secondaryPhotos.any { it.id == photo.id }) continue
+                                val isPrimary = when (orientationTarget) {
+                                    "Portrait" -> photo.height > photo.width && photo.width > 0
+                                    "Landscape" -> photo.width > photo.height && photo.height > 0
                                     "Square" -> photo.width > 0 && photo.height > 0 &&
-                                        kotlin.math.abs(photo.width - photo.height).toFloat() / maxOf(photo.width, photo.height) <= 0.12f
-                                    else -> true
+                                        kotlin.math.abs(photo.width - photo.height).toFloat() /
+                                        maxOf(photo.width, photo.height) <= 0.12f
+                                    else -> photo.height > photo.width && photo.width > 0
                                 }
+                                if (isPrimary) primaryPhotos.add(photo) else secondaryPhotos.add(photo)
                             }
-                            for (photo in orientedPhotos) {
-                                if (photo.id in s.seenIds || added.any { it.id == photo.id }) continue
-                                val author = photo.credit.trim().lowercase()
-                                val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
-                                if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
-                                added.add(photo)
-                                if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
-                                if (added.size >= 20) break
-                            }
+                            if (primaryPhotos.size >= 17 && secondaryPhotos.size >= 3) break
                         }
-                    } catch (e: Exception) {
+
+                        // Fill the preferred orientation first, then allow up to three
+                        // alternatives in a 20-photo batch. If Commons has too few
+                        // preferred results, use alternatives rather than showing an empty feed.
+                        val orderedCandidates = primaryPhotos.take(17) +
+                            secondaryPhotos.take(3) +
+                            primaryPhotos.drop(17) +
+                            secondaryPhotos.drop(3)
+                        val photographerCounts = HashMap<String, Int>()
+                        for (photo in orderedCandidates) {
+                            if (added.size >= 20) break
+                            val author = photo.credit.trim().lowercase()
+                            val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
+                            if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
+                            added.add(photo)
+                            if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
+                        }                    } catch (e: Exception) {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
                     }
                 }
