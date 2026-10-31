@@ -21,7 +21,8 @@ data class Photo(
     val width: Int = 0, val height: Int = 0, val published: String = "", val publishedAt: Long = 0L, val likes: Int = 0,
     val camera: String = "", val aperture: String = "", val focalLength: String = "",
     val shutterSpeed: String = "", val iso: String = "", val downloads: String = "",
-    val license: String = "", val licenseUrl: String = "", val creatorUrl: String = "", val source: String = ""
+    val license: String = "", val licenseUrl: String = "", val creatorUrl: String = "", val source: String = "",
+    val latitude: Double? = null, val longitude: Double? = null
 ) {
     fun toJson(): JSONObject = JSONObject().put("id", id).put("thumb", thumb).put("full", full)
         .put("title", title).put("credit", credit).put("link", link).put("dl", dl).put("color", color)
@@ -29,6 +30,7 @@ data class Photo(
         .put("aperture", aperture).put("focalLength", focalLength).put("shutterSpeed", shutterSpeed)
         .put("iso", iso).put("downloads", downloads).put("license", license)
         .put("licenseUrl", licenseUrl).put("creatorUrl", creatorUrl).put("source", source)
+        .put("latitude", latitude).put("longitude", longitude)
 
     companion object {
         fun from(o: JSONObject) = Photo(
@@ -37,7 +39,9 @@ data class Photo(
             o.optInt("width"), o.optInt("height"), o.optString("published"), o.optLong("publishedAt"), o.optInt("likes"), o.optString("camera"),
             o.optString("aperture"), o.optString("focalLength"), o.optString("shutterSpeed"),
             o.optString("iso"), o.optString("downloads"), o.optString("license"),
-            o.optString("licenseUrl"), o.optString("creatorUrl"), o.optString("source")
+            o.optString("licenseUrl"), o.optString("creatorUrl"), o.optString("source"),
+            if (o.has("latitude") && !o.isNull("latitude")) o.optDouble("latitude") else null,
+            if (o.has("longitude") && !o.isNull("longitude")) o.optDouble("longitude") else null
         )
     }
 }
@@ -198,7 +202,7 @@ object Api {
     }
 
     /** Public Wikimedia Commons search used for broad text searches and invalid custom photo topic names. */
-    fun commons(query: String, page: Int, quality: String = "High"): Pair<List<Photo>, Boolean> {
+    fun commons(query: String, page: Int, quality: String = "High", sort: String = "new"): Pair<List<Photo>, Boolean> {
         // Commons' bitmap filter includes drawings and illustrations. Bias feed
         // discovery toward files explicitly described as photographs, and avoid
         // appending the overly restrictive "wallpaper" term to every category query.
@@ -223,7 +227,11 @@ object Api {
         val previewParam = if (previewWidth > 0) "&iiurlwidth=$previewWidth" else ""
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
             java.net.URLEncoder.encode("filetype:bitmap $search", "UTF-8") +
-            "&gsrnamespace=6&gsrsort=create_timestamp_desc&gsrlimit=50&gsroffset=${(page - 1) * 50}" +
+            "&gsrnamespace=6" + (when (sort) {
+                "hot" -> "&gsrqiprofile=popular_inclinks_pv"
+                "top" -> "&gsrqiprofile=popular_inclinks"
+                else -> "&gsrsort=create_timestamp_desc"
+            }) + "&gsrlimit=50&gsroffset=${(page - 1) * 50}" +
             "&prop=imageinfo&iiprop=url|timestamp|extmetadata$previewParam&format=json&origin=*"
         val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/2.7.13 (https://github.com/savanjee-dev/Drishyam)")))
         val pages = root.optJSONObject("query")?.optJSONObject("pages") ?: JSONObject()
@@ -255,7 +263,9 @@ object Api {
                 license = metadata("LicenseShortName"),
                 licenseUrl = metadata("LicenseUrl"),
                 creatorUrl = Regex("href=[\\\"']([^\\\"']+)").find(artistHtml)?.groupValues?.getOrNull(1) ?: "",
-                source = "Wikimedia Commons"))
+                source = "Wikimedia Commons",
+                latitude = metadata("GPSLatitude").replace(",", ".").toDoubleOrNull(),
+                longitude = metadata("GPSLongitude").replace(",", ".").toDoubleOrNull()))
         }
         return Pair(out, pages.length() == 0 || out.isEmpty())
     }

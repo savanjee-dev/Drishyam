@@ -38,12 +38,11 @@ import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import android.content.res.ColorStateList
 
-class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false) {
+class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false, val sort: String = "hot") {
     val items = ArrayList<Photo>()
-    val ids = HashSet<String>()
-    // Keep recently displayed IDs across pull-to-refresh so repeated refreshes
-    // can skip overlapping provider results instead of showing the same photos.
-    val seenIds = HashSet<String>()
+    val ids = HashSet<String>() // IDs currently present in this session's feed.
+    val fetchedIds = HashSet<String>() // IDs received from the provider, whether displayed or not.
+    val seenIds = HashSet<String>() // Only IDs the user has actually viewed.
     var refreshPage = 1
     // Discovery rotation is specific to this feed and survives ordinary resets.
     var discoveryIndex = 0
@@ -59,7 +58,7 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     var forceFresh = false
 
     fun reset(clearHistory: Boolean = false) {
-        items.clear(); ids.clear()
+        items.clear(); ids.clear(); fetchedIds.clear()
         if (clearHistory) { seenIds.clear(); refreshPage = 1 }
         after = ""; page = 1; done = false; err = null; loading = false; refreshing = false; forceFresh = false
         gen++
@@ -116,7 +115,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sortNew: TextView
     private lateinit var sortTop: TextView
     private val adapter = PhotoAdapter()
-    private val sources = ArrayList<Source>()
+    private val sources = ArrayList<Source>() // Category definitions used by the chip row.
+    private val feedSessions = HashMap<String, Source>() // Independent category + sort sessions.
     private lateinit var cur: Source
     private var tab = 0
     private var savedMode = 0      // 0 = likes, 1 = bookmarks
@@ -228,7 +228,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, true, query))
-        cur = sources.first()
+        cur = sessionFor(sources.first(), currentSort())
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
         installScrollBounce(aboutScroll)
@@ -343,8 +343,14 @@ class MainActivity : AppCompatActivity() {
         var shouldResetFeed = previousSourcesSignature != null && sourcesSignature != previousSourcesSignature
         // Settings may have changed the default sort while this screen was paused.
         val s = currentSort()
-        if (s != shownSort) { shownSort = s; styleSort(); shouldResetFeed = true }
+        if (s != shownSort) {
+            shownSort = s
+            styleSort()
+            val category = sources.firstOrNull { it.name == cur.name } ?: cur
+            cur = sessionFor(category, s)
+        }
         if (shouldResetFeed) resetAll()
+        else if (tab == 0 && cur.items.isEmpty()) loadMore()
         if (tab == 1) refreshSaved() else adapter.notifyDataSetChanged()
     }
 
@@ -609,7 +615,25 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
         val signature = listOf("source_wikimedia", "source_openverse", "source_unsplash")
             .joinToString("_") { prefs.getBoolean(it, true).toString() }
-        return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + signature
+        return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + source.sort + "_" + signature
+    }
+
+    private fun seenCacheKey(source: Source) =
+        "seen_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + source.sort
+
+    private fun persistSeen(source: Source) {
+        getSharedPreferences("drishyam_feed_seen", Context.MODE_PRIVATE).edit()
+            .putStringSet(seenCacheKey(source), HashSet(source.seenIds)).apply()
+    }
+
+    private fun sessionFor(category: Source, sort: String): Source {
+        val key = category.name + "|" + sort + "|" + category.q
+        return feedSessions.getOrPut(key) {
+            Source(category.name, category.unsplash, category.q, category.searchOnly, sort).apply {
+                seenIds.addAll(getSharedPreferences("drishyam_feed_seen", Context.MODE_PRIVATE)
+                    .getStringSet(seenCacheKey(this), emptySet()) ?: emptySet())
+            }
+        }
     }
 
     private fun restoreCachedFeed(source: Source): Boolean {
@@ -622,7 +646,7 @@ class MainActivity : AppCompatActivity() {
                 val photo = Photo.from(array.getJSONObject(i))
                 if (source.ids.add(photo.id)) {
                     source.items.add(photo)
-                    source.seenIds.add(photo.id)
+                    source.fetchedIds.add(photo.id)
                 }
             }
             source.items.isNotEmpty()
@@ -638,8 +662,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun select(s: Source) {
-        cur = s
-        restoreCachedFeed(s)
+        cur = sessionFor(s, currentSort())
+        restoreCachedFeed(cur)
         styleChips()
         rv.scrollToPosition(0)
         showTab(0)
@@ -660,14 +684,20 @@ class MainActivity : AppCompatActivity() {
 
     private fun setSort(s: String) {
         if (s == currentSort()) {
-            // Tapping the already-selected sort is also a useful manual refresh.
             refreshCurrent()
             return
         }
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit().putString("sort", s).apply()
         shownSort = s
         styleSort()
-        resetAll()
+        val category = sources.firstOrNull { it.name == cur.name } ?: cur
+        cur = sessionFor(category, s)
+        restoreCachedFeed(cur)
+        adapter.data = cur.items
+        adapter.notifyDataSetChanged()
+        rv.scrollToPosition(0)
+        updateStatus()
+        if (cur.items.isEmpty()) loadMore()
     }
 
     private fun styleSort() {
@@ -704,7 +734,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun resetAll() {
-        sources.forEach { it.reset(clearHistory = true) }
+        feedSessions.values.forEach { it.reset(clearHistory = true) }
+        getSharedPreferences("drishyam_feed_seen", Context.MODE_PRIVATE).edit().clear().apply()
         if (tab == 0) {
             adapter.data = cur.items
             adapter.notifyDataSetChanged()
@@ -758,7 +789,7 @@ class MainActivity : AppCompatActivity() {
     private fun runSearch(q: String) {
         // Free-text search always uses Unsplash; photo topic names are no longer interpreted.
         sources.removeAll { it.extra || it.searchOnly || it.name == "Search" }
-        val src = Source("Search", true, q, false).apply { extra = true }
+        val src = Source("Search", true, q, false, currentSort()).apply { extra = true }
         sources.add(0, src)
         buildChips()
         select(src)
@@ -799,27 +830,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun refreshCurrent() {
-        if (tab != 0 || cur.loading) { swipe.isRefreshing = false; return }
+        if (tab != 0) { swipe.isRefreshing = false; return }
         transientStatus = null
         statusGeneration++
-        // Keep the currently visible collection on screen while discovering new photos.
-        // Seen IDs remain recorded so the refresh adds only genuinely new results.
-        restoreCachedFeed(cur)
-        cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page)
+        // A pull-to-refresh creates a fresh discovery session and replaces the
+        // visible collection. Keep only the history of photos actually viewed.
+        cur.items.clear()
+        cur.ids.clear()
+        cur.fetchedIds.clear()
         if (cur.name == "For You") cur.discoveryIndex++
         cur.loading = false
         cur.refreshing = true
         cur.err = null
         cur.done = false
         cur.after = ""
-        cur.gen++
-        // Every refresh restarts at the newest Commons results for this category.
         cur.page = 1
+        cur.gen++
         cur.forceFresh = true
-        persistFeedCache(cur)
+        getSharedPreferences("drishyam_feed_cache", Context.MODE_PRIVATE).edit()
+            .remove(feedCacheKey(cur)).apply()
         adapter.data = cur.items
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
+        updateStatus()
         loadMore()
     }
 
@@ -852,7 +885,7 @@ class MainActivity : AppCompatActivity() {
         val gen = s.gen
         val page = s.page
         val after = s.after
-        val sort = currentSort()
+        val sort = s.sort
         val forceFresh = s.forceFresh
         s.forceFresh = false
 
@@ -863,8 +896,8 @@ class MainActivity : AppCompatActivity() {
             var finished = false
             var error: String? = null
             val providerErrors = ArrayList<String>()
-            val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
-            val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
+            val query = s.q
+            val fallbackQuery = s.q
             val browsingPrefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
             val useWikimedia = browsingPrefs.getBoolean("source_wikimedia", true)
             val useOpenverse = browsingPrefs.getBoolean("source_openverse", true)
@@ -893,7 +926,7 @@ class MainActivity : AppCompatActivity() {
                             "waterfall river photography",
                             "architecture city photography"
                         )
-                        val commonsQuery = when (s.name) {
+                        val categoryQuery = when (s.name) {
                             "For You" -> forYouThemes[s.discoveryIndex % forYouThemes.size]
                             "Forest" -> "forest woodland photograph"
                             "Nature" -> "nature photograph"
@@ -910,6 +943,7 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
+                        val commonsQuery = categoryQuery
                         // Orientation is a preference, never a filter or quota.
                         // Deliver a small first group immediately, then improve ordering as
                         // more category-matched Commons results arrive.
@@ -929,16 +963,17 @@ class MainActivity : AppCompatActivity() {
                         }
                         fun publishRanked(limit: Int) {
                             val batch = candidates.withIndex()
-                                .sortedWith(compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
-                                    .thenBy { orientationRank(it.value) }
-                                    .thenBy { it.index })
+                                .sortedWith(if (sort == "new" || sort == "india") {
+                                    compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                        .thenBy { orientationRank(it.value) }.thenBy { it.index }
+                                } else compareBy<IndexedValue<Photo>> { it.index })
                                 .take(limit)
                                 .map { it.value }
                             if (batch.isEmpty()) return
                             runOnUiThread {
                                 if (gen != s.gen) return@runOnUiThread
                                 val fresh = batch.filter { photo ->
-                                    s.ids.add(photo.id) && s.seenIds.add(photo.id)
+                                    s.ids.add(photo.id) && photo.id !in s.seenIds
                                 }
                                 if (fresh.isNotEmpty()) {
                                     s.items.addAll(fresh)
@@ -951,10 +986,12 @@ class MainActivity : AppCompatActivity() {
                                     // Re-rank the visible feed when new preferred-orientation
                                     // results arrive. Unknown dimensions remain fully eligible.
                                     val reordered = s.items.withIndex()
-                                        .sortedWith(compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
-                                            .thenBy { orientationRank(it.value) }
-                                            .thenBy { it.index })
-                                        .map { it.value }
+                                        .let { indexed ->
+                                            if (sort == "new" || sort == "india") indexed.sortedWith(
+                                                compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                                    .thenBy { orientationRank(it.value) }.thenBy { it.index })
+                                            else indexed.toList()
+                                        }.map { it.value }
                                     s.items.clear()
                                     s.items.addAll(reordered)
                                     persistFeedCache(s)
@@ -966,12 +1003,16 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         while (attempts < 6 && !finished && candidates.size < 25) {
-                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality)
+                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality, sort)
                             nextCommonsPage++
                             attempts++
                             finished = last
                             for (photo in photos) {
-                                if (photo.id !in s.seenIds && candidateIds.add(photo.id)) {
+                                s.fetchedIds.add(photo.id)
+                                val inIndia = photo.latitude != null && photo.longitude != null &&
+                                    photo.latitude in 6.5..35.7 && photo.longitude in 68.0..97.5
+                                if (photo.id !in s.seenIds && photo.id !in s.ids &&
+                                    (sort != "india" || inIndia) && candidateIds.add(photo.id)) {
                                     candidates.add(photo)
                                 }
                             }
@@ -981,10 +1022,12 @@ class MainActivity : AppCompatActivity() {
                             else if (attempts > 1 && candidates.isNotEmpty()) publishRanked(25)
                         }
                         val orderedCandidates = candidates.withIndex()
-                            .sortedWith(compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
-                                .thenBy { orientationRank(it.value) }
-                                .thenBy { it.index })
-                            .map { it.value }
+                            .let { indexed ->
+                                if (sort == "new" || sort == "india") indexed.sortedWith(
+                                    compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                        .thenBy { orientationRank(it.value) }.thenBy { it.index })
+                                else indexed.toList()
+                            }.map { it.value }
                         for (photo in orderedCandidates) {
                             if (added.size >= 25) break
                             if (added.none { it.id == photo.id }) added.add(photo)
@@ -1053,10 +1096,14 @@ class MainActivity : AppCompatActivity() {
                     s.after = nextAfter
                     if (finished) s.done = true
                 }
-                val fresh = added.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
+                val fresh = added.filter { photo ->
+                    s.fetchedIds.add(photo.id)
+                    s.ids.add(photo.id) && photo.id !in s.seenIds
+                }
                 s.items.addAll(fresh)
-                // Keep the entire feed in upload-date order, not provider-return order.
-                s.items.sortWith(compareByDescending<Photo> { it.publishedAt })
+                if (sort == "new" || sort == "india") {
+                    s.items.sortWith(compareByDescending<Photo> { it.publishedAt })
+                }
                 persistFeedCache(s)
                 if (s === cur && tab == 0) {
                     adapter.data = s.items
@@ -1107,6 +1154,18 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: VH, pos: Int) {
             val p = data[pos]
+            val boundSession = cur
+            h.root.postDelayed({
+                val rect = android.graphics.Rect()
+                val position = h.bindingAdapterPosition
+                val visibleThreshold = minOf(h.root.height * 0.5f, resources.displayMetrics.heightPixels * 0.35f)
+                if (position != RecyclerView.NO_POSITION &&
+                    data.getOrNull(position)?.id == p.id &&
+                    h.root.height > 0 && h.root.getGlobalVisibleRect(rect) &&
+                    rect.height() >= visibleThreshold) {
+                    if (boundSession.seenIds.add(p.id)) persistSeen(boundSession)
+                }
+            }, 900L)
             h.lbl.text = "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
             h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             h.heart.contentDescription = getString(R.string.like_desc)
@@ -1151,6 +1210,7 @@ class MainActivity : AppCompatActivity() {
                 if (tab == 1) refreshSaved() else h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             }
             h.root.setOnClickListener {
+                if (boundSession.seenIds.add(p.id)) persistSeen(boundSession)
                 startActivity(Intent(this@MainActivity, ViewerActivity::class.java).putExtra("p", p.toJson().toString()))
             }
         }
