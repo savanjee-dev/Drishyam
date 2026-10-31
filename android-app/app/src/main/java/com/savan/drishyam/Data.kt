@@ -221,7 +221,7 @@ object Api {
         val previewParam = if (previewWidth > 0) "&iiurlwidth=$previewWidth" else ""
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
             java.net.URLEncoder.encode("filetype:bitmap $search", "UTF-8") +
-            "&gsrnamespace=6&gsrlimit=20&gsroffset=${(page - 1) * 20}&prop=imageinfo&iiprop=url|extmetadata$previewParam&format=json&origin=*"
+            "&gsrnamespace=6&gsrlimit=50&gsroffset=${(page - 1) * 50}&prop=imageinfo&iiprop=url|extmetadata$previewParam&format=json&origin=*"
         val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/2.7.13 (https://github.com/savanjee-dev/Drishyam)")))
         val pages = root.optJSONObject("query")?.optJSONObject("pages") ?: JSONObject()
         val out = ArrayList<Photo>()
