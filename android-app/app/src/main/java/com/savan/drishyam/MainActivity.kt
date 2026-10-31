@@ -666,7 +666,14 @@ class MainActivity : AppCompatActivity() {
                 if (source.ids.add(photo.id)) {
                     source.items.add(photo)
                     source.fetchedIds.add(photo.id)
-                    markWikimediaFetched(listOf(photo.id))
+                    val providerPrefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
+                    if (providerPrefs.getBoolean("source_wikimedia", true) &&
+                        !providerPrefs.getBoolean("source_openverse", true) &&
+                        !providerPrefs.getBoolean("source_unsplash", true)) {
+                        // With Wikimedia as the sole enabled provider, legacy cached IDs
+                        // can safely seed the persistent Commons exclusion history.
+                        markWikimediaFetched(listOf(photo.id))
+                    }
                 }
             }
             source.items.isNotEmpty()
