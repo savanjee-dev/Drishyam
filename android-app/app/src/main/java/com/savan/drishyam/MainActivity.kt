@@ -51,6 +51,8 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     var page = 1
     var done = false
     var loading = false
+    // True while a pull-to-refresh is discovering newer results; distinct from scroll prefetch.
+    var refreshing = false
     var err: String? = null
     var gen = 0          // bumps on reset so late results from an old sort are ignored
     var extra = false    // searched photo topics, removed when the next search runs
@@ -772,7 +774,7 @@ class MainActivity : AppCompatActivity() {
                 else -> ""
             }
             tab == 2 -> ""
-            cur.loading -> getString(R.string.loading_more)
+            cur.loading -> if (cur.refreshing) "Finding newer photos…" else getString(R.string.loading_more)
             transientStatus != null -> transientStatus!!
             cur.err != null -> cur.err + " " + getString(R.string.retry_suffix)
             cur.done -> getString(R.string.end_of_feed)
@@ -806,6 +808,7 @@ class MainActivity : AppCompatActivity() {
         cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page)
         if (cur.name == "For You") cur.discoveryIndex++
         cur.loading = false
+        cur.refreshing = true
         cur.err = null
         cur.done = false
         cur.after = ""
@@ -939,6 +942,12 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 if (fresh.isNotEmpty()) {
                                     s.items.addAll(fresh)
+                                    if (s.refreshing && s === cur) {
+                                        // Stop the pull-to-refresh spinner as soon as the first
+                                        // new group is visible; discovery can continue quietly.
+                                        swipe.isRefreshing = false
+                                        updateStatus()
+                                    }
                                     // Re-rank the visible feed when new preferred-orientation
                                     // results arrive. Unknown dimensions remain fully eligible.
                                     val reordered = s.items.withIndex()
@@ -1034,6 +1043,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 if (gen != s.gen) return@runOnUiThread   // sort or refresh happened meanwhile
                 s.loading = false
+                s.refreshing = false
                 swipe.isRefreshing = false
                 s.page = if (useWikimedia) nextCommonsPage else page + 1
                 if (error != null) {
