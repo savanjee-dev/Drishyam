@@ -68,6 +68,8 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
 class MainActivity : AppCompatActivity() {
 
     companion object {
+        private val WIKIMEDIA_FETCH_LOCK = Any()
+
         // Curated Unsplash categories only; no Reddit/photo topic sources are exposed in the UI.
         val PHOTO_CATEGORIES = listOf(
             "For You" to "cinematic nature landscape photography",
@@ -623,6 +625,21 @@ class MainActivity : AppCompatActivity() {
     private fun seenCacheKey(source: Source) =
         "seen_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + source.sort
 
+    // Wikimedia IDs are tracked independently of whether a photo was displayed or viewed.
+    // This history survives refreshes, category/sort changes, and app restarts.
+    private fun markWikimediaFetched(ids: Collection<String>): Set<String> {
+        if (ids.isEmpty()) return emptySet()
+        synchronized(WIKIMEDIA_FETCH_LOCK) {
+            val prefs = getSharedPreferences("drishyam_wikimedia_history", Context.MODE_PRIVATE)
+            val known = HashSet(prefs.getStringSet("fetched_ids", emptySet()) ?: emptySet())
+            val newlyFetched = ids.filter { it.isNotBlank() && known.add(it) }.toSet()
+            if (newlyFetched.isNotEmpty()) {
+                prefs.edit().putStringSet("fetched_ids", known).apply()
+            }
+            return newlyFetched
+        }
+    }
+
     private fun persistSeen(source: Source) {
         getSharedPreferences("drishyam_feed_seen", Context.MODE_PRIVATE).edit()
             .putStringSet(seenCacheKey(source), HashSet(source.seenIds)).apply()
@@ -649,6 +666,7 @@ class MainActivity : AppCompatActivity() {
                 if (source.ids.add(photo.id)) {
                     source.items.add(photo)
                     source.fetchedIds.add(photo.id)
+                    markWikimediaFetched(listOf(photo.id))
                 }
             }
             source.items.isNotEmpty()
@@ -835,8 +853,8 @@ class MainActivity : AppCompatActivity() {
         if (tab != 0) { swipe.isRefreshing = false; return }
         transientStatus = null
         statusGeneration++
-        // A pull-to-refresh creates a fresh discovery session and replaces the
-        // visible collection. Keep only the history of photos actually viewed.
+        // A pull-to-refresh replaces the visible collection, but never clears the
+        // persistent Wikimedia fetched-ID history. Previously returned photos stay excluded.
         cur.items.clear()
         cur.ids.clear()
         cur.fetchedIds.clear()
@@ -975,7 +993,7 @@ class MainActivity : AppCompatActivity() {
                             runOnUiThread {
                                 if (gen != s.gen) return@runOnUiThread
                                 val fresh = batch.filter { photo ->
-                                    s.ids.add(photo.id) && photo.id !in s.seenIds
+                                    s.ids.add(photo.id)
                                 }
                                 if (fresh.isNotEmpty()) {
                                     s.items.addAll(fresh)
@@ -1009,11 +1027,14 @@ class MainActivity : AppCompatActivity() {
                             nextCommonsPage++
                             attempts++
                             finished = last
+                            // Record every Commons result immediately, including photos
+                            // rejected by the current filter or never shown to the user.
+                            val globallyFreshIds = markWikimediaFetched(photos.map { it.id })
                             for (photo in photos) {
                                 s.fetchedIds.add(photo.id)
                                 val inIndia = photo.latitude != null && photo.longitude != null &&
                                     photo.latitude in 6.5..35.7 && photo.longitude in 68.0..97.5
-                                if (photo.id !in s.seenIds && photo.id !in s.ids &&
+                                if (photo.id in globallyFreshIds && photo.id !in s.ids &&
                                     (sort != "india" || inIndia) && candidateIds.add(photo.id)) {
                                     candidates.add(photo)
                                 }
