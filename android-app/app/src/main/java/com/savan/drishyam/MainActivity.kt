@@ -85,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private lateinit var atmosphere: GlowBackground
     private lateinit var rv: RecyclerView
     private lateinit var status: TextView
     private lateinit var statusPill: GlassLayout
@@ -119,6 +120,7 @@ class MainActivity : AppCompatActivity() {
         applyTheme(this)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        atmosphere = findViewById(R.id.atmosphere)
         // Match system-bar icon contrast to the active theme; keep Dark Mode unchanged.
         window.statusBarColor = ContextCompat.getColor(this, R.color.bg)
         @Suppress("DEPRECATION")
@@ -182,6 +184,7 @@ class MainActivity : AppCompatActivity() {
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, true, query))
         cur = sources.first()
+        atmosphere.setAtmosphere(cur.name)
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
         installScrollBounce(aboutScroll)
@@ -525,6 +528,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun select(s: Source) {
         cur = s
+        atmosphere.setAtmosphere(s.name)
         styleChips()
         rv.scrollToPosition(0)
         showTab(0)
