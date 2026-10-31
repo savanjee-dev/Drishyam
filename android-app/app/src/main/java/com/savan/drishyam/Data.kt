@@ -198,7 +198,7 @@ object Api {
     }
 
     /** Public Wikimedia Commons search used for broad text searches and invalid custom photo topic names. */
-    fun commons(query: String, page: Int): Pair<List<Photo>, Boolean> {
+    fun commons(query: String, page: Int, quality: String = "High"): Pair<List<Photo>, Boolean> {
         // Commons' bitmap filter includes drawings and illustrations. Bias feed
         // discovery toward files explicitly described as photographs, and avoid
         // appending the overly restrictive "wallpaper" term to every category query.
@@ -213,9 +213,15 @@ object Api {
                     .joinToString(" ")
             }
         }
+        val previewWidth = when (quality) {
+            "Standard" -> 480
+            "Raw" -> 0
+            else -> 1280
+        }
+        val previewParam = if (previewWidth > 0) "&iiurlwidth=$previewWidth" else ""
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
             java.net.URLEncoder.encode("filetype:bitmap $search", "UTF-8") +
-            "&gsrnamespace=6&gsrlimit=20&gsroffset=${(page - 1) * 20}&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=640&format=json&origin=*"
+            "&gsrnamespace=6&gsrlimit=20&gsroffset=${(page - 1) * 20}&prop=imageinfo&iiprop=url|extmetadata$previewParam&format=json&origin=*"
         val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/2.7.13 (https://github.com/savanjee-dev/Drishyam)")))
         val pages = root.optJSONObject("query")?.optJSONObject("pages") ?: JSONObject()
         val out = ArrayList<Photo>()
