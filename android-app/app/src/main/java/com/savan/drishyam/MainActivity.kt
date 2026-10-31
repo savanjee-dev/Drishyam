@@ -43,6 +43,8 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     // can skip overlapping provider results instead of showing the same photos.
     val seenIds = HashSet<String>()
     var refreshPage = 1
+    // Discovery rotation is specific to this feed and survives ordinary resets.
+    var discoveryIndex = 0
     var after = ""
     var page = 1
     var done = false
@@ -758,11 +760,12 @@ class MainActivity : AppCompatActivity() {
         if (tab != 0 || cur.loading) { swipe.isRefreshing = false; return }
         transientStatus = null
         statusGeneration++
-        // Rotate through provider pages on each manual refresh (Openverse supports
-        // five anonymous pages). The next refresh wraps back to page one.
+        // Rotate For You's discovery theme on every manual refresh. Start the
+        // new query at page one; seenIds prevents previously shown photos returning.
+        if (cur.name == "For You") cur.discoveryIndex++
         cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page)
         cur.reset()
-        cur.page = cur.refreshPage
+        cur.page = if (cur.name == "For You") 1 else cur.refreshPage
         cur.forceFresh = true
         adapter.data = cur.items
         adapter.notifyDataSetChanged()
@@ -803,8 +806,22 @@ class MainActivity : AppCompatActivity() {
                 // A disabled provider is never queried, including as a fallback.
                 if (useWikimedia && added.isEmpty()) {
                     try {
+                        val forYouThemes = listOf(
+                            "mountain landscape photography",
+                            "wildlife nature photography",
+                            "ocean coast photography",
+                            "forest nature photography",
+                            "aerial landscape photography",
+                            "macro nature photography",
+                            "desert landscape photography",
+                            "night sky astrophotography",
+                            "street travel photography",
+                            "flowers botanical photography",
+                            "waterfall river photography",
+                            "architecture city photography"
+                        )
                         val commonsQuery = when (s.name) {
-                            "For You" -> "nature landscape photograph"
+                            "For You" -> forYouThemes[s.discoveryIndex % forYouThemes.size]
                             "Forest" -> "forest woodland photograph"
                             "Nature" -> "nature photograph"
                             "Earth" -> "earth landscape photograph"
@@ -820,16 +837,24 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
-                        // A Commons page can overlap earlier results. Skip duplicate-only
-                        // pages in this same request instead of failing the whole refresh.
+                        // Build a diverse batch of up to 20. Limit each identified
+                        // photographer to two images; missing credits remain eligible.
+                        val photographerCounts = HashMap<String, Int>()
                         var attempts = 0
-                        while (added.isEmpty() && attempts < 6 && !finished) {
+                        while (added.size < 20 && attempts < 6 && !finished) {
                             val (photos, last) = Api.commons(commonsQuery, nextCommonsPage)
-                            val unseen = photos.filter { it.id !in s.seenIds }
                             nextCommonsPage++
                             attempts++
                             finished = last
-                            if (unseen.isNotEmpty()) added.addAll(unseen)
+                            for (photo in photos) {
+                                if (photo.id in s.seenIds || added.any { it.id == photo.id }) continue
+                                val author = photo.credit.trim().lowercase()
+                                val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
+                                if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
+                                added.add(photo)
+                                if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
+                                if (added.size >= 20) break
+                            }
                         }
                     } catch (e: Exception) {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
