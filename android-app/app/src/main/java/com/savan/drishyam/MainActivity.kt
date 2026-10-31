@@ -52,6 +52,8 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     var loading = false
     // True while a pull-to-refresh is discovering newer results; distinct from scroll prefetch.
     var refreshing = false
+    // Keep the previous grid until the first fresh refresh batch is ready to replace it.
+    var replaceOnRefreshResult = false
     var err: String? = null
     var gen = 0          // bumps on reset so late results from an old sort are ignored
     var extra = false    // searched photo topics, removed when the next search runs
@@ -60,7 +62,7 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     fun reset(clearHistory: Boolean = false) {
         items.clear(); ids.clear(); fetchedIds.clear()
         if (clearHistory) { seenIds.clear(); refreshPage = 1 }
-        after = ""; page = 1; done = false; err = null; loading = false; refreshing = false; forceFresh = false
+        after = ""; page = 1; done = false; err = null; loading = false; refreshing = false; replaceOnRefreshResult = false; forceFresh = false
         gen++
     }
 }
@@ -860,11 +862,11 @@ class MainActivity : AppCompatActivity() {
         if (tab != 0) { swipe.isRefreshing = false; return }
         transientStatus = null
         statusGeneration++
-        // A pull-to-refresh replaces the visible collection, but never clears the
-        // persistent Wikimedia fetched-ID history. Previously returned photos stay excluded.
-        cur.items.clear()
-        cur.ids.clear()
+        // Keep the current grid visible while fresh Wikimedia results are discovered.
+        // Replace it only when the first genuinely new batch is ready to display.
+        // Persistent fetched-ID history is never cleared by refresh.
         cur.fetchedIds.clear()
+        cur.replaceOnRefreshResult = true
         if (cur.name == "For You") cur.discoveryIndex++
         cur.loading = false
         cur.refreshing = true
@@ -874,8 +876,6 @@ class MainActivity : AppCompatActivity() {
         cur.page = 1
         cur.gen++
         cur.forceFresh = true
-        getSharedPreferences("drishyam_feed_cache", Context.MODE_PRIVATE).edit()
-            .remove(feedCacheKey(cur)).apply()
         adapter.data = cur.items
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
@@ -999,10 +999,14 @@ class MainActivity : AppCompatActivity() {
                             if (batch.isEmpty()) return
                             runOnUiThread {
                                 if (gen != s.gen) return@runOnUiThread
-                                val fresh = batch.filter { photo ->
-                                    s.ids.add(photo.id)
-                                }
-                                if (fresh.isNotEmpty()) {
+                                val freshCandidates = batch.filter { photo -> photo.id !in s.ids }
+                                if (freshCandidates.isNotEmpty()) {
+                                    if (s.replaceOnRefreshResult) {
+                                        s.items.clear()
+                                        s.ids.clear()
+                                        s.replaceOnRefreshResult = false
+                                    }
+                                    val fresh = freshCandidates.filter { photo -> s.ids.add(photo.id) }
                                     s.items.addAll(fresh)
                                     if (s.refreshing && s === cur) {
                                         // Stop the pull-to-refresh spinner as soon as the first
