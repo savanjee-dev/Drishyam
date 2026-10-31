@@ -214,9 +214,11 @@ object Api {
             }
         }
         val previewWidth = when (quality) {
-            "Standard" -> 480
-            "Raw" -> 0
-            else -> 1280
+            "Standard" -> 800
+            "High" -> 1600
+            // Raw opens the original in the viewer; feed tiles remain bounded at 1600px.
+            "Raw" -> 1600
+            else -> 1600
         }
         val previewParam = if (previewWidth > 0) "&iiurlwidth=$previewWidth" else ""
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
