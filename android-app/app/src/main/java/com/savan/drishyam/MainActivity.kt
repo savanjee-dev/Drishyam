@@ -892,7 +892,8 @@ class MainActivity : AppCompatActivity() {
                             if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
                             added.add(photo)
                             if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
-                        }                    } catch (e: Exception) {
+                        }
+                    } catch (e: Exception) {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
                     }
                 }
