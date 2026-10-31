@@ -631,7 +631,7 @@ class BrowsingActivity : AppCompatActivity() {
 
     private fun addChoiceRow(parent: LinearLayout, title: String, subtitle: String, key: String, choices: Array<String>, default: String) {
         if (key == "orientation" && choices.contentEquals(arrayOf("Portrait", "Landscape", "Random", "Square"))) {
-            addOrientationCards(parent, title, subtitle, key, choices, default)
+            addOrientationCards(parent, title, "Portrait is recommended by default; other orientations remain eligible and are never filtered out.", key, choices, default)
             return
         }
         var selected = prefs.getString(key, default) ?: default
@@ -640,7 +640,32 @@ class BrowsingActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(if (compactFourWay) 6 else 8), 0, dp(if (compactFourWay) 6 else 8))
         }
-        row.addView(label(title, 13f, R.color.fg, 0, 2, true))
+        if (key == "image_quality") {
+            val heading = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            heading.addView(label(title, 13f, R.color.fg, 0, 2, true),
+                LinearLayout.LayoutParams(0, -2, 1f))
+            val defaultTag = TextView(this).apply {
+                text = "HIGH · DEFAULT"
+                textSize = 9f
+                includeFontPadding = false
+                letterSpacing = 0.04f
+                setTextColor(c(R.color.accent))
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@BrowsingActivity, R.font.montserrat_semibold)
+                setPadding(dp(9), dp(5), dp(9), dp(5))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(999).toFloat()
+                    setColor(withAlpha(c(R.color.accent), 0.12f))
+                    setStroke(dp(1), withAlpha(c(R.color.accent), 0.28f))
+                }
+            }
+            heading.addView(defaultTag, LinearLayout.LayoutParams(-2, -2))
+            row.addView(heading)
+        } else {
+            row.addView(label(title, 13f, R.color.fg, 0, 2, true))
+        }
         row.addView(label(subtitle, 11f, R.color.mute, 0, if (compactFourWay) 6 else 8))
 
         val twoRows = choices.size == 4
