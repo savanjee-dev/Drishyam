@@ -542,6 +542,7 @@ class MainActivity : AppCompatActivity() {
         if (n == 1) {
             refreshSaved()
         } else {
+            restoreCachedFeed(cur)
             adapter.data = cur.items
             adapter.notifyDataSetChanged()
             updateStatus()
@@ -604,8 +605,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun feedCacheKey(source: Source): String {
+        val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
+        val signature = listOf("source_wikimedia", "source_openverse", "source_unsplash")
+            .joinToString("_") { prefs.getBoolean(it, true).toString() } +
+            "_" + (prefs.getString("orientation", "Portrait") ?: "Portrait")
+        return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + signature
+    }
+
+    private fun restoreCachedFeed(source: Source): Boolean {
+        if (source.items.isNotEmpty()) return true
+        return try {
+            val raw = getSharedPreferences("drishyam_feed_cache", Context.MODE_PRIVATE)
+                .getString(feedCacheKey(source), null) ?: return false
+            val array = org.json.JSONArray(raw)
+            for (i in 0 until array.length()) {
+                val photo = Photo.from(array.getJSONObject(i))
+                if (source.ids.add(photo.id)) {
+                    source.items.add(photo)
+                    source.seenIds.add(photo.id)
+                }
+            }
+            source.items.isNotEmpty()
+        } catch (_: Exception) { false }
+    }
+
+    private fun persistFeedCache(source: Source) {
+        if (source.items.isEmpty()) return
+        val array = org.json.JSONArray()
+        source.items.take(60).forEach { array.put(it.toJson()) }
+        getSharedPreferences("drishyam_feed_cache", Context.MODE_PRIVATE).edit()
+            .putString(feedCacheKey(source), array.toString()).apply()
+    }
+
     private fun select(s: Source) {
         cur = s
+        restoreCachedFeed(s)
         styleChips()
         rv.scrollToPosition(0)
         showTab(0)
@@ -768,13 +803,19 @@ class MainActivity : AppCompatActivity() {
         if (tab != 0 || cur.loading) { swipe.isRefreshing = false; return }
         transientStatus = null
         statusGeneration++
-        // Rotate For You's discovery theme on every manual refresh. Start the
-        // new query at page one; seenIds prevents previously shown photos returning.
-        if (cur.name == "For You") cur.discoveryIndex++
+        // Keep the currently visible collection on screen while discovering new photos.
+        // Seen IDs remain recorded so the refresh adds only genuinely new results.
+        restoreCachedFeed(cur)
         cur.refreshPage = maxOf(cur.refreshPage + 1, cur.page)
-        cur.reset()
+        if (cur.name == "For You") cur.discoveryIndex++
+        cur.loading = false
+        cur.err = null
+        cur.done = false
+        cur.after = ""
+        cur.gen++
         cur.page = if (cur.name == "For You") 1 else cur.refreshPage
         cur.forceFresh = true
+        persistFeedCache(cur)
         adapter.data = cur.items
         adapter.notifyDataSetChanged()
         rv.scrollToPosition(0)
@@ -894,6 +935,7 @@ class MainActivity : AppCompatActivity() {
                                 if (fresh.isNotEmpty()) {
                                     val start = s.items.size
                                     s.items.addAll(fresh)
+                                    persistFeedCache(s)
                                     if (s === cur && tab == 0) adapter.notifyItemRangeInserted(start, fresh.size)
                                 }
                             }
@@ -949,6 +991,7 @@ class MainActivity : AppCompatActivity() {
                                     if (fresh.isNotEmpty()) {
                                         val start = s.items.size
                                         s.items.addAll(fresh)
+                                        persistFeedCache(s)
                                         if (s === cur && tab == 0) adapter.notifyItemRangeInserted(start, fresh.size)
                                     }
                                 }
@@ -1010,7 +1053,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                if (added.isEmpty()) {
+                if (added.isEmpty() && s.items.isEmpty()) {
                     error = if (providerErrors.isNotEmpty()) {
                         "Home feed couldn't load. " + providerErrors.joinToString(" · ")
                     } else if (useWikimedia && !useOpenverse && !useUnsplash) {
@@ -1036,13 +1079,15 @@ class MainActivity : AppCompatActivity() {
                 val fresh = added.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
                 val start = s.items.size
                 s.items.addAll(fresh)
+                persistFeedCache(s)
                 if (s === cur && tab == 0) {
                     adapter.notifyItemRangeInserted(start, fresh.size)
                     if (error != null) {
                         showTransientStatus(error + " " + getString(R.string.retry_suffix))
                     } else {
                         val message = when {
-                            fresh.isNotEmpty() -> "Loaded ${fresh.size} photos"
+                            fresh.isNotEmpty() -> "Loaded ${fresh.size} new photos"
+                            s.items.isNotEmpty() -> "You're all caught up. Keeping your photos here."
                             s.done -> getString(R.string.end_of_feed)
                             else -> "No new photos returned"
                         }
