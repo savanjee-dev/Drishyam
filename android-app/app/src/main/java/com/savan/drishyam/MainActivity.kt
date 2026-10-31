@@ -348,6 +348,8 @@ class MainActivity : AppCompatActivity() {
             styleSort()
             val category = sources.firstOrNull { it.name == cur.name } ?: cur
             cur = sessionFor(category, s)
+            adapter.data = cur.items
+            rv.scrollToPosition(0)
         }
         if (shouldResetFeed) resetAll()
         else if (tab == 0 && cur.items.isEmpty()) loadMore()
@@ -594,7 +596,7 @@ class MainActivity : AppCompatActivity() {
         val onSurface = if (night) 0xFFE5E7D8.toInt() else 0xFF41483A.toInt()
         for (i in 0 until chips.childCount) {
             val item = chips.getChildAt(i) as? Chip ?: continue
-            val active = item.tag === cur
+            val active = (item.tag as? Source)?.name == cur.name
             item.chipBackgroundColor = ColorStateList.valueOf(if (active) selected else surface)
             item.setTextColor(if (active) onSelected else onSurface)
             item.chipStrokeWidth = if (active) 0f else 1.dp().toFloat()
