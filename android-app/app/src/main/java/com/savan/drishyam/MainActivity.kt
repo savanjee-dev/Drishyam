@@ -326,9 +326,7 @@ class MainActivity : AppCompatActivity() {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
         val sources = listOf("source_wikimedia", "source_openverse", "source_unsplash")
             .joinToString("|") { key -> prefs.getBoolean(key, true).toString() }
-        return sources + "|" +
-            (prefs.getString("image_quality", "High") ?: "High") + "|" +
-            (prefs.getString("orientation", "Portrait") ?: "Portrait")
+        return sources + "|" + (prefs.getString("image_quality", "High") ?: "High")
     }
 
     override fun onResume() {
@@ -608,8 +606,7 @@ class MainActivity : AppCompatActivity() {
     private fun feedCacheKey(source: Source): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
         val signature = listOf("source_wikimedia", "source_openverse", "source_unsplash")
-            .joinToString("_") { prefs.getBoolean(it, true).toString() } +
-            "_" + (prefs.getString("orientation", "Portrait") ?: "Portrait")
+            .joinToString("_") { prefs.getBoolean(it, true).toString() }
         return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + signature
     }
 
@@ -909,109 +906,75 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
-                        // Portrait mode is strict: only confirmed portrait dimensions count
-                        // toward the target. Unknown dimensions are alternatives, never primary.
-                        val primaryPhotos = ArrayList<Photo>()
-                        val secondaryPhotos = ArrayList<Photo>()
-                        val photographerCounts = HashMap<String, Int>()
+                        // Orientation is a preference, never a filter or quota.
+                        // Deliver a small first group immediately, then improve ordering as
+                        // more category-matched Commons results arrive.
+                        val candidates = ArrayList<Photo>()
+                        val candidateIds = HashSet<String>()
                         var attempts = 0
-                        fun publishEarlyPortraits() {
-                            if (added.size >= 8 || primaryPhotos.size < 8) return
-                            val first = ArrayList<Photo>()
-                            for (photo in primaryPhotos) {
-                                if (first.size >= 8) break
-                                val author = photo.credit.trim().lowercase()
-                                val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
-                                if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
-                                if (added.any { it.id == photo.id }) continue
-                                first.add(photo)
-                                if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
+                        fun orientationRank(photo: Photo): Int {
+                            if (photo.width <= 0 || photo.height <= 0) return 1
+                            if (preferredOrientation == "Random") return 0
+                            val ratio = photo.width.toFloat() / photo.height.toFloat()
+                            val matches = when (preferredOrientation) {
+                                "Landscape" -> ratio > 1.12f
+                                "Square" -> kotlin.math.abs(ratio - 1f) <= 0.12f
+                                else -> ratio < (1f / 1.12f)
                             }
-                            if (first.isEmpty()) return
-                            added.addAll(first)
+                            return if (matches) 0 else 2
+                        }
+                        fun publishRanked(limit: Int) {
+                            val batch = candidates.withIndex()
+                                .sortedWith(compareBy<IndexedValue<Photo>> { orientationRank(it.value) }
+                                    .thenBy { it.index })
+                                .take(limit)
+                                .map { it.value }
+                            if (batch.isEmpty()) return
                             runOnUiThread {
                                 if (gen != s.gen) return@runOnUiThread
-                                val fresh = first.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
+                                val fresh = batch.filter { photo ->
+                                    s.ids.add(photo.id) && s.seenIds.add(photo.id)
+                                }
                                 if (fresh.isNotEmpty()) {
-                                    val start = s.items.size
                                     s.items.addAll(fresh)
+                                    // Re-rank the visible feed when new preferred-orientation
+                                    // results arrive. Unknown dimensions remain fully eligible.
+                                    val reordered = s.items.withIndex()
+                                        .sortedWith(compareBy<IndexedValue<Photo>> { orientationRank(it.value) }
+                                            .thenBy { it.index })
+                                        .map { it.value }
+                                    s.items.clear()
+                                    s.items.addAll(reordered)
                                     persistFeedCache(s)
-                                    if (s === cur && tab == 0) adapter.notifyItemRangeInserted(start, fresh.size)
-                                }
-                            }
-                        }
-                        while (primaryPhotos.size < 22 && attempts < 6 && !finished) {
-                            val orientationQuery = if (preferredOrientation == "Portrait") "$commonsQuery portrait vertical" else commonsQuery
-                            val (photos, last) = Api.commons(orientationQuery, nextCommonsPage, imageQuality)
-                            nextCommonsPage++
-                            attempts++
-                            finished = last
-                            val orientationTarget = when (preferredOrientation) {
-                                "Portrait" -> "Portrait"
-                                "Landscape" -> "Landscape"
-                                "Square" -> "Square"
-                                "Random" -> if ((s.discoveryIndex + attempts) % 2 == 0) "Portrait" else "Landscape"
-                                else -> "Portrait"
-                            }
-                            for (photo in photos) {
-                                if (photo.id in s.seenIds ||
-                                    primaryPhotos.any { it.id == photo.id } ||
-                                    secondaryPhotos.any { it.id == photo.id }) continue
-                                val isPrimary = when (orientationTarget) {
-                                    "Portrait" -> photo.height > photo.width && photo.width > 0
-                                    "Landscape" -> photo.width > photo.height && photo.height > 0
-                                    "Square" -> photo.width > 0 && photo.height > 0 &&
-                                        kotlin.math.abs(photo.width - photo.height).toFloat() /
-                                        maxOf(photo.width, photo.height) <= 0.12f
-                                    else -> photo.height > photo.width && photo.width > 0
-                                }
-                                if (isPrimary) primaryPhotos.add(photo) else secondaryPhotos.add(photo)
-                            }
-                            publishEarlyPortraits()
-                            if (primaryPhotos.size >= 22 && secondaryPhotos.size >= 3) break
-                        }
-
-                        // If fewer than eight confirmed preferred-orientation photos were
-                        // found, do not hold the feed hostage: publish a smaller first group.
-                        if (added.isEmpty()) {
-                            val earlyPool = primaryPhotos + secondaryPhotos.take(3)
-                            for (photo in earlyPool) {
-                                if (added.size >= 8) break
-                                val author = photo.credit.trim().lowercase()
-                                val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
-                                if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
-                                added.add(photo)
-                                if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
-                            }
-                            if (added.isNotEmpty()) {
-                                val first = added.toList()
-                                runOnUiThread {
-                                    if (gen != s.gen) return@runOnUiThread
-                                    val fresh = first.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
-                                    if (fresh.isNotEmpty()) {
-                                        val start = s.items.size
-                                        s.items.addAll(fresh)
-                                        persistFeedCache(s)
-                                        if (s === cur && tab == 0) adapter.notifyItemRangeInserted(start, fresh.size)
+                                    if (s === cur && tab == 0) {
+                                        adapter.data = s.items
+                                        adapter.notifyDataSetChanged()
                                     }
                                 }
                             }
                         }
-
-                        // Aim for 22/25 confirmed preferred-orientation photos. At most
-                        // three alternatives are admitted; unknown dimensions never count
-                        // as confirmed portrait. Keep photographer diversity across partial
-                        // and final delivery.
-                        val orderedCandidates = primaryPhotos.take(22) + secondaryPhotos.take(3) +
-                            primaryPhotos.drop(22) + secondaryPhotos.drop(3)
+                        while (attempts < 6 && !finished && candidates.size < 25) {
+                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality)
+                            nextCommonsPage++
+                            attempts++
+                            finished = last
+                            for (photo in photos) {
+                                if (photo.id !in s.seenIds && candidateIds.add(photo.id)) {
+                                    candidates.add(photo)
+                                }
+                            }
+                            // First response is visible immediately; later responses can
+                            // add more photos and move preferred shapes ahead of alternatives.
+                            if (attempts == 1 && candidates.isNotEmpty()) publishRanked(8)
+                            else if (attempts > 1 && candidates.isNotEmpty()) publishRanked(25)
+                        }
+                        val orderedCandidates = candidates.withIndex()
+                            .sortedWith(compareBy<IndexedValue<Photo>> { orientationRank(it.value) }
+                                .thenBy { it.index })
+                            .map { it.value }
                         for (photo in orderedCandidates) {
                             if (added.size >= 25) break
-                            if (added.any { it.id == photo.id }) continue
-                            val author = photo.credit.trim().lowercase()
-                            val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
-                            if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
-                            added.add(photo)
-                            if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
+                            if (added.none { it.id == photo.id }) added.add(photo)
                         }
                     } catch (e: Exception) {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
