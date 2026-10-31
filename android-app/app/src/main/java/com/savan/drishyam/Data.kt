@@ -208,7 +208,7 @@ object Api {
             "amoledbackgrounds" -> "dark abstract photograph"
             "mobilewallpaper", "verticalwallpapers", "wallpapers" -> "mobile nature landscape photograph"
             else -> {
-                val terms = cleanQuery.split(Regex("\\s+")).filter { it.isNotBlank() }.take(3)
+                val terms = cleanQuery.split(Regex("\\s+")).filter { it.isNotBlank() }.take(5)
                 (terms + if (terms.none { it.equals("photograph", true) || it.equals("photography", true) }) listOf("photograph") else emptyList())
                     .joinToString(" ")
             }
