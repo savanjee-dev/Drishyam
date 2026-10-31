@@ -61,7 +61,7 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
     fun reset(clearHistory: Boolean = false) {
         items.clear(); ids.clear()
         if (clearHistory) { seenIds.clear(); refreshPage = 1 }
-        after = ""; page = 1; done = false; err = null; loading = false; forceFresh = false
+        after = ""; page = 1; done = false; err = null; loading = false; refreshing = false; forceFresh = false
         gen++
     }
 }
