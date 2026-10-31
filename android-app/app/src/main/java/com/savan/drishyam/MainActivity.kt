@@ -9,6 +9,8 @@ import android.graphics.RenderEffect
 import android.graphics.Shader
 import android.graphics.drawable.AnimationDrawable
 import android.net.Uri
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
@@ -243,7 +245,10 @@ class MainActivity : AppCompatActivity() {
                     setTopVisible(true)
                 }
                 val lm = r.layoutManager as LinearLayoutManager
-                if (dy > 0 && lm.findLastVisibleItemPosition() >= adapter.itemCount - 4) loadMore()
+                if (dy > 0) {
+                    val remaining = adapter.itemCount - lm.findLastVisibleItemPosition() - 1
+                    if (remaining <= 7 || remaining <= backgroundPrefetchThreshold()) loadMore()
+                }
             }
         })
 
@@ -776,6 +781,27 @@ class MainActivity : AppCompatActivity() {
         loadMore()
     }
 
+    // Keep a bounded ready-ahead buffer. Wi-Fi can prepare farther ahead;
+    // metered connections use a smaller buffer to conserve mobile data.
+    private fun backgroundPrefetchThreshold(): Int {
+        val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return 0
+        val network = manager.activeNetwork ?: return 0
+        val caps = manager.getNetworkCapabilities(network) ?: return 0
+        if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) ||
+            !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return 0
+        return if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) 40 else 12
+    }
+
+    private fun maybePrefetchFeed(source: Source) {
+        if (tab != 0 || source !== cur || source.loading || source.done || source.err != null) return
+        val threshold = backgroundPrefetchThreshold()
+        if (threshold <= 0) return
+        val lm = rv.layoutManager as? LinearLayoutManager ?: return
+        val lastVisible = lm.findLastVisibleItemPosition()
+        val remaining = adapter.itemCount - lastVisible - 1
+        if (remaining <= threshold) loadMore()
+    }
+
     private fun loadMore() {
         val s = cur
         if (tab != 0 || s.loading || s.done || s.err != null) return
@@ -848,7 +874,7 @@ class MainActivity : AppCompatActivity() {
                         val primaryPhotos = ArrayList<Photo>()
                         val secondaryPhotos = ArrayList<Photo>()
                         var attempts = 0
-                        while (primaryPhotos.size < 17 && attempts < 6 && !finished) {
+                        while (primaryPhotos.size < 21 && attempts < 3 && !finished) {
                             val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality)
                             nextCommonsPage++
                             attempts++
@@ -874,19 +900,19 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 if (isPrimary) primaryPhotos.add(photo) else secondaryPhotos.add(photo)
                             }
-                            if (primaryPhotos.size >= 17 && secondaryPhotos.size >= 3) break
+                            if (primaryPhotos.size >= 21 && secondaryPhotos.size >= 4) break
                         }
 
                         // Fill the preferred orientation first, then allow up to three
                         // alternatives in a 20-photo batch. If Commons has too few
                         // preferred results, use alternatives rather than showing an empty feed.
-                        val orderedCandidates = primaryPhotos.take(17) +
-                            secondaryPhotos.take(3) +
-                            primaryPhotos.drop(17) +
-                            secondaryPhotos.drop(3)
+                        val orderedCandidates = primaryPhotos.take(21) +
+                            secondaryPhotos.take(4) +
+                            primaryPhotos.drop(21) +
+                            secondaryPhotos.drop(4)
                         val photographerCounts = HashMap<String, Int>()
                         for (photo in orderedCandidates) {
-                            if (added.size >= 20) break
+                            if (added.size >= 25) break
                             val author = photo.credit.trim().lowercase()
                             val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
                             if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
@@ -971,8 +997,8 @@ class MainActivity : AppCompatActivity() {
                         }
                         showTransientStatus(message)
                     }
-                    // Avoid immediately chaining requests when the first page is shorter than the viewport.
-                    // Recursive loads made the status pill flash repeatedly.
+                    // Prepare a bounded buffer ahead without requiring the user to scroll.
+                    rv.post { maybePrefetchFeed(s) }
                 }
             }
         }.start()
