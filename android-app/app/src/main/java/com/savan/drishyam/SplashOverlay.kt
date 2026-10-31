@@ -94,14 +94,15 @@ class SplashOverlay private constructor(private val host: Activity) : FrameLayou
             }
             alpha = 0f
         }
-        wrap.addView(ring, FrameLayout.LayoutParams(dp(138), dp(138), Gravity.        logo = DrishyamLoaderView(context).apply {
+        wrap.addView(ring, FrameLayout.LayoutParams(dp(138), dp(138), Gravity.CENTER))
+        logo = DrishyamLoaderView(context).apply {
             contentDescription = "Drishyam"
             alpha = 0f
             scaleX = 0.55f
             scaleY = 0.55f
         }
         wrap.addView(logo, FrameLayout.LayoutParams(dp(118), dp(118), Gravity.CENTER))
-        centre.addView(wrap, LinearLayout.LayoutParams(dp(138), dp(138)))dp(138)))
+        centre.addView(wrap, LinearLayout.LayoutParams(dp(138), dp(138)))
 
         val name = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
         for (c in "Drishyam") {
