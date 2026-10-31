@@ -868,14 +868,39 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
-                        // Prefer the selected orientation while retaining a small,
-                        // Resplash-style mix of other shapes. Unknown dimensions remain
-                        // eligible as secondary candidates instead of emptying the feed.
+                        // Portrait mode is strict: only confirmed portrait dimensions count
+                        // toward the target. Unknown dimensions are alternatives, never primary.
                         val primaryPhotos = ArrayList<Photo>()
                         val secondaryPhotos = ArrayList<Photo>()
+                        val photographerCounts = HashMap<String, Int>()
                         var attempts = 0
-                        while (primaryPhotos.size < 21 && attempts < 3 && !finished) {
-                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality)
+                        fun publishEarlyPortraits() {
+                            if (added.size >= 8 || primaryPhotos.size < 8) return
+                            val first = ArrayList<Photo>()
+                            for (photo in primaryPhotos) {
+                                if (first.size >= 8) break
+                                val author = photo.credit.trim().lowercase()
+                                val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
+                                if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
+                                if (added.any { it.id == photo.id }) continue
+                                first.add(photo)
+                                if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
+                            }
+                            if (first.isEmpty()) return
+                            added.addAll(first)
+                            runOnUiThread {
+                                if (gen != s.gen) return@runOnUiThread
+                                val fresh = first.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
+                                if (fresh.isNotEmpty()) {
+                                    val start = s.items.size
+                                    s.items.addAll(fresh)
+                                    if (s === cur && tab == 0) adapter.notifyItemRangeInserted(start, fresh.size)
+                                }
+                            }
+                        }
+                        while (primaryPhotos.size < 22 && attempts < 6 && !finished) {
+                            val orientationQuery = if (preferredOrientation == "Portrait") "$commonsQuery portrait vertical" else commonsQuery
+                            val (photos, last) = Api.commons(orientationQuery, nextCommonsPage, imageQuality)
                             nextCommonsPage++
                             attempts++
                             finished = last
@@ -900,19 +925,45 @@ class MainActivity : AppCompatActivity() {
                                 }
                                 if (isPrimary) primaryPhotos.add(photo) else secondaryPhotos.add(photo)
                             }
-                            if (primaryPhotos.size >= 21 && secondaryPhotos.size >= 4) break
+                            publishEarlyPortraits()
+                            if (primaryPhotos.size >= 22 && secondaryPhotos.size >= 3) break
                         }
 
-                        // Fill the preferred orientation first, then allow up to three
-                        // alternatives in a 20-photo batch. If Commons has too few
-                        // preferred results, use alternatives rather than showing an empty feed.
-                        val orderedCandidates = primaryPhotos.take(21) +
-                            secondaryPhotos.take(4) +
-                            primaryPhotos.drop(21) +
-                            secondaryPhotos.drop(4)
-                        val photographerCounts = HashMap<String, Int>()
+                        // If fewer than eight confirmed preferred-orientation photos were
+                        // found, do not hold the feed hostage: publish a smaller first group.
+                        if (added.isEmpty()) {
+                            val earlyPool = primaryPhotos + secondaryPhotos.take(3)
+                            for (photo in earlyPool) {
+                                if (added.size >= 8) break
+                                val author = photo.credit.trim().lowercase()
+                                val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
+                                if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
+                                added.add(photo)
+                                if (hasAuthor) photographerCounts[author] = (photographerCounts[author] ?: 0) + 1
+                            }
+                            if (added.isNotEmpty()) {
+                                val first = added.toList()
+                                runOnUiThread {
+                                    if (gen != s.gen) return@runOnUiThread
+                                    val fresh = first.filter { s.ids.add(it.id) && s.seenIds.add(it.id) }
+                                    if (fresh.isNotEmpty()) {
+                                        val start = s.items.size
+                                        s.items.addAll(fresh)
+                                        if (s === cur && tab == 0) adapter.notifyItemRangeInserted(start, fresh.size)
+                                    }
+                                }
+                            }
+                        }
+
+                        // Aim for 22/25 confirmed preferred-orientation photos. At most
+                        // three alternatives are admitted; unknown dimensions never count
+                        // as confirmed portrait. Keep photographer diversity across partial
+                        // and final delivery.
+                        val orderedCandidates = primaryPhotos.take(22) + secondaryPhotos.take(3) +
+                            primaryPhotos.drop(22) + secondaryPhotos.drop(3)
                         for (photo in orderedCandidates) {
                             if (added.size >= 25) break
+                            if (added.any { it.id == photo.id }) continue
                             val author = photo.credit.trim().lowercase()
                             val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
                             if (hasAuthor && (photographerCounts[author] ?: 0) >= 2) continue
