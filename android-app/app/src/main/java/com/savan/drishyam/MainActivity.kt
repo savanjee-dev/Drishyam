@@ -798,6 +798,8 @@ class MainActivity : AppCompatActivity() {
             val useWikimedia = browsingPrefs.getBoolean("source_wikimedia", true)
             val useOpenverse = browsingPrefs.getBoolean("source_openverse", true)
             val useUnsplash = browsingPrefs.getBoolean("source_unsplash", true)
+            val imageQuality = browsingPrefs.getString("image_quality", "High") ?: "High"
+            val preferredOrientation = browsingPrefs.getString("orientation", "Portrait") ?: "Portrait"
 
             if (!useWikimedia && !useOpenverse && !useUnsplash) {
                 error = "No photo sources are enabled. Enable at least one source in Settings → Browsing."
@@ -842,11 +844,33 @@ class MainActivity : AppCompatActivity() {
                         val photographerCounts = HashMap<String, Int>()
                         var attempts = 0
                         while (added.size < 20 && attempts < 6 && !finished) {
-                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage)
+                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality)
                             nextCommonsPage++
                             attempts++
                             finished = last
-                            for (photo in photos) {
+                            val orientationTarget = when (preferredOrientation) {
+                                "Portrait" -> "Portrait"
+                                "Landscape" -> "Landscape"
+                                "Square" -> "Square"
+                                "Random" -> if ((s.discoveryIndex + attempts) % 2 == 0) "Portrait" else "Landscape"
+                                else -> "Portrait"
+                            }
+                            val orientedPhotos = if (preferredOrientation == "Random") {
+                                photos.filter { photo ->
+                                    photo.width > 0 && photo.height > 0 &&
+                                        (if (orientationTarget == "Portrait") photo.height > photo.width
+                                         else photo.width > photo.height)
+                                }
+                            } else photos.filter { photo ->
+                                when (orientationTarget) {
+                                    "Portrait" -> photo.height > photo.width
+                                    "Landscape" -> photo.width > photo.height
+                                    "Square" -> photo.width > 0 && photo.height > 0 &&
+                                        kotlin.math.abs(photo.width - photo.height).toFloat() / maxOf(photo.width, photo.height) <= 0.12f
+                                    else -> true
+                                }
+                            }
+                            for (photo in orientedPhotos) {
                                 if (photo.id in s.seenIds || added.any { it.id == photo.id }) continue
                                 val author = photo.credit.trim().lowercase()
                                 val hasAuthor = author.isNotBlank() && author != "wikimedia commons"
