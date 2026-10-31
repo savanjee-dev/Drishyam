@@ -223,7 +223,8 @@ object Api {
         val previewParam = if (previewWidth > 0) "&iiurlwidth=$previewWidth" else ""
         val url = "https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
             java.net.URLEncoder.encode("filetype:bitmap $search", "UTF-8") +
-            "&gsrnamespace=6&gsrlimit=50&gsroffset=${(page - 1) * 50}&prop=imageinfo&iiprop=url|extmetadata$previewParam&format=json&origin=*"
+            "&gsrnamespace=6&gsrsort=create_timestamp_desc&gsrlimit=50&gsroffset=${(page - 1) * 50}" +
+            "&prop=imageinfo&iiprop=url|timestamp|extmetadata$previewParam&format=json&origin=*"
         val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/2.7.13 (https://github.com/savanjee-dev/Drishyam)")))
         val pages = root.optJSONObject("query")?.optJSONObject("pages") ?: JSONObject()
         val out = ArrayList<Photo>()
@@ -242,10 +243,15 @@ object Api {
             val title = pageObj.optString("title", "Wallpaper").removePrefix("File:")
             val width = info.optInt("width", 0)
             val height = info.optInt("height", 0)
+            val uploadedAt = info.optString("timestamp", "")
+            val uploadedAtMillis = try { java.time.Instant.parse(uploadedAt).toEpochMilli() } catch (_: Exception) { 0L }
+            val uploadedDate = if (uploadedAtMillis > 0L)
+                java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(uploadedAtMillis))
+                else ""
             val pageUrl = "https://commons.wikimedia.org/wiki/" + java.net.URLEncoder.encode(pageObj.optString("title"), "UTF-8")
             out.add(Photo(pageObj.optString("pageid", title), thumb, original, title,
                 if (artist.isBlank()) "Wikimedia Commons" else artist,
-                pageUrl, "", 0xFF222222.toInt(), width, height,
+                pageUrl, "", 0xFF222222.toInt(), width, height, uploadedDate, uploadedAtMillis,
                 license = metadata("LicenseShortName"),
                 licenseUrl = metadata("LicenseUrl"),
                 creatorUrl = Regex("href=[\\\"']([^\\\"']+)").find(artistHtml)?.groupValues?.getOrNull(1) ?: "",
