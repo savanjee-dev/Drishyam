@@ -7,7 +7,7 @@
     <application
         android:enableOnBackInvokedCallback="true"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/drishyam_mark_launcher"
         android:label="Drishyam"
         android:theme="@style/Theme.Drishyam">
         <provider
