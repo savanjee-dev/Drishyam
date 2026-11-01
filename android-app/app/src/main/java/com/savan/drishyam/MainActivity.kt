@@ -35,7 +35,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import android.content.res.ColorStateList
 
-class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false, val provider: String = if (unsplash) "unsplash" else "commons") {
+class Source(val name: String, val q: String, val searchOnly: Boolean = false, val provider: String = "commons") {
     val items = ArrayList<Photo>()
     val ids = HashSet<String>()
     var after = ""
@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { showSortPopup() }
         }
 
-        for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, true, query))
+        for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, query))
         sources.add(Source("Space", false, "space exploration nebula galaxy", provider = "nasa"))
         sources.add(Source("Earth from Space", false, "Earth from space satellite", provider = "nasa"))
         sources.add(Source("Aurora", false, "aurora borealis", provider = "nasa"))
@@ -649,9 +649,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runSearch(q: String) {
-        // Free-text search always uses Unsplash; photo topic names are no longer interpreted.
+        // Free-text search uses Wikimedia Commons; photo topic names are no longer interpreted.
         sources.removeAll { it.extra || it.searchOnly || it.name == "Search" }
-        val src = Source("Search", true, q, false).apply { extra = true }
+        val src = Source("Search", q, false, "commons").apply { extra = true }
         sources.add(0, src)
         buildChips()
         select(src)
@@ -720,61 +720,46 @@ class MainActivity : AppCompatActivity() {
             var nextAfter = after
             var finished = false
             var error: String? = null
-            var unsplashError: String? = null
-            val query = if (sort == "india" && s.name != "Search" && s.provider == "unsplash") "India photography" else s.q
-            val fallbackQuery = if (sort == "india" && s.name != "Search" && s.provider == "unsplash") "India landscape monument architecture" else s.q
+            var sourceError: String? = null
+            val commonsQuery = if (sort == "india" && s.name != "Search" && s.provider == "commons")
+                "India landscape monument architecture" else s.q
             try {
-                if (s.provider == "nasa") {
-                    val (list, last) = Api.nasa(s.q, page)
-                    if (list.isNotEmpty()) {
-                        finished = last
-                        added.addAll(list)
-                    } else {
-                        unsplashError = "NASA returned no suitable images."
+                when (s.provider) {
+                    "nasa" -> {
+                        val (list, last) = Api.nasa(s.q, page)
+                        if (list.isNotEmpty()) { finished = last; added.addAll(list) }
+                        else sourceError = "NASA returned no suitable images."
                     }
-                } else if (s.provider == "nexwall") {
-                    val nexSort = when (sort) {
-                        "top", "hot" -> "popular"
-                        "new" -> "newest"
-                        else -> "newest"
+                    "nexwall" -> {
+                        val nexSort = when (sort) {
+                            "top", "hot" -> "popular"
+                            "new" -> "newest"
+                            else -> "newest"
+                        }
+                        val (list, last) = Api.nexwall(s.q, page, nexSort)
+                        if (list.isNotEmpty()) { finished = last; added.addAll(list) }
+                        else sourceError = "NexWall returned no suitable images."
                     }
-                    val (list, last) = Api.nexwall(s.q, page, nexSort)
-                    if (list.isNotEmpty()) {
-                        finished = last
-                        added.addAll(list)
-                    } else {
-                        unsplashError = "NexWall returned no suitable images."
-                    }
-                } else {
-                    val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
-                    if (list.isNotEmpty()) {
-                        finished = last
-                        added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
-                    } else {
-                        // HTTP 200 with an empty results array is still a feed failure; try the backup source.
-                        unsplashError = "Unsplash returned no photos."
+                    else -> {
+                        val (list, last) = Api.commons(commonsQuery, page)
+                        if (list.isNotEmpty()) { finished = last; added.addAll(list) }
+                        else sourceError = "Wikimedia Commons returned no suitable photographs."
                     }
                 }
             } catch (e: Exception) {
-                unsplashError = e.message ?: "Photo service unavailable."
+                sourceError = e.message ?: "Photo service unavailable."
             }
 
-            // Try Wikimedia Commons both when Unsplash errors and when it returns an empty feed.
             if (added.isEmpty()) {
-                try {
-                    val (fallbackPhotos, fallbackLast) = Api.commons(fallbackQuery, page)
-                    if (fallbackPhotos.isEmpty()) throw Exception("No backup photos returned.")
-                    added.addAll(fallbackPhotos)
-                    finished = fallbackLast
-                } catch (fallbackError: Exception) {
-                    val m = unsplashError ?: "Unsplash returned no photos."
-                    error = when {
-                        m.contains("429") -> "Unsplash is temporarily rate-limiting requests and backup photos are unavailable. Please retry."
-                        m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied the request and backup photos could not load. Check the connection and retry."
-                        m.contains("404") -> "This feed was not found and backup photos could not load."
-                        m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet and retry."
-                        else -> "Photo services are temporarily unavailable ($m). Please retry."
-                    }
+                val message = sourceError ?: "No photographs were returned."
+                error = when {
+                    message.contains("UnknownHost") || message.contains("timeout", true) ||
+                        message.contains("Unable to resolve", true) ->
+                        "Network unavailable. Check your internet and retry."
+                    message.contains("403") || message.contains("Forbidden", true) ->
+                        "The selected photo source denied the request. Please retry."
+                    message.contains("404") -> "This photo collection was not found. Please retry."
+                    else -> "Photo services are temporarily unavailable ($message). Please retry."
                 }
             }
 
