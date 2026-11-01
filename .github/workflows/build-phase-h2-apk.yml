@@ -2,6 +2,11 @@ name: Phase H2 Candidate APK (No Release)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - phase-h2-splash-home-transition-fixed
+    paths:
+      - .github/workflows/build-phase-h2-apk.yml
 
 permissions:
   contents: read
