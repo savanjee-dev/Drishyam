@@ -35,5 +35,6 @@
         <activity android:name=".WhatsNewActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
         <activity android:name=".ViewerActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
         <activity android:name=".FullscreenActivity" android:exported="false" android:theme="@style/Theme.Drishyam.Portal" />
-    </application>
+        <activity android:name=".SearchActivity" android:exported="false" />
+</application>
 </manifest>
