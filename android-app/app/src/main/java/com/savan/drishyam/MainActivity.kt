@@ -122,6 +122,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var glassTop: GlassLayout
     private lateinit var glassNav: GlassLayout
     private lateinit var overlay: View
+    private lateinit var navIndicator: View
+    private lateinit var navItemsRow: LinearLayout
+    private lateinit var edgeTop: View
+    private lateinit var edgeBottom: View
     private lateinit var segFav: TextView
     private lateinit var segBook: TextView
     private lateinit var homeHeaderAdapter: HomeHeaderAdapter
@@ -181,6 +185,10 @@ class MainActivity : AppCompatActivity() {
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
         overlay = findViewById(R.id.overlay)
+        navIndicator = findViewById(R.id.navIndicator)
+        navItemsRow = findViewById(R.id.navItemsRow)
+        edgeTop = findViewById(R.id.edgeTop)
+        edgeBottom = findViewById(R.id.edgeBottom)
 
         // Keep the glass header below status-bar icons while the animated page background
         // remains visible behind the transparent system bar.
@@ -235,6 +243,7 @@ class MainActivity : AppCompatActivity() {
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(r: RecyclerView, dx: Int, dy: Int) {
                 pokeGlass()
+                pulseEdgeFade()
                 if (tab == 0 && dy > 3) {
                     setNavVisible(false)
                 } else if (dy < -1) {
@@ -518,6 +527,36 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- Floating glass bars ----------
 
+    private fun moveNavIndicator(index: Int, animate: Boolean) {
+        if (index !in 0 until navItemsRow.childCount) {
+            navIndicator.animate().cancel()
+            navIndicator.alpha = 0f
+            return
+        }
+        val target = navItemsRow.getChildAt(index)
+        val left = navItemsRow.left + target.left
+        val width = target.width
+        if (width <= 0) return
+        navIndicator.alpha = 1f
+        if (animate && navIndicator.width > 0) {
+            SegmentStretch.animate(navIndicator, Pair(left.toFloat(), width.toFloat()),
+                resources.displayMetrics.density, !motionEnabled(this))
+        } else {
+            SegmentStretch.place(navIndicator, left.toFloat(), width.toFloat())
+        }
+    }
+
+    private fun pulseEdgeFade() {
+        listOf(edgeTop, edgeBottom).forEach { edge ->
+            edge.animate().cancel()
+            edge.visibility = View.VISIBLE
+            edge.alpha = 1f
+            edge.animate().alpha(0f).setStartDelay(180L).setDuration(350L)
+                .withEndAction { edge.visibility = View.GONE }
+                .start()
+        }
+    }
+
     private fun pokeGlass() {
         glassTop.poke()
         glassNav.poke()
@@ -665,7 +704,7 @@ class MainActivity : AppCompatActivity() {
         listOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3).forEachIndexed { i, id ->
             val v = findViewById<ImageView>(id)
             val on = i == selectedNav
-            v.background = if (on) ContextCompat.getDrawable(this, R.drawable.accent_pill) else null
+            v.background = null
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             val iconColor = when {
                 on && night -> 0xFF0A0D08.toInt()
@@ -689,10 +728,9 @@ class MainActivity : AppCompatActivity() {
                 2 -> R.id.navItem2
                 else -> R.id.navItem3
             }
-            findViewById<View>(itemId).setBackgroundResource(
-                if (on) R.drawable.glass_pill else android.R.color.transparent
-            )
+            findViewById<View>(itemId).setBackgroundResource(android.R.color.transparent)
         }
+        navItemsRow.post { moveNavIndicator(selectedNav, true) }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
         glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
