@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="2dp"
+    android:paddingEnd="2dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <LinearLayout
+        android:id="@+id/brandRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/headerLogo"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:contentDescription="Drishyam logo"
+            android:padding="4dp"
+            android:src="@drawable/drishyam_mark"
+            android:tint="?attr/colorOnSurface" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:layout_marginStart="12dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top|start"
+                android:fontFamily="@font/ericaone"
+                android:includeFontPadding="false"
+                android:text="Drishyam"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="30sp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:fontFamily="@font/pacifico_regular"
+                android:text="by Savan"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp" />
+        </FrameLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <FrameLayout
+            android:id="@+id/settingsButton"
+            android:layout_width="46dp"
+            android:layout_height="46dp"
+            android:background="@drawable/glass_pill"
+            android:clickable="true"
+            android:contentDescription="Settings"
+            android:focusable="true">
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_settings"
+                android:tint="?attr/colorOnSurface" />
+        </FrameLayout>
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="20dp"
+        android:fontFamily="@font/poppins_semibold"
+        android:letterSpacing="0.16"
+        android:text="PHOTOGRAPHY, SLOWED DOWN"
+        android:textColor="?attr/colorPrimary"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="6dp"
+        android:fontFamily="@font/poppins_extrabold"
+        android:includeFontPadding="false"
+        android:text="Explore"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="34sp" />
+
+    <LinearLayout
+        android:id="@+id/searchBar"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/glass_pill"
+        android:clickable="true"
+        android:focusable="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:src="@drawable/ic_search"
+            android:tint="?attr/colorOnSurfaceVariant" />
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:fontFamily="@font/poppins_medium"
+            android:text="Search forest, hiking, night sky"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/sortBar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="14dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/glass_pill"
+        android:padding="4dp">
+
+        <View
+            android:id="@+id/sortIndicator"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="top|start"
+            android:background="@drawable/accent_pill" />
+
+        <LinearLayout
+            android:id="@+id/sortButtons"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <TextView
+                android:id="@+id/sortHot"
+                style="@style/Segment"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:gravity="center"
+                android:text="Hot" />
+            <TextView
+                android:id="@+id/sortNew"
+                style="@style/Segment"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:gravity="center"
+                android:text="Latest" />
+            <TextView
+                android:id="@+id/sortTop"
+                style="@style/Segment"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:gravity="center"
+                android:text="Top" />
+            <TextView
+                android:id="@+id/sortIndia"
+                style="@style/Segment"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@android:color/transparent"
+                android:gravity="center"
+                android:text="India" />
+        </LinearLayout>
+    </FrameLayout>
+</LinearLayout>
