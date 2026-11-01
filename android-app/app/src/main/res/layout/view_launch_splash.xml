@@ -15,59 +15,6 @@
         android:layout_gravity="center"
         android:background="@drawable/splash_glow" />
 
-on="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/splashRoot"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/splash_radial_background"
-    android:clickable="true"
-    android:focusable="true"
-    android:importantForAccessibility="yes">
-
-    <View
-        android:id="@+id/splashAmbientGlow"
-        android:layout_width="460dp"
-        android:layout_height="460dp"
-        android:layout_gravity="center"
-        android:background="@drawable/splash_glow" />
-
-ion="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/splashRoot"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/splash_radial_background"
-    android:clickable="true"
-    android:focusable="true"
-    android:importantForAccessibility="yes">
-
-    <View
-        android:id="@+id/splashAmbientGlow"
-        android:layout_width="460dp"
-        android:layout_height="460dp"
-        android:layout_gravity="center"
-        android:background="@drawable/splash_glow" />
-
-on="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/splashRoot"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/splash_radial_background"
-    android:clickable="true"
-    android:focusable="true"
-    android:importantForAccessibility="yes">
-
-    <View
-        android:id="@+id/splashAmbientGlow"
-        android:layout_width="460dp"
-        android:layout_height="460dp"
-        android:layout_gravity="center"
-        android:background="@drawable/splash_glow" />
-
-
-
     <LinearLayout
         android:id="@+id/splashContent"
         android:layout_width="match_parent"
@@ -84,6 +31,7 @@ on="1.0" encoding="utf-8"?>
             android:layout_height="160dp"
             android:clipChildren="false"
             android:clipToPadding="false">
+
             <View
                 android:id="@+id/splashRing"
                 android:layout_width="138dp"
@@ -91,6 +39,7 @@ on="1.0" encoding="utf-8"?>
                 android:layout_gravity="center"
                 android:background="@drawable/splash_ring"
                 android:alpha="0" />
+
             <ImageView
                 android:id="@+id/splashLogo"
                 android:layout_width="118dp"
