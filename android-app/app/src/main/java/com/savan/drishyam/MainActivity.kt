@@ -32,6 +32,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -497,6 +498,7 @@ class MainActivity : AppCompatActivity() {
         if (displaySort != shownSort) {
             shownSort = displaySort
             styleSort()
+            if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.placeSelectedIndicator(false)
             val category = sources.firstOrNull { it.name == cur.name } ?: cur
             cur = sessionFor(category, s)
             adapter.data = cur.items
@@ -788,7 +790,6 @@ class MainActivity : AppCompatActivity() {
         shownSort = s
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
             .putString("sort", s).putString("sort_display", s).apply()
-        styleSort()
         if (s == previous) { refreshCurrent(); return }
         val category = sources.firstOrNull { it.name == cur.name } ?: cur
         cur = sessionFor(category, s)
@@ -805,7 +806,6 @@ class MainActivity : AppCompatActivity() {
         shownSort = "india"
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
             .putString("sort", "hot").putString("sort_display", "india").apply()
-        styleSort()
         val category = sources.firstOrNull { it.name == cur.name } ?: cur
         cur = sessionFor(category, "hot")
         restoreCachedFeed(cur)
@@ -841,7 +841,12 @@ class MainActivity : AppCompatActivity() {
                     isClickable = true
                     isFocusable = true
                     pressFx()
-                    setOnClickListener { close(); setSort(key) }
+                    setOnClickListener {
+                        close()
+                        setSort(key)
+                        styleSort()
+                        if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.placeSelectedIndicator(false)
+                    }
                 }, LinearLayout.LayoutParams(-1, 44.dp()).apply { topMargin = 5.dp() })
             }
         }
@@ -1214,7 +1219,7 @@ class MainActivity : AppCompatActivity() {
                     pressFx()
                     setOnClickListener {
                         if (key == "india") setIndiaSort() else setSort(key)
-                        styleSort()
+                        this@MainActivity.styleSort()
                         moveIndicator(true)
                     }
                 }
@@ -1239,8 +1244,9 @@ class MainActivity : AppCompatActivity() {
                     if (button === selected) R.color.bg else R.color.mute))
                 button?.background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
             }
-            moveIndicator(false)
         }
+
+        fun placeSelectedIndicator(animate: Boolean) = moveIndicator(animate)
 
         private fun moveIndicator(animate: Boolean) {
             val frame = sortContainer ?: return
@@ -1268,10 +1274,8 @@ class MainActivity : AppCompatActivity() {
         var data: List<Photo> = ArrayList()
         private val animatedPhotoIds = HashSet<String>()
 
-        companion object {
-            const val TYPE_PHOTO = 0
-            const val TYPE_FEATURED = 1
-        }
+        private val TYPE_PHOTO = 0
+        private val TYPE_FEATURED = 1
 
         inner class VH(val root: View) : RecyclerView.ViewHolder(root) {
             val img: ImageView = root.findViewById(R.id.img)
@@ -1283,7 +1287,7 @@ class MainActivity : AppCompatActivity() {
 
         private fun hasFeatured() = tab == 0 && data.isNotEmpty()
 
-        override fun getItemCount() = data.size + if (hasFeatured()) 1 else 0
+        override fun getItemCount() = data.size
 
         override fun getItemViewType(position: Int) =
             if (hasFeatured() && position == 0) TYPE_FEATURED else TYPE_PHOTO
@@ -1299,8 +1303,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: VH, position: Int) {
             val featured = getItemViewType(position) == TYPE_FEATURED
-            val dataPosition = if (featured) 0 else position - if (hasFeatured()) 1 else 0
-            val p = data[dataPosition]
+            val p = data[position]
             val boundSession = cur
             h.root.postDelayed({
                 val rect = android.graphics.Rect()
