@@ -1,4 +1,4 @@
-name: Phase H2 Candidate APK (No Release) # triggered after H2 home/search/sort integration
+name: Phase H2 Candidate APK (No Release) # triggered after final H2 home/search/sort integration 9ff8a5a
 
 on:
   workflow_dispatch:
