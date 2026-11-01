@@ -23,7 +23,7 @@ class SettingsActivity : AppCompatActivity() {
         if (motionEnabled(this)) {
             val motionTargets = listOf(
                 R.id.sectionAppearance, R.id.cardTheme, R.id.sectionEffects, R.id.cardHaptics,
-                R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.sectionAbout,
+                R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.cardImageSources, R.id.sectionAbout,
                 R.id.rowClear, R.id.rowWhatsNew, R.id.rowCredits
             )
             motionTargets.forEachIndexed { index, id ->
@@ -36,6 +36,25 @@ class SettingsActivity : AppCompatActivity() {
                     .setInterpolator(android.view.animation.DecelerateInterpolator())
                     .start()
             }
+        }
+        val imageSourcesCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(20.dp(), 16.dp(), 20.dp(), 16.dp())
+            background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.glass_row)
+            addView(TextView(this@SettingsActivity).apply {
+                text = "Image sources"
+                textSize = 16f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.montserrat_semibold)
+                setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF.toInt()))
+            })
+            addView(TextView(this@SettingsActivity).apply {
+                text = "Wikimedia Commons · NASA Image Library · NexWall\\nUnsplash and Openverse are not used."
+                textSize = 12f
+                typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.poppins_regular)
+                setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFBBBBBB.toInt()))
+                setPadding(0, 5.dp(), 0, 0)
+            })
+            id = R.id.cardImageSources
         }
         val prefs = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
         val updateRow = LinearLayout(this).apply {
@@ -57,6 +76,10 @@ class SettingsActivity : AppCompatActivity() {
                 setPadding(0, 4.dp(), 0, 0)
             })
             setOnClickListener { startActivity(android.content.Intent(this@SettingsActivity, UpdatesActivity::class.java)) }
+        }
+        (findViewById<View>(R.id.cardSort).parent as? ViewGroup)?.let { parent ->
+            parent.addView(imageSourcesCard, parent.indexOfChild(findViewById(R.id.cardSort)) + 1,
+                ViewGroup.MarginLayoutParams(-1, -2).apply { topMargin = 12.dp() })
         }
         (findViewById<View>(R.id.rowCredits).parent as? ViewGroup)?.let { parent ->
             parent.addView(updateRow, parent.indexOfChild(findViewById(R.id.rowCredits)) + 1,
@@ -84,7 +107,7 @@ class SettingsActivity : AppCompatActivity() {
             val about = section == "about"
             show(R.id.sectionAppearance, appearance); show(R.id.cardTheme, appearance)
             show(R.id.sectionEffects, appearance); show(R.id.cardHaptics, appearance); show(R.id.cardLowFx, appearance)
-            show(R.id.sectionFeed, preferences); show(R.id.cardSort, preferences)
+            show(R.id.sectionFeed, preferences); show(R.id.cardSort, preferences); show(R.id.cardImageSources, preferences)
             show(R.id.sectionAbout, storage || about)
             show(R.id.rowClear, storage); show(R.id.rowWhatsNew, about); show(R.id.rowCredits, about); updateRow.visibility = if (about) View.VISIBLE else View.GONE
             show(R.id.settingsVersion, about)
