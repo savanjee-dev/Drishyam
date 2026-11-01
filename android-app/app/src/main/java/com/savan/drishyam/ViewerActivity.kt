@@ -193,7 +193,6 @@ class ViewerActivity : AppCompatActivity() {
         if (busy) return
         busy = true
         toast(getString(R.string.preparing))
-        if (p.dl.isNotEmpty()) Thread { Api.ping(p.dl) }.start()
         Thread {
             try {
                 val bmp = Glide.with(applicationContext).asBitmap().load(p.full).submit(1440, 2960).get()

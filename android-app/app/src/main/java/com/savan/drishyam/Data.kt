@@ -9,9 +9,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object Config {
-    // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
-    // Do not add an Unsplash key to the Android app.
-    const val UNSPLASH_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
+    const val NEXWALL_API_BASE_URL = "https://nexwall.kodnextech.com/api/developer/v1"
+    const val NEXWALL_API_KEY = "207|zOUljlzUpzFU6uGK1l9lCcTIbiYvCsEN7xkOnSyJ899d1e12"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -124,19 +123,6 @@ object Api {
         }
     }
 
-    fun ping(downloadLocation: String) {
-        // Unsplash requires its download endpoint to be triggered when a user downloads a photo.
-        // Extract only the photo ID; never proxy a caller-supplied arbitrary URL.
-        try {
-            val id = Regex("/photos/([A-Za-z0-9_-]+)/download").find(downloadLocation)?.groupValues?.get(1)
-                ?: return
-            get(
-                Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') + "/photos/" + id + "/download",
-                emptyMap()
-            )
-        } catch (_: Exception) { }
-    }
-
     /** Returns photos and the "after" token ("" when there is no more). */
     fun reddit(sub: String, after: String, sort: String = "hot"): Pair<List<Photo>, String> {
         val safeSub = sub.replace(Regex("[^A-Za-z0-9_]"), "")
@@ -229,42 +215,130 @@ object Api {
         return Pair(out, pages.length() == 0 || out.isEmpty())
     }
 
-    /** Returns photos and whether this was the last page. */
-    fun unsplash(query: String, page: Int, orderBy: String = "relevant", forceFresh: Boolean = false, indiaOnly: Boolean = false, popular: Boolean = false): Pair<List<Photo>, Boolean> {
-        require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
+    /**
+     * NASA Image and Video Library search. Only image records with a resolvable
+     * NASA-hosted JPEG/PNG rendition are accepted. The source is intentionally
+     * limited to space/Earth-science categories in the UI.
+     */
+    fun nasa(query: String, page: Int): Pair<List<Photo>, Boolean> {
+        require(query.isNotBlank() && query.length <= 120) { "Invalid NASA search query." }
         require(page in 1..10000) { "Invalid page." }
-        val base = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/')
-        val url = if (popular) {
-            "$base/photos?order_by=popular&per_page=20&page=$page" + if (forceFresh) "&refresh=1" else ""
-        } else {
-            "$base/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
-                "&orientation=portrait&per_page=20&page=$page&order_by=" + (if (orderBy == "latest") "latest" else "relevant") +
-                (if (forceFresh) "&refresh=1" else "")
-        }
-        val body = get(url, emptyMap())
-        val root = org.json.JSONTokener(body).nextValue()
-        val arr = if (root is JSONArray) root else (root as JSONObject).getJSONArray("results")
-        val totalPages = if (root is JSONObject) root.optInt("total_pages", 1) else Int.MAX_VALUE
+        val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+        val root = JSONObject(get(
+            "https://images-api.nasa.gov/search?q=$encoded&media_type=image&page=$page&page_size=12",
+            mapOf("User-Agent" to "DrishyamAndroid/3.0 (https://github.com/savanjee-dev/Drishyam)")
+        ))
+        val collection = root.optJSONObject("collection") ?: throw Exception("NASA image response was invalid.")
+        val items = collection.optJSONArray("items") ?: JSONArray()
+        val total = collection.optJSONObject("metadata")?.optInt("total_hits", 0) ?: 0
         val out = ArrayList<Photo>()
-        for (i in 0 until arr.length()) {
-            val p = arr.getJSONObject(i)
-            val urls = p.getJSONObject("urls")
-            val raw = urls.getString("raw")
-            val full = raw + (if (raw.contains("?")) "&" else "?") + "w=1440&q=85&fm=jpg&fit=max"
-            val user = p.getJSONObject("user")
-            val createdAt = p.optString("created_at", "")
-            // Unsplash location metadata is optional. Keep valid photos when metadata is missing;
-            // the India search query biases results without risking an empty feed.
-            val publishedAt = try { java.time.Instant.parse(createdAt).toEpochMilli() } catch (_: Exception) { 0L }
-            val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
-            out.add(Photo(p.getString("id"), urls.getString("small"), full,
-                p.optString("alt_description", "Photo").let { if (it == "null") "Photo" else it },
-                "📷 " + user.optString("name"),
-                p.getJSONObject("links").optString("html") + "?utm_source=drishyam&utm_medium=referral",
-                p.getJSONObject("links").optString("download_location"), col,
-                p.optInt("width", 0), p.optInt("height", 0),
-                createdAt.take(10), publishedAt, p.optInt("likes", 0)))
+        val unsafeTerms = listOf("nudity", "nude", "naked", "porn", "pornographic", "erotic", "sexually explicit", "sexual content", "graphic violence", "gore")
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val metadata = item.optJSONArray("data")?.optJSONObject(0) ?: continue
+            val id = metadata.optString("nasa_id", "")
+            if (id.isBlank()) continue
+            val title = metadata.optString("title", "NASA image").take(180)
+            val description = metadata.optString("description", "")
+            val keywords = metadata.optJSONArray("keywords")
+            val searchable = buildString {
+                append(title).append(' ').append(description)
+                if (keywords != null) for (k in 0 until keywords.length()) append(' ').append(keywords.optString(k))
+            }.lowercase()
+            if (unsafeTerms.any { searchable.contains(it) }) continue
+
+            // NASA's archive may include third-party material. Exclude records that
+            // explicitly carry a copyright notice instead of assuming all NASA-hosted
+            // files are public domain.
+            val copyright = metadata.optString("copyright", "").trim()
+            if (copyright.isNotBlank() && !copyright.equals("NASA", true)) continue
+
+            val preview = item.optJSONArray("links")?.let { links ->
+                (0 until links.length()).mapNotNull { links.optJSONObject(it) }
+                    .firstOrNull { it.optString("rel") == "preview" || it.optString("render") == "image" }
+                    ?.optString("href")
+            }.orEmpty()
+            if (!preview.startsWith("https://images-assets.nasa.gov/")) continue
+
+            var thumb = preview
+            var full = preview
+            val manifestUrl = item.optString("href", "")
+            if (manifestUrl.startsWith("https://images-assets.nasa.gov/")) {
+                runCatching {
+                    val manifest = JSONObject(get(manifestUrl, mapOf("User-Agent" to "DrishyamAndroid/3.0")))
+                    val renditions = manifest.optJSONArray("items") ?: JSONArray()
+                    val imageUrls = (0 until renditions.length()).mapNotNull { renditions.optJSONObject(it)?.optString("href") }
+                        .filter { it.startsWith("https://images-assets.nasa.gov/") && it.substringBefore('?').matches(Regex("(?i).+\\.(jpg|jpeg|png)$")) }
+                    val large = imageUrls.firstOrNull { it.contains("~large.") }
+                        ?: imageUrls.firstOrNull { it.contains("~orig.") }
+                        ?: imageUrls.firstOrNull { it.contains("~medium.") }
+                    val small = imageUrls.firstOrNull { it.contains("~small.") }
+                        ?: imageUrls.firstOrNull { it.contains("~thumb.") }
+                    if (!large.isNullOrBlank()) full = large
+                    if (!small.isNullOrBlank()) thumb = small
+                }
+            }
+            val center = metadata.optString("center", "NASA").take(80)
+            val date = metadata.optString("date_created", "")
+            val publishedAt = try { java.time.Instant.parse(date).toEpochMilli() } catch (_: Exception) { 0L }
+            out.add(Photo(
+                "nasa:$id", thumb, full, title, "NASA · $center",
+                "https://images.nasa.gov/details/$id", "", 0xFF222222.toInt(),
+                published = date.take(10), publishedAt = publishedAt
+            ))
         }
-        return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20))
+        val last = items.length() == 0 || page * 12 >= total
+        return Pair(out, last)
     }
+
+    /**
+     * Direct NexWall wallpaper search. The API key is embedded in the client
+     * at the user's request and can be extracted from the APK.
+     */
+    fun nexwall(query: String, page: Int, sort: String = "newest"): Pair<List<Photo>, Boolean> {
+        require(query.length <= 100) { "Invalid NexWall search query." }
+        require(page in 1..10000) { "Invalid page." }
+        val params = buildString {
+            append("?page=").append(page)
+            append("&per_page=24&type=image")
+            append("&sort=").append(java.net.URLEncoder.encode(sort, "UTF-8"))
+            if (query.length >= 2) append("&search=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+        }
+        val root = JSONObject(get(
+            Config.NEXWALL_API_BASE_URL.trimEnd('/') + "/wallpapers" + params,
+            mapOf(
+                "User-Agent" to "DrishyamAndroid/3.0 (https://github.com/savanjee-dev/Drishyam)",
+                "Authorization" to "Bearer " + Config.NEXWALL_API_KEY
+            )
+        ))
+        val items = root.optJSONArray("data") ?: root.optJSONObject("data")?.optJSONArray("data") ?: JSONArray()
+        val currentPage = root.optInt("current_page", page)
+        val lastPage = root.optInt("last_page", currentPage)
+        val out = ArrayList<Photo>()
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val id = item.optString("id", "")
+            val full = item.optString("image_url", "")
+            if (id.isBlank() || !full.startsWith("https://")) continue
+            val thumb = item.optString("thumbnail_url", item.optString("thumbnail", full))
+                .takeIf { it.startsWith("https://") } ?: full
+            val category = item.optJSONObject("category")?.optString("name", "").orEmpty()
+            val title = item.optString("title", item.optString("name", category.ifBlank { "NexWall wallpaper" })).take(180)
+            val width = item.optInt("width", 0)
+            val height = item.optInt("height", 0)
+            val created = item.optString("created_at", item.optString("published_at", ""))
+            val publishedAt = try {
+                java.time.Instant.parse(created).toEpochMilli()
+            } catch (_: Exception) { 0L }
+            val date = created.take(10)
+            out.add(Photo(
+                "nexwall:$id", thumb, full, title,
+                category.ifBlank { "NexWall" },
+                "https://nexwall.kodnextech.com", "", 0xFF222222.toInt(),
+                width, height, date, publishedAt
+            ))
+        }
+        return Pair(out, currentPage >= lastPage || items.length() == 0)
+    }
+
 }
