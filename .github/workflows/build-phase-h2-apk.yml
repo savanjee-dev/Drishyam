@@ -1,4 +1,4 @@
-name: Phase H2 Candidate APK (No Release) # triggered after final H2 home/search/sort integration 9ff8a5a
+name: Phase H2 Candidate APK (No Release) # triggered after H2 XML layout fix ca49bd9
 
 on:
   workflow_dispatch:
