@@ -226,7 +226,6 @@ class MainActivity : AppCompatActivity() {
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
         swipe.setOnRefreshListener { refreshCurrent() }
 
-        animateTitle()
         animateAbout()
         setupAbout()
 
@@ -668,7 +667,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun animateTitle() {
         if (!visualEffectsEnabled(this) || !motionEnabled(this)) return
-        val t = findViewById<TextView>(R.id.title)
+        val t = if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.titleView else null
+        if (t == null) return
         t.post {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -1226,6 +1226,8 @@ class MainActivity : AppCompatActivity() {
         var visible = true
         var logoView: ImageView? = null
             private set
+        var titleView: TextView? = null
+            private set
         private var sortContainer: FrameLayout? = null
         private var sortButtons: LinearLayout? = null
         private var indicator: View? = null
@@ -1241,6 +1243,8 @@ class MainActivity : AppCompatActivity() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.item_home_header, parent, false)
             logoView = v.findViewById(R.id.headerLogo)
+            titleView = v.findViewById(R.id.title)
+            titleView?.post { animateTitle() }
             sortContainer = v.findViewById(R.id.sortBar)
             sortButtons = v.findViewById(R.id.sortButtons)
             indicator = v.findViewById(R.id.sortIndicator)
