@@ -1,11 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="512"
-    android:viewportHeight="512">
-    <path android:fillColor="#F3F1E7" android:pathData="M0,0h512v512h-512z" />
-    <path android:fillColor="#F28C28" android:pathData="M350,120 A46,46 0,1 0,350 212 A46,46 0,1 0,350 120" />
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#1B2117" android:strokeWidth="26" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M36,382 L151,210 L275,382 M220,382 L338,236 L476,382" />
-    <path android:fillColor="@android:color/transparent" android:strokeColor="#1B2117" android:strokeWidth="18" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M151,210 L153,274 L207,335 M338,236 L339,297 L388,344" />
-</vector>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/drishyam_launcher"
+    android:gravity="center" />
