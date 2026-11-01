@@ -41,6 +41,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
@@ -113,7 +114,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rv: RecyclerView
     private lateinit var status: TextView
     private lateinit var statusPill: GlassLayout
-    private lateinit var sortBar: View
     private lateinit var savedBar: View
     private lateinit var swipe: SwipeRefreshLayout
     private lateinit var aboutScroll: ScrollView
@@ -123,10 +123,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var overlay: View
     private lateinit var segFav: TextView
     private lateinit var segBook: TextView
-    private lateinit var sortHot: TextView
-    private lateinit var sortNew: TextView
-    private lateinit var sortTop: TextView
-    private lateinit var sortIndia: TextView
+    private lateinit var homeHeaderAdapter: HomeHeaderAdapter
     private val adapter = PhotoAdapter()
     private val sources = ArrayList<Source>() // Category definitions used by the chip row.
     private val feedSessions = HashMap<String, Source>() // Independent category + sort sessions.
@@ -175,7 +172,6 @@ class MainActivity : AppCompatActivity() {
         rv.isVerticalScrollBarEnabled = false
         status = findViewById(R.id.status)
         statusPill = findViewById(R.id.statusPill)
-        sortBar = findViewById(R.id.sortBar)
         savedBar = findViewById(R.id.savedBar)
         swipe = findViewById(R.id.swipe)
         aboutScroll = findViewById(R.id.about)
@@ -207,10 +203,6 @@ class MainActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.requestApplyInsets(root)
         segFav = findViewById(R.id.segFav)
         segBook = findViewById(R.id.segBook)
-        sortHot = findViewById(R.id.sortHot)
-        sortNew = findViewById(R.id.sortNew)
-        sortTop = findViewById(R.id.sortTop)
-        sortIndia = findViewById(R.id.sortIndia)
 
         bindGlass(overlay, glassSource, 70)
 
@@ -235,7 +227,8 @@ class MainActivity : AppCompatActivity() {
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
         installScrollBounce(aboutScroll)
-        rv.adapter = adapter
+        homeHeaderAdapter = HomeHeaderAdapter()
+        rv.adapter = ConcatAdapter(homeHeaderAdapter, adapter)
         rv.setHasFixedSize(true)
         rv.setItemViewCacheSize(8)
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -243,14 +236,13 @@ class MainActivity : AppCompatActivity() {
                 pokeGlass()
                 if (tab == 0 && dy > 3) {
                     setNavVisible(false)
-                    setTopVisible(true)
                 } else if (dy < -1) {
                     setNavVisible(true)
-                    setTopVisible(true)
                 }
                 val lm = r.layoutManager as LinearLayoutManager
                 if (dy > 0) {
-                    val remaining = adapter.itemCount - lm.findLastVisibleItemPosition() - 1
+                    val totalFeedRows = adapter.itemCount + if (tab == 0) 1 else 0
+                    val remaining = totalFeedRows - lm.findLastVisibleItemPosition() - 1
                     if (remaining <= 7 || remaining <= backgroundPrefetchThreshold()) loadMore()
                 }
             }
@@ -259,11 +251,6 @@ class MainActivity : AppCompatActivity() {
         status.setOnClickListener { if (tab == 0 && cur.err != null) { cur.err = null; loadMore() } }
 
 
-        findViewById<View>(R.id.searchBar).apply { pressFx(); setOnClickListener { showSearch() } }
-        findViewById<View>(R.id.settingsButton).apply {
-            pressFx()
-            setOnClickListener { PortalTransition.launch(this@MainActivity, this, Intent(this@MainActivity, SettingsHubActivity::class.java)) }
-        }
         findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { showTab(0) } }
         findViewById<View>(R.id.navItem1).apply { pressFx(); setOnClickListener { showSearch() } }
         findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
@@ -281,10 +268,6 @@ class MainActivity : AppCompatActivity() {
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
         segBook.apply { pressFx(); setOnClickListener { setSaved(1) } }
-        sortHot.apply { pressFx(); setOnClickListener { setSort("hot") } }
-        sortNew.apply { pressFx(); setOnClickListener { setSort("new") } }
-        sortTop.apply { pressFx(); setOnClickListener { setSort("top") } }
-        sortIndia.apply { pressFx(); setOnClickListener { setIndiaSort() } }
 
         shownSort = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort_display", currentSort()) ?: currentSort()
         styleSort()
@@ -540,12 +523,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyInsets() {
-        val top = glassTop.bottom + 8.dp()
+        val top = if (tab == 0) statusBarInsetTop + 12.dp() else glassTop.bottom + 8.dp()
         val bottom = if (navShown && glassNav.visibility == View.VISIBLE) (overlay.height - glassNav.top) + 8.dp() else 20.dp()
         if (top != lastTopPad || bottom != lastBottomPad) {
             lastTopPad = top
             lastBottomPad = bottom
-            rv.setPadding(14.dp(), top, 14.dp(), bottom)
+            rv.setPadding(16.dp(), top, 16.dp(), bottom)
             swipe.setProgressViewOffset(false, top, top + 60.dp())
         }
         // Our Story hides the floating header, so its top gap must come from the actual
@@ -667,9 +650,11 @@ class MainActivity : AppCompatActivity() {
         navShown = true
         topShown = true
         glassTop.animate().cancel()
-        glassTop.visibility = View.VISIBLE
+        glassTop.visibility = if (n == 1) View.VISIBLE else View.GONE
         glassTop.translationY = 0f
         glassTop.alpha = 1f
+        homeHeaderAdapter.visible = n == 0
+        homeHeaderAdapter.notifyDataSetChanged()
         glassNav.animate().cancel()
         glassNav.visibility = View.VISIBLE
         glassNav.translationY = 0f
@@ -711,7 +696,6 @@ class MainActivity : AppCompatActivity() {
         glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
         if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
         glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
-        sortBar.visibility = if (n == 0) View.VISIBLE else View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
 
         if (n == 1) {
@@ -833,10 +817,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun styleSort() {
-        sortHot.styleSeg(shownSort == "hot")
-        sortNew.styleSeg(shownSort == "new")
-        sortTop.styleSeg(shownSort == "top")
-        sortIndia.styleSeg(shownSort == "india")
+        if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.styleSort()
     }
 
     private fun showSortPopup() {
@@ -986,7 +967,8 @@ class MainActivity : AppCompatActivity() {
         if (threshold <= 0) return
         val lm = rv.layoutManager as? LinearLayoutManager ?: return
         val lastVisible = lm.findLastVisibleItemPosition()
-        val remaining = adapter.itemCount - lastVisible - 1
+        val totalFeedRows = adapter.itemCount + if (tab == 0) 1 else 0
+        val remaining = totalFeedRows - lastVisible - 1
         if (remaining <= threshold) loadMore()
     }
 
@@ -1189,83 +1171,181 @@ class MainActivity : AppCompatActivity() {
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
-    // ---------- Adapter ----------
+    // ---------- Home header + photo feed adapters ----------
 
-    inner class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.VH>() {
-        var data: List<Photo> = ArrayList()
+    inner class HomeHeaderAdapter : RecyclerView.Adapter<HomeHeaderAdapter.VH>() {
+        var visible = true
+        private var sortContainer: FrameLayout? = null
+        private var sortButtons: LinearLayout? = null
+        private var indicator: View? = null
+        private var hot: TextView? = null
+        private var latest: TextView? = null
+        private var top: TextView? = null
+        private var india: TextView? = null
 
-        inner class VH(val root: View) : RecyclerView.ViewHolder(root) {
-            val img: ImageView = root.findViewById(R.id.img)
-            val lbl: TextView = root.findViewById(R.id.lbl)
-            val heart: ImageView = root.findViewById(R.id.heart)
-            init { heart.pressFx() }
-        }
+        inner class VH(val root: View) : RecyclerView.ViewHolder(root)
+
+        override fun getItemCount() = if (visible) 1 else 0
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_photo, parent, false)
-            v.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, 0, 14.dp())
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_home_header, parent, false)
+            sortContainer = v.findViewById(R.id.sortBar)
+            sortButtons = v.findViewById(R.id.sortButtons)
+            indicator = v.findViewById(R.id.sortIndicator)
+            hot = v.findViewById(R.id.sortHot)
+            latest = v.findViewById(R.id.sortNew)
+            top = v.findViewById(R.id.sortTop)
+            india = v.findViewById(R.id.sortIndia)
+
+            v.findViewById<View>(R.id.searchBar).apply {
+                pressFx()
+                setOnClickListener { showSearch() }
+            }
+            v.findViewById<View>(R.id.settingsButton).apply {
+                pressFx()
+                setOnClickListener {
+                    PortalTransition.launch(this@MainActivity, this, Intent(this@MainActivity, SettingsHubActivity::class.java))
+                }
+            }
+            listOf(
+                (hot to "hot"), (latest to "new"), (top to "top"), (india to "india")
+            ).forEach { (view, key) ->
+                view?.apply {
+                    pressFx()
+                    setOnClickListener {
+                        if (key == "india") setIndiaSort() else setSort(key)
+                        styleSort()
+                        moveIndicator(true)
+                    }
+                }
             }
             return VH(v)
         }
 
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            styleSort()
+            holder.root.post { moveIndicator(false) }
+        }
+
+        fun styleSort() {
+            val selected = when (shownSort) {
+                "new" -> latest
+                "top" -> top
+                "india" -> india
+                else -> hot
+            }
+            listOf(hot, latest, top, india).forEach { button ->
+                button?.setTextColor(ContextCompat.getColor(this@MainActivity,
+                    if (button === selected) R.color.bg else R.color.mute))
+                button?.background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            }
+            moveIndicator(false)
+        }
+
+        private fun moveIndicator(animate: Boolean) {
+            val frame = sortContainer ?: return
+            val row = sortButtons ?: return
+            val pill = indicator ?: return
+            val selected = when (shownSort) {
+                "new" -> latest
+                "top" -> top
+                "india" -> india
+                else -> hot
+            } ?: return
+            frame.post {
+                if (selected.width <= 0) return@post
+                val target = Pair((row.left + selected.left).toFloat(), selected.width.toFloat())
+                if (animate && pill.width > 0) {
+                    SegmentStretch.animate(pill, target, resources.displayMetrics.density, !motionEnabled(this@MainActivity))
+                } else {
+                    SegmentStretch.place(pill, target.first, target.second)
+                }
+            }
+        }
+    }
+
+    inner class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.VH>() {
+        var data: List<Photo> = ArrayList()
         private val animatedPhotoIds = HashSet<String>()
 
-        override fun getItemCount() = data.size
+        companion object {
+            const val TYPE_PHOTO = 0
+            const val TYPE_FEATURED = 1
+        }
 
-        override fun onBindViewHolder(h: VH, pos: Int) {
-            val p = data[pos]
+        inner class VH(val root: View) : RecyclerView.ViewHolder(root) {
+            val img: ImageView = root.findViewById(R.id.img)
+            val lbl: TextView = root.findViewById(R.id.lbl)
+            val tag: TextView = root.findViewById(R.id.tag)
+            val heart: ImageView = root.findViewById(R.id.heart)
+            init { heart.pressFx() }
+        }
+
+        private fun hasFeatured() = tab == 0 && data.isNotEmpty()
+
+        override fun getItemCount() = data.size + if (hasFeatured()) 1 else 0
+
+        override fun getItemViewType(position: Int) =
+            if (hasFeatured() && position == 0) TYPE_FEATURED else TYPE_PHOTO
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+            val layout = if (viewType == TYPE_FEATURED) R.layout.item_featured_photo else R.layout.item_photo
+            val v = LayoutInflater.from(parent.context).inflate(layout, parent, false)
+            v.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, 0, 0, if (viewType == TYPE_FEATURED) 18.dp() else 18.dp())
+            }
+            return VH(v)
+        }
+
+        override fun onBindViewHolder(h: VH, position: Int) {
+            val featured = getItemViewType(position) == TYPE_FEATURED
+            val dataPosition = if (featured) 0 else position - if (hasFeatured()) 1 else 0
+            val p = data[dataPosition]
             val boundSession = cur
             h.root.postDelayed({
                 val rect = android.graphics.Rect()
-                val position = h.bindingAdapterPosition
-                val visibleThreshold = minOf(h.root.height * 0.5f, resources.displayMetrics.heightPixels * 0.35f)
-                if (position != RecyclerView.NO_POSITION &&
-                    data.getOrNull(position)?.id == p.id &&
+                val adapterPosition = h.bindingAdapterPosition
+                val threshold = minOf(h.root.height * 0.5f, resources.displayMetrics.heightPixels * 0.35f)
+                if (adapterPosition != RecyclerView.NO_POSITION &&
                     h.root.height > 0 && h.root.getGlobalVisibleRect(rect) &&
-                    rect.height() >= visibleThreshold) {
+                    rect.height() >= threshold) {
                     if (boundSession.seenIds.add(p.id)) persistSeen(boundSession)
                 }
             }, 900L)
-            h.lbl.text = "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
+
+            h.tag.text = if (featured) "FEATURED" else p.title
+            h.lbl.text = if (featured) p.title + "\n" + p.credit.ifBlank { getString(R.string.unknown_photographer) }
+                else "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
             h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             h.heart.contentDescription = getString(R.string.like_desc)
-            val screenWidth = resources.displayMetrics.widthPixels - 28.dp()
-            val ratio = if (p.width > 0 && p.height > 0) p.height.toFloat() / p.width.toFloat() else 1.18f
-            h.img.layoutParams.height = (screenWidth * ratio).toInt().coerceIn(200.dp(), 650.dp())
+
+            if (featured) {
+                h.img.layoutParams.height = 236.dp()
+            } else {
+                val screenWidth = resources.displayMetrics.widthPixels - 32.dp()
+                val ratio = if (p.width > 0 && p.height > 0) p.height.toFloat() / p.width.toFloat() else 1.18f
+                val viewport = resources.displayMetrics.heightPixels - statusBarInsetTop - 150.dp()
+                val immersiveHeight = (viewport * 0.78f).toInt()
+                h.img.layoutParams.height = maxOf(immersiveHeight, (screenWidth * ratio).toInt()).coerceIn(430.dp(), 720.dp())
+            }
             h.img.setBackgroundColor(p.color)
-            // Animate each photo only on its first bind. RecyclerView rebinds happen during
-            // scrolling and state updates; replaying the entrance there causes distracting flicker.
+
             if (visualEffectsEnabled(this@MainActivity) && motionEnabled(this@MainActivity) && animatedPhotoIds.add(p.id)) {
                 h.root.animate().cancel()
                 h.root.alpha = 0.78f
                 h.root.translationY = 18.dp().toFloat()
                 h.root.scaleX = 0.985f
                 h.root.scaleY = 0.985f
-                h.root.animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(420L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
-                    .start()
+                h.root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setDuration(420L).setInterpolator(DecelerateInterpolator(1.5f)).start()
             } else {
                 h.root.animate().cancel()
-                h.root.alpha = 1f
-                h.root.translationY = 0f
-                h.root.scaleX = 1f
-                h.root.scaleY = 1f
+                h.root.alpha = 1f; h.root.translationY = 0f; h.root.scaleX = 1f; h.root.scaleY = 1f
             }
-            // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
-            // Some remote thumbnail URLs can fail independently of the original photo.
-            // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
-            Glide.with(h.img)
-                .load(p.thumb)
-                .disallowHardwareConfig()
-                .centerCrop()
-                .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop())
-                .into(h.img)
+
+            Glide.with(h.img).load(p.thumb).disallowHardwareConfig().centerCrop()
+                .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop()).into(h.img)
+
             h.heart.setOnClickListener {
                 Store.toggle(this@MainActivity, p)
                 if (tab == 1) refreshSaved() else h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
