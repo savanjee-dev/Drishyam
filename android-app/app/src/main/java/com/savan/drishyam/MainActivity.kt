@@ -341,8 +341,17 @@ class MainActivity : AppCompatActivity() {
         logo.scaleY = 0.55f
         logo.rotation = -14f
         logo.alpha = 0f
-        logo.animate().alpha(1f).scaleX(1f).scaleY(1f).rotation(0f)
+        logo.rotation = 0f
+        logo.animate().alpha(1f).scaleX(1f).scaleY(1f)
             .setStartDelay(200L).setDuration(1100L).setInterpolator(OvershootInterpolator(1.15f)).start()
+        ObjectAnimator.ofFloat(logo, View.ROTATION, 0f, 360f).apply {
+            duration = 2600L
+            startDelay = 200L
+            repeatCount = ObjectAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            start()
+            splashAnimators.add(this)
+        }
 
         val byline = findViewById<TextView>(R.id.splashByline)
         val tagline = findViewById<TextView>(R.id.splashTagline)
@@ -395,42 +404,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handOffSplashLogo(splash: View, logo: ImageView, target: ImageView) {
-        if (splashFinished || isFinishing) return
+        if (splashFinished || isFinishing || isDestroyed) return
         if (!motionEnabled(this)) {
             splash.visibility = View.GONE
+            target.visibility = View.VISIBLE
             finishSplashAndContinue()
             return
         }
+        // A separate travelling copy lets the splash dissolve without fading the logo itself.
+        val host = splash.parent as? ViewGroup ?: return
+        val overlay = ImageView(this).apply {
+            setImageDrawable(logo.drawable)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Drishyam"
+            rotation = logo.rotation
+            elevation = 100.dp().toFloat()
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val hostPos = IntArray(2)
         val logoPos = IntArray(2)
         val targetPos = IntArray(2)
+        host.getLocationOnScreen(hostPos)
         logo.getLocationOnScreen(logoPos)
         target.getLocationOnScreen(targetPos)
-        val dx = targetPos[0] + target.width / 2f - (logoPos[0] + logo.width / 2f)
-        val dy = targetPos[1] + target.height / 2f - (logoPos[1] + logo.height / 2f)
-        val targetContentWidth = (target.width - target.paddingLeft - target.paddingRight).coerceAtLeast(1)
-        val targetScale = targetContentWidth.toFloat() / logo.width.coerceAtLeast(1)
-        logo.animate().translationX(dx).translationY(dy).scaleX(targetScale).scaleY(targetScale)
-            .rotation(0f).setDuration(980L).setInterpolator(DecelerateInterpolator(1.8f))
-            .setListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    // Swap the moving logo for the real header logo on the same frame.
-                    // The two images occupy the same screen position, so no pop or double image is shown.
-                    target.visibility = View.VISIBLE
-                    logo.alpha = 0f
-                    splash.animate().alpha(0f).setDuration(220L)
-                        .setInterpolator(DecelerateInterpolator())
-                        .withEndAction {
-                            splash.visibility = View.GONE
-                            splash.alpha = 1f
-                            logo.translationX = 0f
-                            logo.translationY = 0f
-                            logo.scaleX = 1f
-                            logo.scaleY = 1f
-                            logo.rotation = 0f
-                            finishSplashAndContinue()
-                        }.start()
-                }
-            }).start()
+        val startX = (logoPos[0] - hostPos[0]).toFloat()
+        val startY = (logoPos[1] - hostPos[1]).toFloat()
+        val targetWidth = (target.width - target.paddingLeft - target.paddingRight).coerceAtLeast(1)
+        val targetHeight = (target.height - target.paddingTop - target.paddingBottom).coerceAtLeast(1)
+        val scale = minOf(targetWidth.toFloat() / logo.width.coerceAtLeast(1),
+            targetHeight.toFloat() / logo.height.coerceAtLeast(1))
+        val endX = targetPos[0] - hostPos[0] + target.paddingLeft - (logo.width * scale - targetWidth) / 2f
+        val endY = targetPos[1] - hostPos[1] + target.paddingTop - (logo.height * scale - targetHeight) / 2f
+        overlay.layoutParams = FrameLayout.LayoutParams(logo.width, logo.height)
+        host.addView(overlay)
+        overlay.x = startX
+        overlay.y = startY
+        logo.alpha = 0f
+        target.visibility = View.INVISIBLE
+
+        overlay.animate()
+            .x(endX).y(endY).scaleX(scale).scaleY(scale).rotation(360f)
+            .setDuration(1050L)
+            .setInterpolator(android.view.animation.PathInterpolator(0.7f, 0f, 0.2f, 1f))
+            .withEndAction {
+                target.visibility = View.VISIBLE
+                host.removeView(overlay)
+                splash.visibility = View.GONE
+                splash.alpha = 1f
+                splash.scaleX = 1f
+                splash.scaleY = 1f
+                finishSplashAndContinue()
+            }.start()
+        splash.animate().alpha(0f).scaleX(1.025f).scaleY(1.025f)
+            .setStartDelay(120L).setDuration(820L)
+            .setInterpolator(DecelerateInterpolator(1.3f)).start()
     }
 
     private fun finishSplashAndContinue() {
@@ -1379,8 +1406,9 @@ class MainActivity : AppCompatActivity() {
             } else {
                 val screenWidth = resources.displayMetrics.widthPixels - 32.dp()
                 val ratio = if (p.width > 0 && p.height > 0) p.height.toFloat() / p.width.toFloat() else 1.18f
-                val viewport = resources.displayMetrics.heightPixels - statusBarInsetTop - 150.dp()
-                val immersiveHeight = (viewport * 0.78f).toInt()
+                val screenHeight = resources.displayMetrics.heightPixels
+                // Prototype v10 cards occupy roughly 74–86% of the locked screen height.
+                val immersiveHeight = (screenHeight * 0.82f).toInt()
                 h.img.layoutParams.height = maxOf(immersiveHeight, (screenWidth * ratio).toInt()).coerceIn(430.dp(), 720.dp())
             }
             h.img.setBackgroundColor(p.color)
