@@ -54,6 +54,22 @@
                     android:layout_height="wrap_content" />
             </ScrollView>
         </FrameLayout>
+
+        <View
+            android:id="@+id/edgeTop"
+            android:layout_width="match_parent"
+            android:layout_height="64dp"
+            android:background="@drawable/home_edge_top"
+            android:importantForAccessibility="no"
+            android:visibility="gone" />
+        <View
+            android:id="@+id/edgeBottom"
+            android:layout_width="match_parent"
+            android:layout_height="96dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/home_edge_bottom"
+            android:importantForAccessibility="no"
+            android:visibility="gone" />
     </FrameLayout>
 
     <!-- Saved-only filter bar. The Explore header now scrolls naturally with the feed. -->
@@ -128,7 +144,15 @@
                 android:padding="6dp"
                 app:glassRadius="100dp">
 
+                <View
+                    android:id="@+id/navIndicator"
+                    android:layout_width="0dp"
+                    android:layout_height="58dp"
+                    android:layout_gravity="top|start"
+                    android:background="@drawable/accent_pill" />
+
                 <LinearLayout
+                    android:id="@+id/navItemsRow"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
