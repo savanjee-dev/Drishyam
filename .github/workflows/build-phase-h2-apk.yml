@@ -30,12 +30,17 @@ jobs:
           set -euo pipefail
           PROJECT_DIR="$GITHUB_WORKSPACE/android-app"
           GRADLE_FILE="$PROJECT_DIR/app/build.gradle.kts"
-          VERSION_NAME="$(sed -nE 's/.*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\\1/p' "$GRADLE_FILE" | head -n 1)"
-          VERSION_CODE="$(sed -nE 's/.*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\\1/p' "$GRADLE_FILE" | head -n 1)"
-          test "$VERSION_NAME" = "2.7.16"
-          test "$VERSION_CODE" = "44"
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Building isolated Phase H2 test APK only; no release or tag will be published."
+          python3 - "$GRADLE_FILE" "$GITHUB_ENV" <<'PY'
+          import os, re, sys
+          source = open(sys.argv[1], encoding="utf-8").read()
+          name = re.search(r'versionName\s*=\s*"([^"]+)"', source)
+          code = re.search(r'versionCode\s*=\s*(\d+)', source)
+          if not name or not code or (name.group(1), code.group(1)) != ("2.7.16", "44"):
+              raise SystemExit("Unexpected or unreadable Phase H2 baseline version.")
+          with open(sys.argv[2], "a", encoding="utf-8") as env:
+              env.write("PROJECT_DIR=" + os.path.dirname(os.path.dirname(sys.argv[1])) + "\n")
+          print("Validated Drishyam 2.7.16 (44); isolated H2 test APK only.")
+          PY
 
       - name: Configure Android signing key
         shell: bash
