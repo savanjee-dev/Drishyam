@@ -12,7 +12,8 @@ object Config {
     // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
     // Do not add an Unsplash key to the Android app.
     const val UNSPLASH_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
-    const val NEXWALL_PROXY_BASE_URL = "https://drishyam-nexwall-proxy.savansingh8147.workers.dev"
+    const val NEXWALL_API_BASE_URL = "https://nexwall.kodnextech.com/api/developer/v1"
+    const val NEXWALL_API_KEY = "207|zOUljlzUpzFU6uGK1l9lCcTIbiYvCsEN7xkOnSyJ899d1e12"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -307,8 +308,8 @@ object Api {
     }
 
     /**
-     * NexWall wallpaper search through the Drishyam Cloudflare proxy.
-     * The upstream API key is never sent to or stored in the Android app.
+     * Direct NexWall wallpaper search. The API key is embedded in the client
+     * at the user's request and can be extracted from the APK.
      */
     fun nexwall(query: String, page: Int, sort: String = "newest"): Pair<List<Photo>, Boolean> {
         require(query.length <= 100) { "Invalid NexWall search query." }
@@ -320,8 +321,11 @@ object Api {
             if (query.length >= 2) append("&search=").append(java.net.URLEncoder.encode(query, "UTF-8"))
         }
         val root = JSONObject(get(
-            Config.NEXWALL_PROXY_BASE_URL.trimEnd('/') + "/wallpapers" + params,
-            mapOf("User-Agent" to "DrishyamAndroid/3.0 (https://github.com/savanjee-dev/Drishyam)")
+            Config.NEXWALL_API_BASE_URL.trimEnd('/') + "/wallpapers" + params,
+            mapOf(
+                "User-Agent" to "DrishyamAndroid/3.0 (https://github.com/savanjee-dev/Drishyam)",
+                "Authorization" to "Bearer " + Config.NEXWALL_API_KEY
+            )
         ))
         val items = root.optJSONArray("data") ?: root.optJSONObject("data")?.optJSONArray("data") ?: JSONArray()
         val currentPage = root.optInt("current_page", page)
