@@ -840,13 +840,13 @@ class MainActivity : AppCompatActivity() {
         cur.items.clear()
         cur.ids.clear()
         cur.fetchedIds.clear()
-        if (cur.name == "For You") cur.discoveryIndex++
+        cur.discoveryIndex++ // Rotate discovery for every category, not only For You.
         cur.loading = false
         cur.refreshing = true
         cur.err = null
         cur.done = false
         cur.after = ""
-        cur.page = 1
+        cur.page = maxOf(cur.refreshPage, cur.page, 1)
         cur.gen++
         cur.forceFresh = true
         getSharedPreferences("drishyam_feed_cache", Context.MODE_PRIVATE).edit()
@@ -1003,7 +1003,8 @@ class MainActivity : AppCompatActivity() {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
                     }
                 }
-                if (useNexwall && added.isEmpty()) {
+                val nexwallCooldownUntil = browsingPrefs.getLong("nexwall_cooldown_until", 0L)
+                if (useNexwall && added.isEmpty() && System.currentTimeMillis() >= nexwallCooldownUntil) {
                     try {
                         val nexSort = if (sort == "hot" || sort == "top") "popular" else "newest"
                         val (photos, last) = Api.nexwall(fallbackQuery, nextNexwallPage, nexSort)
@@ -1014,7 +1015,11 @@ class MainActivity : AppCompatActivity() {
                         usedNexwall = true
                         nextNexwallPage++
                     } catch (e: Exception) {
-                        providerErrors.add("NexWall: " + (e.message ?: "request failed").take(120))
+                        val detail = e.message ?: "request failed"
+                        if (detail.contains("HTTP 429")) {
+                            browsingPrefs.edit().putLong("nexwall_cooldown_until", System.currentTimeMillis() + 30L * 60L * 1000L).apply()
+                            providerErrors.add("NexWall is rate-limited; retrying after a cooldown")
+                        } else providerErrors.add("NexWall: " + detail.take(120))
                     }
                 }
                 if (added.isEmpty() && s.items.isEmpty()) {
@@ -1033,6 +1038,7 @@ class MainActivity : AppCompatActivity() {
                 s.refreshing = false
                 swipe.isRefreshing = false
                 s.page = if (usedNexwall) nextNexwallPage else if (useWikimedia) nextCommonsPage else page + 1
+                s.refreshPage = maxOf(s.refreshPage, s.page)
                 if (error != null) {
                     s.err = error
                     statusPill.setTag(R.id.statusPill, null)
