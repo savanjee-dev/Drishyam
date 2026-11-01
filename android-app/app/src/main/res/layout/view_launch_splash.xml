@@ -46,7 +46,8 @@
                 android:layout_gravity="center"
                 android:contentDescription="Drishyam"
                 android:scaleType="fitCenter"
-                android:src="@mipmap/ic_launcher" />
+                android:src="@drawable/drishyam_mark"
+                android:tint="?attr/colorOnSurface" />
         </FrameLayout>
 
         <LinearLayout
