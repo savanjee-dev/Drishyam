@@ -207,7 +207,6 @@ class ViewerActivity : AppCompatActivity() {
         if (busy) return
         busy = true
         toast(getString(R.string.preparing))
-        if (p.dl.isNotEmpty()) Thread { Api.ping(p.dl) }.start()
         Thread {
             try {
                 // Some Commons originals reject or time out on direct retrieval even
