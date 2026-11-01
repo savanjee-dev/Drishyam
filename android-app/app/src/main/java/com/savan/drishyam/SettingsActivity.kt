@@ -23,7 +23,7 @@ class SettingsActivity : AppCompatActivity() {
         if (motionEnabled(this)) {
             val motionTargets = listOf(
                 R.id.sectionAppearance, R.id.cardTheme, R.id.sectionEffects, R.id.cardHaptics,
-                R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.cardImageSources, R.id.sectionAbout,
+                R.id.cardLowFx, R.id.sectionFeed, R.id.cardSort, R.id.sectionAbout,
                 R.id.rowClear, R.id.rowWhatsNew, R.id.rowCredits
             )
             motionTargets.forEachIndexed { index, id ->
@@ -54,7 +54,6 @@ class SettingsActivity : AppCompatActivity() {
                 setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFBBBBBB.toInt()))
                 setPadding(0, 5.dp(), 0, 0)
             })
-            id = R.id.cardImageSources
         }
         val prefs = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE)
         val updateRow = LinearLayout(this).apply {
@@ -107,7 +106,7 @@ class SettingsActivity : AppCompatActivity() {
             val about = section == "about"
             show(R.id.sectionAppearance, appearance); show(R.id.cardTheme, appearance)
             show(R.id.sectionEffects, appearance); show(R.id.cardHaptics, appearance); show(R.id.cardLowFx, appearance)
-            show(R.id.sectionFeed, preferences); show(R.id.cardSort, preferences); show(R.id.cardImageSources, preferences)
+            show(R.id.sectionFeed, preferences); show(R.id.cardSort, preferences); imageSourcesCard.visibility = if (preferences) View.VISIBLE else View.GONE
             show(R.id.sectionAbout, storage || about)
             show(R.id.rowClear, storage); show(R.id.rowWhatsNew, about); show(R.id.rowCredits, about); updateRow.visibility = if (about) View.VISIBLE else View.GONE
             show(R.id.settingsVersion, about)
