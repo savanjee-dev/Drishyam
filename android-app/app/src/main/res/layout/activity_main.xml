@@ -217,7 +217,8 @@ app:glassRadius="100dp">
                 </LinearLayout>
             </com.savan.drishyam.GlassLayout>
         </LinearLayout>
-        <!-- Preserve the current S2/H2 launch splash and logo hand-off. -->
+    </FrameLayout>
+    <!-- Preserve the current S2/H2 launch splash and logo hand-off. -->
     <include
         layout="@layout/view_launch_splash"
         android:layout_width="match_parent"
