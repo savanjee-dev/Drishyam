@@ -254,7 +254,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        target.visibility = View.VISIBLE
+        // Keep the destination logo hidden while the splash logo is in flight.
+        // Revealing both at once creates a visible duplicate in the Home header.
+        target.visibility = View.INVISIBLE
         val nameRow = findViewById<LinearLayout>(R.id.splashName)
         nameRow.removeAllViews()
         val name = "Drishyam"
@@ -355,11 +357,22 @@ class MainActivity : AppCompatActivity() {
             .rotation(0f).setDuration(880L).setInterpolator(DecelerateInterpolator())
             .setListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    splash.animate().alpha(0f).setDuration(220L).withEndAction {
-                        splash.visibility = View.GONE
-                        splash.alpha = 1f
-                        finishSplashAndContinue()
-                    }.start()
+                    // Swap the moving logo for the real header logo on the same frame.
+                    // The two images occupy the same screen position, so no pop or double image is shown.
+                    target.visibility = View.VISIBLE
+                    logo.alpha = 0f
+                    splash.animate().alpha(0f).setDuration(220L)
+                        .setInterpolator(DecelerateInterpolator())
+                        .withEndAction {
+                            splash.visibility = View.GONE
+                            splash.alpha = 1f
+                            logo.translationX = 0f
+                            logo.translationY = 0f
+                            logo.scaleX = 1f
+                            logo.scaleY = 1f
+                            logo.rotation = 0f
+                            finishSplashAndContinue()
+                        }.start()
                 }
             }).start()
     }
