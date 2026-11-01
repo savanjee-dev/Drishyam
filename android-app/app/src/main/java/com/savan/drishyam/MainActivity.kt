@@ -741,7 +741,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
         glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
         if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
-        glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
+        glassTop.visibility = if (n == 1) View.VISIBLE else View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
 
         if (n == 1) {
