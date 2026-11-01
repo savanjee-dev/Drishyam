@@ -407,9 +407,10 @@ class MainActivity : AppCompatActivity() {
         target.getLocationOnScreen(targetPos)
         val dx = targetPos[0] + target.width / 2f - (logoPos[0] + logo.width / 2f)
         val dy = targetPos[1] + target.height / 2f - (logoPos[1] + logo.height / 2f)
-        val targetScale = target.width.toFloat() / logo.width.coerceAtLeast(1)
+        val targetContentWidth = (target.width - target.paddingLeft - target.paddingRight).coerceAtLeast(1)
+        val targetScale = targetContentWidth.toFloat() / logo.width.coerceAtLeast(1)
         logo.animate().translationX(dx).translationY(dy).scaleX(targetScale).scaleY(targetScale)
-            .rotation(0f).setDuration(880L).setInterpolator(DecelerateInterpolator())
+            .rotation(0f).setDuration(980L).setInterpolator(DecelerateInterpolator(1.8f))
             .setListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     // Swap the moving logo for the real header logo on the same frame.
