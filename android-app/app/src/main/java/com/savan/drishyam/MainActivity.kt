@@ -1009,9 +1009,10 @@ class MainActivity : AppCompatActivity() {
                         val (photos, last) = Api.nexwall(fallbackQuery, nextNexwallPage, nexSort)
                         val unseen = photos.filter { it.id !in s.seenIds && s.ids.add(it.id) }
                         s.fetchedIds.addAll(photos.map { it.id })
-                        if (unseen.isNotEmpty()) {
-                            added.addAll(unseen); finished = last; usedNexwall = true; nextNexwallPage++
-                        }
+                        if (unseen.isNotEmpty()) added.addAll(unseen)
+                        finished = last
+                        usedNexwall = true
+                        nextNexwallPage++
                     } catch (e: Exception) {
                         providerErrors.add("NexWall: " + (e.message ?: "request failed").take(120))
                     }
