@@ -81,11 +81,16 @@ class MainActivity : AppCompatActivity() {
         // Curated photography categories only; no Reddit/photo topic sources are exposed in the UI.
         val PHOTO_CATEGORIES = listOf(
             "For You" to "cinematic nature landscape photography",
-            "Forest" to "forest woodland trees",
             "Nature" to "nature photography",
+            "Forest" to "forest woodland trees",
+            "Portrait" to "portrait photography",
+            "Photography" to "photography",
+            "Mountains" to "mountain landscape",
+            "Clouds" to "clouds sky",
+            "Landscape" to "landscape photography",
+            "Beach" to "beach sea sand",
             "Earth" to "planet earth landscape",
             "Hiking" to "hiking trail outdoors",
-            "Mountains" to "mountain landscape",
             "Wildlife" to "wildlife animals",
             "Architecture" to "modern architecture",
             "Abstract" to "abstract photography",
@@ -109,8 +114,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rv: RecyclerView
     private lateinit var status: TextView
     private lateinit var statusPill: GlassLayout
-    private lateinit var chips: LinearLayout
-    private lateinit var chipScroll: HorizontalScrollView
     private lateinit var sortBar: View
     private lateinit var savedBar: View
     private lateinit var swipe: SwipeRefreshLayout
@@ -124,6 +127,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sortHot: TextView
     private lateinit var sortNew: TextView
     private lateinit var sortTop: TextView
+    private lateinit var sortIndia: TextView
     private val adapter = PhotoAdapter()
     private val sources = ArrayList<Source>() // Category definitions used by the chip row.
     private val feedSessions = HashMap<String, Source>() // Independent category + sort sessions.
@@ -172,12 +176,6 @@ class MainActivity : AppCompatActivity() {
         rv.isVerticalScrollBarEnabled = false
         status = findViewById(R.id.status)
         statusPill = findViewById(R.id.statusPill)
-        chips = findViewById(R.id.chips)
-        chipScroll = findViewById(R.id.chipScroll)
-        chipScroll.isHorizontalFadingEdgeEnabled = true
-        chipScroll.setFadingEdgeLength(24.dp())
-        chipScroll.clipChildren = true
-        chipScroll.clipToPadding = true
         sortBar = findViewById(R.id.sortBar)
         savedBar = findViewById(R.id.savedBar)
         swipe = findViewById(R.id.swipe)
@@ -213,6 +211,7 @@ class MainActivity : AppCompatActivity() {
         sortHot = findViewById(R.id.sortHot)
         sortNew = findViewById(R.id.sortNew)
         sortTop = findViewById(R.id.sortTop)
+        sortIndia = findViewById(R.id.sortIndia)
 
         bindGlass(overlay, glassSource, 70)
 
@@ -231,20 +230,12 @@ class MainActivity : AppCompatActivity() {
         animateAbout()
         setupAbout()
 
-        findViewById<ImageView>(R.id.sortButton).apply {
-            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
-            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
-            pressFx()
-            contentDescription = "Sort photos"
-            setOnClickListener { showSortPopup() }
-        }
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, query))
         cur = sessionFor(sources.first(), currentSort())
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
         installScrollBounce(aboutScroll)
-        installScrollBounce(chipScroll)
         rv.adapter = adapter
         rv.setHasFixedSize(true)
         rv.setItemViewCacheSize(8)
@@ -268,8 +259,12 @@ class MainActivity : AppCompatActivity() {
 
         status.setOnClickListener { if (tab == 0 && cur.err != null) { cur.err = null; loadMore() } }
 
-        buildChips()
 
+        findViewById<View>(R.id.searchBar).apply { pressFx(); setOnClickListener { showSearch() } }
+        findViewById<View>(R.id.settingsButton).apply {
+            pressFx()
+            setOnClickListener { PortalTransition.launch(this@MainActivity, this, Intent(this@MainActivity, SettingsHubActivity::class.java)) }
+        }
         findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { showTab(0) } }
         findViewById<View>(R.id.navItem1).apply { pressFx(); setOnClickListener { showSearch() } }
         findViewById<View>(R.id.navItem2).apply { pressFx(); setOnClickListener { showTab(1) } }
@@ -290,8 +285,9 @@ class MainActivity : AppCompatActivity() {
         sortHot.apply { pressFx(); setOnClickListener { setSort("hot") } }
         sortNew.apply { pressFx(); setOnClickListener { setSort("new") } }
         sortTop.apply { pressFx(); setOnClickListener { setSort("top") } }
+        sortIndia.apply { pressFx(); setOnClickListener { setIndiaSort() } }
 
-        shownSort = currentSort()
+        shownSort = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort_display", currentSort()) ?: currentSort()
         styleSort()
         showTab(0)
         if (intent.getBooleanExtra("open_about", false)) showTab(2)
@@ -515,8 +511,9 @@ class MainActivity : AppCompatActivity() {
         var shouldResetFeed = previousSourcesSignature != null && sourcesSignature != previousSourcesSignature
         // Settings may have changed the default sort while this screen was paused.
         val s = currentSort()
-        if (s != shownSort) {
-            shownSort = s
+        val displaySort = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort_display", s) ?: s
+        if (displaySort != shownSort) {
+            shownSort = displaySort
             styleSort()
             val category = sources.firstOrNull { it.name == cur.name } ?: cur
             cur = sessionFor(category, s)
@@ -715,8 +712,7 @@ class MainActivity : AppCompatActivity() {
         glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
         if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
         glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
-        chipScroll.visibility = if (n == 0) View.VISIBLE else View.GONE
-        sortBar.visibility = View.GONE
+        sortBar.visibility = if (n == 0) View.VISIBLE else View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
 
         if (n == 1) {
@@ -733,57 +729,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------- Chips ----------
-
-    private fun buildChips() {
-        chips.removeAllViews()
-        for (s in sources) chips.addView(chip(s.name, s) { select(s) })
-        chips.addView(chip(getString(R.string.shuffle), "shuffle") { shuffleCurrent() })
-        styleChips()
-    }
-
-    private fun chip(label: String, key: Any, onTap: () -> Unit): Chip = Chip(this).apply {
-        text = label
-        tag = key
-        isCheckable = false
-        isClickable = true
-        isFocusable = true
-        chipMinHeight = 42.dp().toFloat()
-        chipCornerRadius = 21.dp().toFloat()
-        textSize = 13f
-        setEnsureMinTouchTargetSize(false)
-        setPadding(4.dp(), 0, 4.dp(), 0)
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42.dp()).apply {
-            marginEnd = 8.dp()
-        }
-        pressFx()
-        setOnClickListener { onTap() }
-    }
-
-    private fun styleChips() {
-        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val selected = if (night) 0xFFD0C79A.toInt() else 0xFF414D2D.toInt()
-        val onSelected = if (night) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
-        val surface = if (night) 0xFF293022.toInt() else 0xFFE8E6DA.toInt()
-        val onSurface = if (night) 0xFFE5E7D8.toInt() else 0xFF41483A.toInt()
-        for (i in 0 until chips.childCount) {
-            val item = chips.getChildAt(i) as? Chip ?: continue
-            val active = (item.tag as? Source)?.name == cur.name
-            item.chipBackgroundColor = ColorStateList.valueOf(if (active) selected else surface)
-            item.setTextColor(if (active) onSelected else onSurface)
-            item.chipStrokeWidth = if (active) 0f else 1.dp().toFloat()
-            item.chipStrokeColor = ColorStateList.valueOf(if (night) 0xFF59634A.toInt() else 0xFFC8CCB9.toInt())
-            item.elevation = if (active) 2.dp().toFloat() else 0f
-            item.animate().cancel()
-            if (motionEnabled(this)) {
-                item.animate().scaleX(if (active) 1.02f else 1f).scaleY(if (active) 1.02f else 1f)
-                    .setDuration(180L).setInterpolator(AccelerateDecelerateInterpolator()).start()
-            } else {
-                item.scaleX = 1f
-                item.scaleY = 1f
-            }
-        }
-    }
 
     private fun feedCacheKey(source: Source): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
@@ -838,7 +783,6 @@ class MainActivity : AppCompatActivity() {
     private fun select(s: Source) {
         cur = sessionFor(s, currentSort())
         restoreCachedFeed(cur)
-        styleChips()
         rv.scrollToPosition(0)
         showTab(0)
     }
@@ -857,15 +801,30 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort", "hot") ?: "hot"
 
     private fun setSort(s: String) {
-        if (s == currentSort()) {
-            refreshCurrent()
-            return
-        }
-        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit().putString("sort", s).apply()
+        val previous = currentSort()
         shownSort = s
+        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
+            .putString("sort", s).putString("sort_display", s).apply()
         styleSort()
+        if (s == previous) { refreshCurrent(); return }
         val category = sources.firstOrNull { it.name == cur.name } ?: cur
         cur = sessionFor(category, s)
+        restoreCachedFeed(cur)
+        adapter.data = cur.items
+        adapter.notifyDataSetChanged()
+        rv.scrollToPosition(0)
+        updateStatus()
+        if (cur.items.isEmpty()) loadMore()
+    }
+
+    // India intentionally mirrors Hot: same feed and ordering, with its own selected segment.
+    private fun setIndiaSort() {
+        shownSort = "india"
+        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
+            .putString("sort", "hot").putString("sort_display", "india").apply()
+        styleSort()
+        val category = sources.firstOrNull { it.name == cur.name } ?: cur
+        cur = sessionFor(category, "hot")
         restoreCachedFeed(cur)
         adapter.data = cur.items
         adapter.notifyDataSetChanged()
@@ -878,6 +837,7 @@ class MainActivity : AppCompatActivity() {
         sortHot.styleSeg(shownSort == "hot")
         sortNew.styleSeg(shownSort == "new")
         sortTop.styleSeg(shownSort == "top")
+        sortIndia.styleSeg(shownSort == "india")
     }
 
     private fun showSortPopup() {
@@ -937,36 +897,16 @@ class MainActivity : AppCompatActivity() {
     // ---------- Search ----------
 
     private fun showSearch() {
-        showGlassPopup(this, glassSource, topOffsetDp = 110) { box, close ->
-            val view = LayoutInflater.from(this).inflate(R.layout.dialog_search, box, false)
-            box.addView(view)
-            val input = view.findViewById<EditText>(R.id.searchInput)
-            val go = view.findViewById<View>(R.id.searchGo)
-            view.findViewById<View>(R.id.searchCancel).apply { pressFx(); setOnClickListener { close() } }
-            go.apply {
-                pressFx()
-                setOnClickListener {
-                    val q = input.text.toString().trim()
-                    close()
-                    if (q.isBlank()) toast(getString(R.string.search_empty)) else runSearch(q)
-                }
-            }
-            input.setOnEditorActionListener { _, _, _ -> go.performClick(); true }
-            input.postDelayed({
-                input.requestFocus()
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
-            }, 250)
-        }
+        startActivityForResult(Intent(this, SearchActivity::class.java), 721)
     }
 
-    private fun runSearch(q: String) {
-        // Free-text search uses the enabled image providers; photo topic names are not interpreted.
-        sources.removeAll { it.extra || it.searchOnly || it.name == "Search" }
-        val src = Source("Search", q, false, currentSort()).apply { extra = true }
-        sources.add(0, src)
-        buildChips()
-        select(src)
+    @Deprecated("Deprecated in Android, retained for SearchActivity category hand-off")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 721 && resultCode == RESULT_OK) {
+            val category = data?.getStringExtra("category") ?: return
+            sources.firstOrNull { it.name == category }?.let { select(it) }
+        }
     }
 
     // ---------- Feed ----------
