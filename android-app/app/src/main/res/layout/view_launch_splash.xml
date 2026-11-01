@@ -66,13 +66,7 @@ on="1.0" encoding="utf-8"?>
         android:layout_gravity="center"
         android:background="@drawable/splash_glow" />
 
-    <View
-        android:id="@+id/splashRing"
-        android:layout_width="150dp"
-        android:layout_height="150dp"
-        android:layout_gravity="center"
-        android:background="@drawable/splash_ring"
-        android:alpha="0" />
+
 
     <LinearLayout
         android:id="@+id/splashContent"
