@@ -1360,6 +1360,7 @@ class MainActivity : AppCompatActivity() {
             val lbl: TextView = root.findViewById(R.id.lbl)
             val tag: TextView = root.findViewById(R.id.tag)
             val heart: ImageView = root.findViewById(R.id.heart)
+            val featuredCredit: TextView? = root.findViewById(R.id.featuredCredit)
             init { heart.pressFx() }
         }
 
@@ -1396,8 +1397,9 @@ class MainActivity : AppCompatActivity() {
             }, 900L)
 
             h.tag.text = if (featured) "FEATURED" else p.title
-            h.lbl.text = if (featured) p.title + "\n" + p.credit.ifBlank { getString(R.string.unknown_photographer) }
+            h.lbl.text = if (featured) p.title
                 else "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
+            h.featuredCredit?.text = if (featured) p.credit.ifBlank { getString(R.string.unknown_photographer) } + " · Tap to open" else ""
             h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             h.heart.contentDescription = getString(R.string.like_desc)
 
