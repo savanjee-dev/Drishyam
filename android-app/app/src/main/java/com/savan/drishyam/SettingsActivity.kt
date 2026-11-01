@@ -48,7 +48,7 @@ class SettingsActivity : AppCompatActivity() {
                 setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface, 0xFFFFFFFF.toInt()))
             })
             addView(TextView(this@SettingsActivity).apply {
-                text = "Wikimedia Commons · NASA Image Library · NexWall\\nUnsplash and Openverse are not used."
+                text = "Wikimedia Commons · NASA Image Library · NexWall\nUnsplash and Openverse are not used."
                 textSize = 12f
                 typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.poppins_regular)
                 setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant, 0xFFBBBBBB.toInt()))
