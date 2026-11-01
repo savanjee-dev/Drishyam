@@ -12,6 +12,7 @@ object Config {
     // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
     // Do not add an Unsplash key to the Android app.
     const val UNSPLASH_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
+    const val NEXWALL_PROXY_BASE_URL = "https://drishyam-nexwall-proxy.savansingh8147.workers.dev"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -303,6 +304,53 @@ object Api {
         }
         val last = items.length() == 0 || page * 12 >= total
         return Pair(out, last)
+    }
+
+    /**
+     * NexWall wallpaper search through the Drishyam Cloudflare proxy.
+     * The upstream API key is never sent to or stored in the Android app.
+     */
+    fun nexwall(query: String, page: Int, sort: String = "newest"): Pair<List<Photo>, Boolean> {
+        require(query.length <= 100) { "Invalid NexWall search query." }
+        require(page in 1..10000) { "Invalid page." }
+        val params = buildString {
+            append("?page=").append(page)
+            append("&per_page=24&type=image")
+            append("&sort=").append(java.net.URLEncoder.encode(sort, "UTF-8"))
+            if (query.length >= 2) append("&search=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+        }
+        val root = JSONObject(get(
+            Config.NEXWALL_PROXY_BASE_URL.trimEnd('/') + "/wallpapers" + params,
+            mapOf("User-Agent" to "DrishyamAndroid/3.0 (https://github.com/savanjee-dev/Drishyam)")
+        ))
+        val items = root.optJSONArray("data") ?: root.optJSONObject("data")?.optJSONArray("data") ?: JSONArray()
+        val currentPage = root.optInt("current_page", page)
+        val lastPage = root.optInt("last_page", currentPage)
+        val out = ArrayList<Photo>()
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val id = item.optString("id", "")
+            val full = item.optString("image_url", "")
+            if (id.isBlank() || !full.startsWith("https://")) continue
+            val thumb = item.optString("thumbnail_url", item.optString("thumbnail", full))
+                .takeIf { it.startsWith("https://") } ?: full
+            val category = item.optJSONObject("category")?.optString("name", "").orEmpty()
+            val title = item.optString("title", item.optString("name", category.ifBlank { "NexWall wallpaper" })).take(180)
+            val width = item.optInt("width", 0)
+            val height = item.optInt("height", 0)
+            val created = item.optString("created_at", item.optString("published_at", ""))
+            val publishedAt = try {
+                java.time.Instant.parse(created).toEpochMilli()
+            } catch (_: Exception) { 0L }
+            val date = created.take(10)
+            out.add(Photo(
+                "nexwall:$id", thumb, full, title,
+                category.ifBlank { "NexWall" },
+                "https://nexwall.kodnextech.com", "", 0xFF222222.toInt(),
+                width, height, date, publishedAt
+            ))
+        }
+        return Pair(out, currentPage >= lastPage || items.length() == 0)
     }
 
     /** Returns photos and whether this was the last page. */
