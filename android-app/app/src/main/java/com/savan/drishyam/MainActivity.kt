@@ -288,8 +288,10 @@ class MainActivity : AppCompatActivity() {
             startLaunchSplash()
         } else {
             findViewById<View>(R.id.splashRoot).visibility = View.GONE
-            findViewById<ImageView>(R.id.splashLogoTarget).visibility = View.VISIBLE
-            finishSplashAndContinue()
+            rv.post {
+                homeHeaderAdapter.logoView?.visibility = View.VISIBLE
+                finishSplashAndContinue()
+            }
         }
     }
 
@@ -297,7 +299,11 @@ class MainActivity : AppCompatActivity() {
     private fun startLaunchSplash() {
         val splash = findViewById<View>(R.id.splashRoot)
         val logo = findViewById<ImageView>(R.id.splashLogo)
-        val target = findViewById<ImageView>(R.id.splashLogoTarget)
+        val target = homeHeaderAdapter.logoView
+        if (target == null) {
+            rv.post { if (!isFinishing && !isDestroyed) startLaunchSplash() }
+            return
+        }
         if (!motionEnabled(this)) {
             splash.visibility = View.GONE
             target.visibility = View.VISIBLE
@@ -1218,6 +1224,8 @@ class MainActivity : AppCompatActivity() {
 
     inner class HomeHeaderAdapter : RecyclerView.Adapter<HomeHeaderAdapter.VH>() {
         var visible = true
+        var logoView: ImageView? = null
+            private set
         private var sortContainer: FrameLayout? = null
         private var sortButtons: LinearLayout? = null
         private var indicator: View? = null
@@ -1232,6 +1240,7 @@ class MainActivity : AppCompatActivity() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
             val v = LayoutInflater.from(parent.context).inflate(R.layout.item_home_header, parent, false)
+            logoView = v.findViewById(R.id.headerLogo)
             sortContainer = v.findViewById(R.id.sortBar)
             sortButtons = v.findViewById(R.id.sortButtons)
             indicator = v.findViewById(R.id.sortIndicator)
@@ -1348,6 +1357,7 @@ class MainActivity : AppCompatActivity() {
                 val adapterPosition = h.bindingAdapterPosition
                 val threshold = minOf(h.root.height * 0.5f, resources.displayMetrics.heightPixels * 0.35f)
                 if (adapterPosition != RecyclerView.NO_POSITION &&
+                    data.getOrNull(adapterPosition)?.id == p.id &&
                     h.root.height > 0 && h.root.getGlobalVisibleRect(rect) &&
                     rect.height() >= threshold) {
                     if (boundSession.seenIds.add(p.id)) persistSeen(boundSession)
