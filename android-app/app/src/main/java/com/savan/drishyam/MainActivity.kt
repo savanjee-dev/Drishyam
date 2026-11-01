@@ -341,10 +341,9 @@ class MainActivity : AppCompatActivity() {
         logo.scaleY = 0.55f
         logo.rotation = -14f
         logo.alpha = 0f
-        logo.rotation = 0f
         logo.animate().alpha(1f).scaleX(1f).scaleY(1f)
             .setStartDelay(200L).setDuration(1100L).setInterpolator(OvershootInterpolator(1.15f)).start()
-        ObjectAnimator.ofFloat(logo, View.ROTATION, 0f, 360f).apply {
+        ObjectAnimator.ofFloat(logo, View.ROTATION, -14f, 346f).apply {
             duration = 2600L
             startDelay = 200L
             repeatCount = ObjectAnimator.INFINITE
@@ -387,13 +386,13 @@ class MainActivity : AppCompatActivity() {
         val ring = findViewById<View>(R.id.splashRing)
         ring.postDelayed({
             if (splash.visibility == View.VISIBLE) {
-                val ringPulse = ValueAnimator.ofFloat(0.55f, 1.65f).apply {
+                val ringPulse = ValueAnimator.ofFloat(0.92f, 1.22f).apply {
                     duration = 2600L; repeatCount = ValueAnimator.INFINITE; interpolator = LinearInterpolator()
                     addUpdateListener {
                         val fraction = it.animatedFraction
                         ring.scaleX = it.animatedValue as Float
                         ring.scaleY = it.animatedValue as Float
-                        ring.alpha = 1f - fraction
+                        ring.alpha = 0.7f * (1f - fraction)
                     }
                 }
                 splashAnimators.add(ringPulse); ringPulse.start()
