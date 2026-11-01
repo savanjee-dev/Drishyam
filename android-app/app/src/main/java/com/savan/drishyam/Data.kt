@@ -2,16 +2,14 @@
 package com.savan.drishyam
 
 import android.content.Context
-import android.graphics.Color
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
 object Config {
-    // Set this to the deployed Cloudflare Worker URL before enabling the proxy integration.
-    // Do not add an Unsplash key to the Android app.
-    const val UNSPLASH_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
+    const val NEXWALL_API_BASE_URL = "https://nexwall.kodnextech.com/api/developer/v1"
+    const val NEXWALL_API_KEY = "207|zOUljlzUpzFU6uGK1l9lCcTIbiYvCsEN7xkOnSyJ899d1e12"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -129,19 +127,6 @@ object Api {
         } finally {
             c.disconnect()
         }
-    }
-
-    fun ping(downloadLocation: String) {
-        // Unsplash requires its download endpoint to be triggered when a user downloads a photo.
-        // Extract only the photo ID; never proxy a caller-supplied arbitrary URL.
-        try {
-            val id = Regex("/photos/([A-Za-z0-9_-]+)/download").find(downloadLocation)?.groupValues?.get(1)
-                ?: return
-            get(
-                Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/') + "/photos/" + id + "/download",
-                emptyMap()
-            )
-        } catch (_: Exception) { }
     }
 
     /** Returns photos and the "after" token ("" when there is no more). */
@@ -270,82 +255,49 @@ object Api {
         return Pair(out, pages.length() == 0 || out.isEmpty())
     }
 
-    /**
-     * Openverse anonymous image search. Only broadly reusable licences are requested;
-     * each result retains its licence and attribution links for the app's credit UI.
-     * Anonymous API pagination is intentionally capped to avoid excessive requests.
-     */
-    fun openverse(query: String, page: Int): Pair<List<Photo>, Boolean> {
-        require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
-        require(page in 1..5) { "Openverse anonymous pagination limit reached." }
-        val url = "https://api.openverse.org/v1/images/?q=" +
-            java.net.URLEncoder.encode(query, "UTF-8") +
-            "&page_size=20&page=$page&license=cc0,pdm,by,by-sa"
-        val root = JSONObject(get(url, mapOf("User-Agent" to "DrishyamAndroid/3.1 (https://github.com/savanjee-dev/Drishyam)")))
-        val results = root.optJSONArray("results") ?: JSONArray()
+    /** Direct NexWall image search. The API key is embedded in the client at the user's request. */
+    fun nexwall(query: String, page: Int, sort: String = "newest"): Pair<List<Photo>, Boolean> {
+        require(query.length <= 100) { "Invalid NexWall search query." }
+        require(page in 1..10000) { "Invalid page." }
+        val params = buildString {
+            append("?page=").append(page)
+            append("&per_page=24&type=image")
+            append("&sort=").append(java.net.URLEncoder.encode(sort, "UTF-8"))
+            if (query.length >= 2) append("&search=").append(java.net.URLEncoder.encode(query, "UTF-8"))
+        }
+        val root = JSONObject(get(
+            Config.NEXWALL_API_BASE_URL.trimEnd('/') + "/wallpapers" + params,
+            mapOf(
+                "User-Agent" to "DrishyamAndroid/3.0 (https://github.com/savanjee-dev/Drishyam)",
+                "Authorization" to "Bearer " + Config.NEXWALL_API_KEY
+            )
+        ))
+        val items = root.optJSONArray("data") ?: root.optJSONObject("data")?.optJSONArray("data") ?: JSONArray()
+        val currentPage = root.optInt("current_page", page)
+        val lastPage = root.optInt("last_page", currentPage)
         val out = ArrayList<Photo>()
-        for (i in 0 until results.length()) {
-            val item = results.optJSONObject(i) ?: continue
-            val image = item.optString("url", "")
-            val thumb = item.optString("thumbnail", image)
-            val landing = item.optString("foreign_landing_url", "")
-            if (!image.startsWith("https://") || !thumb.startsWith("https://") || !landing.startsWith("https://")) continue
-            val creator = item.optString("creator", "").ifBlank { "Unknown creator" }
-            val creatorUrl = item.optString("creator_url", "")
-            val license = item.optString("license", "").uppercase()
-            val licenseUrl = item.optString("license_url", "")
-            if (license !in setOf("CC0", "PDM", "BY", "BY-SA") || licenseUrl.isBlank()) continue
-            val title = item.optString("title", "Untitled image").replace(Regex("<[^>]*>"), "").take(180)
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val id = item.optString("id", "")
+            val full = item.optString("image_url", "")
+            if (id.isBlank() || !full.startsWith("https://")) continue
+            val thumb = item.optString("thumbnail_url", item.optString("thumbnail", full))
+                .takeIf { it.startsWith("https://") } ?: full
+            val category = item.optJSONObject("category")?.optString("name", "").orEmpty()
+            val title = item.optString("title", item.optString("name", category.ifBlank { "NexWall wallpaper" })).take(180)
+            val width = item.optInt("width", 0)
+            val height = item.optInt("height", 0)
+            val created = item.optString("created_at", item.optString("published_at", ""))
+            val publishedAt = try { java.time.Instant.parse(created).toEpochMilli() } catch (_: Exception) { 0L }
             out.add(Photo(
-                id = "openverse:" + item.optString("id", "$page-$i"),
-                thumb = thumb, full = image, title = title, credit = creator,
-                link = landing, dl = "", color = 0xFF222222.toInt(),
-                width = item.optInt("width", 0), height = item.optInt("height", 0),
-                license = license, licenseUrl = licenseUrl, creatorUrl = creatorUrl,
-                source = item.optString("source", "Openverse")
+                id = "nexwall:$id", thumb = thumb, full = full, title = title,
+                credit = category.ifBlank { "NexWall" },
+                link = "https://nexwall.kodnextech.com", dl = "", color = 0xFF222222.toInt(),
+                width = width, height = height, published = created.take(10), publishedAt = publishedAt,
+                source = "NexWall"
             ))
         }
-        val next = root.optString("next", "")
-        return Pair(out, next.isBlank() || next == "null" || page >= 5)
+        return Pair(out, currentPage >= lastPage || items.length() == 0)
     }
 
-
-    /** Returns photos and whether this was the last page. */
-    fun unsplash(query: String, page: Int, orderBy: String = "relevant", forceFresh: Boolean = false, indiaOnly: Boolean = false, popular: Boolean = false): Pair<List<Photo>, Boolean> {
-        require(query.isNotBlank() && query.length <= 120) { "Invalid search query." }
-        require(page in 1..10000) { "Invalid page." }
-        val base = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/')
-        val url = if (popular) {
-            "$base/photos?order_by=popular&per_page=20&page=$page" + if (forceFresh) "&refresh=1" else ""
-        } else {
-            "$base/search/photos?query=" + java.net.URLEncoder.encode(query, "UTF-8") +
-                "&orientation=portrait&per_page=20&page=$page&order_by=" + (if (orderBy == "latest") "latest" else "relevant") +
-                (if (forceFresh) "&refresh=1" else "")
-        }
-        val body = get(url, emptyMap())
-        val root = org.json.JSONTokener(body).nextValue()
-        val arr = if (root is JSONArray) root else (root as JSONObject).getJSONArray("results")
-        val totalPages = if (root is JSONObject) root.optInt("total_pages", 1) else Int.MAX_VALUE
-        val out = ArrayList<Photo>()
-        for (i in 0 until arr.length()) {
-            val p = arr.getJSONObject(i)
-            val urls = p.getJSONObject("urls")
-            val raw = urls.getString("raw")
-            val full = raw + (if (raw.contains("?")) "&" else "?") + "w=1440&q=85&fm=jpg&fit=max"
-            val user = p.getJSONObject("user")
-            val createdAt = p.optString("created_at", "")
-            // Unsplash location metadata is optional. Keep valid photos when metadata is missing;
-            // the India search query biases results without risking an empty feed.
-            val publishedAt = try { java.time.Instant.parse(createdAt).toEpochMilli() } catch (_: Exception) { 0L }
-            val col = try { Color.parseColor(p.optString("color", "#222222")) } catch (_: Exception) { 0xFF222222.toInt() }
-            out.add(Photo(p.getString("id"), urls.getString("small"), full,
-                p.optString("alt_description", "Photo").let { if (it == "null") "Photo" else it },
-                "📷 " + user.optString("name"),
-                p.getJSONObject("links").optString("html") + "?utm_source=drishyam&utm_medium=referral",
-                p.getJSONObject("links").optString("download_location"), col,
-                p.optInt("width", 0), p.optInt("height", 0),
-                createdAt.take(10), publishedAt, p.optInt("likes", 0)))
-        }
-        return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20))
-    }
 }
