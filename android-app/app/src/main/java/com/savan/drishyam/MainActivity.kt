@@ -920,23 +920,23 @@ class MainActivity : AppCompatActivity() {
                             "street travel photography", "flowers botanical photography",
                             "waterfall river photography", "architecture city photography"
                         )
-                        val categoryQuery = when (s.name) {
-                            "For You" -> forYouThemes[s.discoveryIndex % forYouThemes.size]
-                            "Forest" -> "forest woodland photograph"
-                            "Nature" -> "nature photograph"
-                            "Earth" -> "earth landscape photograph"
-                            "Hiking" -> "hiking trail photograph"
-                            "Mountains" -> "mountain landscape photograph"
-                            "Wildlife" -> "wildlife animal photograph"
-                            "Architecture" -> "architecture photograph"
-                            "Abstract" -> "abstract photography"
-                            "Minimalism" -> "minimalist photograph"
-                            "Travel" -> "travel landscape photograph"
-                            "Street" -> "street photography"
-                            "Ocean" -> "ocean sea photograph"
-                            "Night Sky" -> "night sky photograph"
-                            else -> fallbackQuery
-                        }
+                        val categoryVariants = mapOf(
+                            "Forest" to listOf("forest woodland photograph", "misty forest trees photography", "ancient forest canopy photograph", "pine forest landscape photo"),
+                            "Nature" to listOf("nature wildlife macro photography", "botanical nature landscape photo", "river waterfall nature photograph", "flowers plants closeup photography"),
+                            "Earth" to listOf("earth aerial landscape photograph", "desert geological landscape photo", "coastal earth landscape photography"),
+                            "Hiking" to listOf("hiking trail mountain photograph", "wilderness trekking landscape photo", "forest hiking path photography"),
+                            "Mountains" to listOf("mountain peaks landscape photography", "snowy alpine mountain photo", "mountain valley sunrise photograph"),
+                            "Wildlife" to listOf("wildlife animal portrait photography", "birds in nature photograph", "wild animals habitat photo"),
+                            "Architecture" to listOf("contemporary architecture photography", "historic building architecture photo", "minimal architecture details photograph"),
+                            "Abstract" to listOf("abstract texture photography", "abstract light shadow photograph", "geometric abstract photo"),
+                            "Minimalism" to listOf("minimalist nature photography", "minimal architecture photograph", "minimal still life photo"),
+                            "Travel" to listOf("travel destination landscape photograph", "travel street photography", "remote places travel photo"),
+                            "Street" to listOf("street candid photography", "urban street scene photograph", "city life documentary photo"),
+                            "Ocean" to listOf("ocean waves coastal photography", "underwater marine life photograph", "sea cliffs landscape photo"),
+                            "Night Sky" to listOf("night sky astrophotography", "milky way landscape photograph", "stars moon long exposure photo")
+                        )
+                        val categoryQuery = if (s.name == "For You") forYouThemes[s.discoveryIndex % forYouThemes.size]
+                            else categoryVariants[s.name]?.let { it[s.discoveryIndex % it.size] } ?: fallbackQuery
                         val candidates = ArrayList<Photo>()
                         val candidateIds = HashSet<String>()
                         var attempts = 0
