@@ -15,6 +15,23 @@
         android:layout_gravity="center"
         android:background="@drawable/splash_glow" />
 
+on="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splashRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/splash_radial_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:importantForAccessibility="yes">
+
+    <View
+        android:id="@+id/splashAmbientGlow"
+        android:layout_width="460dp"
+        android:layout_height="460dp"
+        android:layout_gravity="center"
+        android:background="@drawable/splash_glow" />
+
     <View
         android:id="@+id/splashRing"
         android:layout_width="150dp"
@@ -39,6 +56,13 @@
             android:layout_height="160dp"
             android:clipChildren="false"
             android:clipToPadding="false">
+            <View
+                android:id="@+id/splashRing"
+                android:layout_width="138dp"
+                android:layout_height="138dp"
+                android:layout_gravity="center"
+                android:background="@drawable/splash_ring"
+                android:alpha="0" />
             <ImageView
                 android:id="@+id/splashLogo"
                 android:layout_width="118dp"
@@ -46,8 +70,7 @@
                 android:layout_gravity="center"
                 android:contentDescription="Drishyam"
                 android:scaleType="fitCenter"
-                android:src="@drawable/drishyam_mark"
-                android:tint="?attr/colorOnSurface" />
+                android:src="@drawable/drishyam_mark" />
         </FrameLayout>
 
         <LinearLayout
