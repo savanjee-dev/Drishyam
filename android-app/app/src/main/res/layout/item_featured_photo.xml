@@ -45,11 +45,24 @@
             android:layout_gravity="bottom|start"
             android:layout_marginStart="18dp"
             android:layout_marginEnd="72dp"
-            android:layout_marginBottom="18dp"
-            android:fontFamily="@font/poppins_semibold"
+            android:layout_marginBottom="22dp"
+            android:fontFamily="@font/poppins_extrabold"
             android:maxLines="2"
             android:textColor="@android:color/white"
-            android:textSize="17sp" />
+            android:textSize="22sp" />
+        <TextView
+            android:id="@+id/featuredCredit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_marginStart="18dp"
+            android:layout_marginEnd="72dp"
+            android:layout_marginBottom="2dp"
+            android:fontFamily="@font/poppins_medium"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:textColor="#DFFFFFFF"
+            android:textSize="11sp" />
         <ImageView
             android:id="@+id/heart"
             android:layout_width="46dp"
