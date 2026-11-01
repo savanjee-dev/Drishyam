@@ -35,7 +35,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import android.content.res.ColorStateList
 
-class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false) {
+class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false, val provider: String = if (unsplash) "unsplash" else "commons") {
     val items = ArrayList<Photo>()
     val ids = HashSet<String>()
     var after = ""
@@ -57,7 +57,7 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        // Curated Unsplash categories only; no Reddit/photo topic sources are exposed in the UI.
+        // General photography categories plus a small, dedicated NASA space-imagery collection.
         val PHOTO_CATEGORIES = listOf(
             "For You" to "cinematic nature landscape photography",
             "Forest" to "forest woodland trees",
@@ -181,6 +181,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, true, query))
+        sources.add(Source("Space", false, "space exploration nebula galaxy", provider = "nasa"))
+        sources.add(Source("Earth from Space", false, "Earth from space satellite", provider = "nasa"))
+        sources.add(Source("Aurora", false, "aurora borealis", provider = "nasa"))
         cur = sources.first()
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
@@ -713,16 +716,26 @@ class MainActivity : AppCompatActivity() {
             var finished = false
             var error: String? = null
             var unsplashError: String? = null
-            val query = if (sort == "india" && s.name != "Search") "India photography" else s.q
-            val fallbackQuery = if (sort == "india" && s.name != "Search") "India landscape monument architecture" else s.q
+            val query = if (sort == "india" && s.name != "Search" && s.provider == "unsplash") "India photography" else s.q
+            val fallbackQuery = if (sort == "india" && s.name != "Search" && s.provider == "unsplash") "India landscape monument architecture" else s.q
             try {
-                val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
-                if (list.isNotEmpty()) {
-                    finished = last
-                    added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
+                if (s.provider == "nasa") {
+                    val (list, last) = Api.nasa(s.q, page)
+                    if (list.isNotEmpty()) {
+                        finished = last
+                        added.addAll(list)
+                    } else {
+                        unsplashError = "NASA returned no suitable images."
+                    }
                 } else {
-                    // HTTP 200 with an empty results array is still a feed failure; try the backup source.
-                    unsplashError = "Unsplash returned no photos."
+                    val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
+                    if (list.isNotEmpty()) {
+                        finished = last
+                        added.addAll(if (sort == "top") list.sortedByDescending { it.likes } else list)
+                    } else {
+                        // HTTP 200 with an empty results array is still a feed failure; try the backup source.
+                        unsplashError = "Unsplash returned no photos."
+                    }
                 }
             } catch (e: Exception) {
                 unsplashError = e.message ?: "Photo service unavailable."
