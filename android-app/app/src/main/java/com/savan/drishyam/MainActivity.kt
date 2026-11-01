@@ -181,14 +181,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, query))
-        sources.add(Source("Space", false, "space exploration nebula galaxy", provider = "nasa"))
-        sources.add(Source("Earth from Space", false, "Earth from space satellite", provider = "nasa"))
-        sources.add(Source("Aurora", false, "aurora borealis", provider = "nasa"))
-        sources.add(Source("NexWall Nature", false, "nature", provider = "nexwall"))
-        sources.add(Source("NexWall Landscapes", false, "landscape", provider = "nexwall"))
-        sources.add(Source("NexWall Abstract", false, "abstract", provider = "nexwall"))
-        sources.add(Source("NexWall Architecture", false, "architecture", provider = "nexwall"))
-        sources.add(Source("NexWall Space", false, "space", provider = "nexwall"))
+        sources.add(Source("Space", "space exploration nebula galaxy", provider = "nasa"))
+        sources.add(Source("Earth from Space", "Earth from space satellite", provider = "nasa"))
+        sources.add(Source("Aurora", "aurora borealis", provider = "nasa"))
+        sources.add(Source("NexWall Nature", "nature", provider = "nexwall"))
+        sources.add(Source("NexWall Landscapes", "landscape", provider = "nexwall"))
+        sources.add(Source("NexWall Abstract", "abstract", provider = "nexwall"))
+        sources.add(Source("NexWall Architecture", "architecture", provider = "nexwall"))
+        sources.add(Source("NexWall Space", "space", provider = "nexwall"))
         cur = sources.first()
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
@@ -857,7 +857,7 @@ class MainActivity : AppCompatActivity() {
                 h.root.scaleY = 1f
             }
             // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
-            // Some Unsplash thumbnail URLs can fail independently of the photo itself.
+            // Some remote thumbnail URLs can fail independently of the original photo.
             // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
             Glide.with(h.img)
                 .load(p.thumb)
