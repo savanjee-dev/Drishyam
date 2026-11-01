@@ -38,7 +38,7 @@ import com.bumptech.glide.Glide
 import com.google.android.material.chip.Chip
 import android.content.res.ColorStateList
 
-class Source(val name: String, val unsplash: Boolean, val q: String, val searchOnly: Boolean = false, val sort: String = "hot") {
+class Source(val name: String, val q: String, val searchOnly: Boolean = false, val sort: String = "hot") {
     val items = ArrayList<Photo>()
     val ids = HashSet<String>() // IDs currently present in this session's feed.
     val fetchedIds = HashSet<String>() // IDs received from the provider, whether displayed or not.
@@ -68,7 +68,7 @@ class Source(val name: String, val unsplash: Boolean, val q: String, val searchO
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        // Curated Unsplash categories only; no Reddit/photo topic sources are exposed in the UI.
+        // Curated photography categories only; no Reddit/photo topic sources are exposed in the UI.
         val PHOTO_CATEGORIES = listOf(
             "For You" to "cinematic nature landscape photography",
             "Forest" to "forest woodland trees",
@@ -227,7 +227,7 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { showSortPopup() }
         }
 
-        for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, true, query))
+        for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, query))
         cur = sessionFor(sources.first(), currentSort())
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
@@ -326,7 +326,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun browsingSourcesSignature(): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
-        val sources = listOf("source_wikimedia", "source_openverse", "source_unsplash")
+        val sources = listOf("source_wikimedia", "source_nexwall")
             .joinToString("|") { key -> prefs.getBoolean(key, true).toString() }
         return sources + "|" + (prefs.getString("image_quality", "High") ?: "High")
     }
@@ -615,7 +615,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun feedCacheKey(source: Source): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
-        val signature = listOf("source_wikimedia", "source_openverse", "source_unsplash")
+        val signature = listOf("source_wikimedia", "source_nexwall")
             .joinToString("_") { prefs.getBoolean(it, true).toString() }
         return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + source.sort + "_" + signature
     }
@@ -631,7 +631,7 @@ class MainActivity : AppCompatActivity() {
     private fun sessionFor(category: Source, sort: String): Source {
         val key = category.name + "|" + sort + "|" + category.q
         return feedSessions.getOrPut(key) {
-            Source(category.name, category.unsplash, category.q, category.searchOnly, sort).apply {
+            Source(category.name, category.q, category.searchOnly, sort).apply {
                 seenIds.addAll(getSharedPreferences("drishyam_feed_seen", Context.MODE_PRIVATE)
                     .getStringSet(seenCacheKey(this), emptySet()) ?: emptySet())
             }
@@ -789,9 +789,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun runSearch(q: String) {
-        // Free-text search always uses Unsplash; photo topic names are no longer interpreted.
+        // Free-text search uses the enabled image providers; photo topic names are not interpreted.
         sources.removeAll { it.extra || it.searchOnly || it.name == "Search" }
-        val src = Source("Search", true, q, false, currentSort()).apply { extra = true }
+        val src = Source("Search", q, false, currentSort()).apply { extra = true }
         sources.add(0, src)
         buildChips()
         select(src)
@@ -902,31 +902,23 @@ class MainActivity : AppCompatActivity() {
             val fallbackQuery = s.q
             val browsingPrefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
             val useWikimedia = browsingPrefs.getBoolean("source_wikimedia", true)
-            val useOpenverse = browsingPrefs.getBoolean("source_openverse", true)
-            val useUnsplash = browsingPrefs.getBoolean("source_unsplash", true)
+            val useNexwall = browsingPrefs.getBoolean("source_nexwall", true)
             val imageQuality = browsingPrefs.getString("image_quality", "High") ?: "High"
             val preferredOrientation = browsingPrefs.getString("orientation", "Portrait") ?: "Portrait"
-
-            if (!useWikimedia && !useOpenverse && !useUnsplash) {
-                error = "No photo sources are enabled. Enable at least one source in Settings → Browsing."
+            var usedNexwall = false
+            var nextNexwallPage = page
+            if (!useWikimedia && !useNexwall) {
+                error = "No photo sources are enabled. Enable Wikimedia Commons or NexWall in Settings → Browsing."
             } else {
-                // MilkyWay provider order: Wikimedia Commons → Openverse → Unsplash.
-                // A disabled provider is never queried, including as a fallback.
                 if (useWikimedia && added.isEmpty()) {
                     try {
                         val forYouThemes = listOf(
-                            "mountain landscape photography",
-                            "wildlife nature photography",
-                            "ocean coast photography",
-                            "forest nature photography",
-                            "aerial landscape photography",
-                            "macro nature photography",
-                            "desert landscape photography",
-                            "night sky astrophotography",
-                            "street travel photography",
-                            "flowers botanical photography",
-                            "waterfall river photography",
-                            "architecture city photography"
+                            "mountain landscape photography", "wildlife nature photography",
+                            "ocean coast photography", "forest nature photography",
+                            "aerial landscape photography", "macro nature photography",
+                            "desert landscape photography", "night sky astrophotography",
+                            "street travel photography", "flowers botanical photography",
+                            "waterfall river photography", "architecture city photography"
                         )
                         val categoryQuery = when (s.name) {
                             "For You" -> forYouThemes[s.discoveryIndex % forYouThemes.size]
@@ -945,10 +937,6 @@ class MainActivity : AppCompatActivity() {
                             "Night Sky" -> "night sky photograph"
                             else -> fallbackQuery
                         }
-                        val commonsQuery = categoryQuery
-                        // Orientation is a preference, never a filter or quota.
-                        // Deliver a small first group immediately, then improve ordering as
-                        // more category-matched Commons results arrive.
                         val candidates = ArrayList<Photo>()
                         val candidateIds = HashSet<String>()
                         var attempts = 0
@@ -969,34 +957,21 @@ class MainActivity : AppCompatActivity() {
                                     compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
                                         .thenBy { orientationRank(it.value) }.thenBy { it.index }
                                 } else compareBy<IndexedValue<Photo>> { it.index })
-                                .take(limit)
-                                .map { it.value }
+                                .take(limit).map { it.value }
                             if (batch.isEmpty()) return
                             runOnUiThread {
                                 if (gen != s.gen) return@runOnUiThread
-                                val fresh = batch.filter { photo ->
-                                    s.ids.add(photo.id) && photo.id !in s.seenIds
-                                }
+                                val fresh = batch.filter { photo -> s.ids.add(photo.id) && photo.id !in s.seenIds }
                                 if (fresh.isNotEmpty()) {
                                     s.items.addAll(fresh)
-                                    if (s.refreshing && s === cur) {
-                                        // Stop the pull-to-refresh spinner as soon as the first
-                                        // new group is visible; discovery can continue quietly.
-                                        swipe.isRefreshing = false
-                                        updateStatus()
-                                    }
-                                    // Re-rank the visible feed when new preferred-orientation
-                                    // results arrive. Unknown dimensions remain fully eligible.
-                                    val reordered = s.items.withIndex()
-                                        .let { indexed ->
-                                            if (sort == "new" || sort == "india") indexed.sortedWith(
-                                                compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
-                                                    .thenBy { orientationRank(it.value) }.thenBy { it.index })
-                                            else indexed.toList()
-                                        }.map { it.value }
-                                    s.items.clear()
-                                    s.items.addAll(reordered)
-                                    persistFeedCache(s)
+                                    if (s.refreshing && s === cur) { swipe.isRefreshing = false; updateStatus() }
+                                    val reordered = s.items.withIndex().let { indexed ->
+                                        if (sort == "new" || sort == "india") indexed.sortedWith(
+                                            compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                                .thenBy { orientationRank(it.value) }.thenBy { it.index })
+                                        else indexed.toList()
+                                    }.map { it.value }
+                                    s.items.clear(); s.items.addAll(reordered); persistFeedCache(s)
                                     if (s === cur && tab == 0) {
                                         adapter.data = s.items
                                         adapter.notifyDataSetChanged()
@@ -1005,92 +980,58 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         while (attempts < 6 && !finished && candidates.size < 25) {
-                            val (photos, last) = Api.commons(commonsQuery, nextCommonsPage, imageQuality, sort)
-                            nextCommonsPage++
-                            attempts++
-                            finished = last
+                            val (photos, last) = Api.commons(categoryQuery, nextCommonsPage, imageQuality, sort)
+                            nextCommonsPage++; attempts++; finished = last
                             for (photo in photos) {
                                 s.fetchedIds.add(photo.id)
                                 val inIndia = photo.latitude != null && photo.longitude != null &&
                                     photo.latitude in 6.5..35.7 && photo.longitude in 68.0..97.5
                                 if (photo.id !in s.seenIds && photo.id !in s.ids &&
-                                    (sort != "india" || inIndia) && candidateIds.add(photo.id)) {
-                                    candidates.add(photo)
-                                }
+                                    (sort != "india" || inIndia) && candidateIds.add(photo.id)) candidates.add(photo)
                             }
-                            // First response is visible immediately; later responses can
-                            // add more photos and move preferred shapes ahead of alternatives.
                             if (attempts == 1 && candidates.isNotEmpty()) publishRanked(8)
                             else if (attempts > 1 && candidates.isNotEmpty()) publishRanked(25)
                         }
-                        val orderedCandidates = candidates.withIndex()
-                            .let { indexed ->
-                                if (sort == "new" || sort == "india") indexed.sortedWith(
-                                    compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
-                                        .thenBy { orientationRank(it.value) }.thenBy { it.index })
-                                else indexed.toList()
-                            }.map { it.value }
-                        for (photo in orderedCandidates) {
-                            if (added.size >= 25) break
-                            if (added.none { it.id == photo.id }) added.add(photo)
-                        }
+                        val ordered = candidates.withIndex().let { indexed ->
+                            if (sort == "new" || sort == "india") indexed.sortedWith(
+                                compareByDescending<IndexedValue<Photo>> { it.value.publishedAt }
+                                    .thenBy { orientationRank(it.value) }.thenBy { it.index })
+                            else indexed.toList()
+                        }.map { it.value }
+                        for (photo in ordered) { if (added.size >= 25) break; if (added.none { it.id == photo.id }) added.add(photo) }
                     } catch (e: Exception) {
                         providerErrors.add("Wikimedia: " + (e.message ?: "request failed").take(120))
                     }
                 }
-
-                // Openverse anonymous pagination is capped at five pages. Keep its
-                // cursor independent from Wikimedia's longer-running search offset.
-                val openversePage = ((page - 1) % 5) + 1
-                if (useOpenverse && added.isEmpty()) {
+                if (useNexwall && added.isEmpty()) {
                     try {
-                        val (photos, last) = Api.openverse(fallbackQuery, openversePage)
-                        val unseen = photos.filter { it.id !in s.seenIds }
+                        val nexSort = if (sort == "hot" || sort == "top") "popular" else "newest"
+                        val (photos, last) = Api.nexwall(fallbackQuery, nextNexwallPage, nexSort)
+                        val unseen = photos.filter { it.id !in s.seenIds && s.ids.add(it.id) }
+                        s.fetchedIds.addAll(photos.map { it.id })
                         if (unseen.isNotEmpty()) {
-                            added.addAll(unseen)
-                            finished = last
+                            added.addAll(unseen); finished = last; usedNexwall = true; nextNexwallPage++
                         }
                     } catch (e: Exception) {
-                        providerErrors.add("Openverse: " + (e.message ?: "request failed").take(120))
+                        providerErrors.add("NexWall: " + (e.message ?: "request failed").take(120))
                     }
                 }
-
-                if (useUnsplash && added.isEmpty()) {
-                    try {
-                        val (photos, last) = Api.unsplash(
-                            query, page,
-                            orderBy = if (sort == "new") "latest" else "relevant",
-                            forceFresh = forceFresh,
-                            indiaOnly = sort == "india" && s.name != "Search",
-                            popular = sort == "hot"
-                        )
-                        val unseen = photos.filter { it.id !in s.seenIds }
-                        if (unseen.isNotEmpty()) {
-                            finished = last
-                            added.addAll(if (sort == "top") unseen.sortedByDescending { it.likes } else unseen)
-                        }
-                    } catch (e: Exception) {
-                        providerErrors.add("Unsplash: " + (e.message ?: "request failed").take(120))
-                    }
-                }
-
                 if (added.isEmpty() && s.items.isEmpty()) {
                     error = if (providerErrors.isNotEmpty()) {
                         "Home feed couldn't load. " + providerErrors.joinToString(" · ")
-                    } else if (useWikimedia && !useOpenverse && !useUnsplash) {
+                    } else if (useWikimedia && !useNexwall) {
                         "Wikimedia Commons has no more unseen photos for this category. Try another category or refresh later."
                     } else {
                         "Enabled photo sources returned no matching photos. Try another category or refresh."
                     }
                 }
             }
-
             runOnUiThread {
                 if (gen != s.gen) return@runOnUiThread   // sort or refresh happened meanwhile
                 s.loading = false
                 s.refreshing = false
                 swipe.isRefreshing = false
-                s.page = if (useWikimedia) nextCommonsPage else page + 1
+                s.page = if (usedNexwall) nextNexwallPage else if (useWikimedia) nextCommonsPage else page + 1
                 if (error != null) {
                     s.err = error
                     statusPill.setTag(R.id.statusPill, null)
@@ -1199,7 +1140,7 @@ class MainActivity : AppCompatActivity() {
                 h.root.scaleY = 1f
             }
             // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
-            // Some Unsplash thumbnail URLs can fail independently of the photo itself.
+            // Some remote thumbnail URLs can fail independently of the original photo.
             // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
             Glide.with(h.img)
                 .load(p.thumb)
