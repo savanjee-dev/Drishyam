@@ -184,6 +184,11 @@ class MainActivity : AppCompatActivity() {
         sources.add(Source("Space", false, "space exploration nebula galaxy", provider = "nasa"))
         sources.add(Source("Earth from Space", false, "Earth from space satellite", provider = "nasa"))
         sources.add(Source("Aurora", false, "aurora borealis", provider = "nasa"))
+        sources.add(Source("NexWall Nature", false, "nature", provider = "nexwall"))
+        sources.add(Source("NexWall Landscapes", false, "landscape", provider = "nexwall"))
+        sources.add(Source("NexWall Abstract", false, "abstract", provider = "nexwall"))
+        sources.add(Source("NexWall Architecture", false, "architecture", provider = "nexwall"))
+        sources.add(Source("NexWall Space", false, "space", provider = "nexwall"))
         cur = sources.first()
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
@@ -726,6 +731,19 @@ class MainActivity : AppCompatActivity() {
                         added.addAll(list)
                     } else {
                         unsplashError = "NASA returned no suitable images."
+                    }
+                } else if (s.provider == "nexwall") {
+                    val nexSort = when (sort) {
+                        "top", "hot" -> "popular"
+                        "new" -> "newest"
+                        else -> "newest"
+                    }
+                    val (list, last) = Api.nexwall(s.q, page, nexSort)
+                    if (list.isNotEmpty()) {
+                        finished = last
+                        added.addAll(list)
+                    } else {
+                        unsplashError = "NexWall returned no suitable images."
                     }
                 } else {
                     val (list, last) = Api.unsplash(query, page, orderBy = if (sort == "new") "latest" else "relevant", forceFresh = forceFresh, indiaOnly = sort == "india" && s.name != "Search", popular = sort == "hot")
