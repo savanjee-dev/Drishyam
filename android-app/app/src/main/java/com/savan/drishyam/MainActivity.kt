@@ -523,7 +523,7 @@ class MainActivity : AppCompatActivity() {
     private fun browsingSourcesSignature(): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
         val sources = listOf("source_wikimedia", "source_nexwall", "source_pixabay")
-            .joinToString("|") { key -> prefs.getBoolean(key, true).toString() }
+            .joinToString("|") { key -> prefs.getBoolean(key, key != "source_pixabay").toString() }
         return sources + "|" + (prefs.getString("image_quality", "High") ?: "High")
     }
 
@@ -793,7 +793,7 @@ class MainActivity : AppCompatActivity() {
     private fun feedCacheKey(source: Source): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
         val signature = listOf("source_wikimedia", "source_nexwall", "source_pixabay")
-            .joinToString("_") { prefs.getBoolean(it, true).toString() }
+            .joinToString("_") { prefs.getBoolean(it, it != "source_pixabay").toString() }
         return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + source.sort + "_" + signature
     }
 
