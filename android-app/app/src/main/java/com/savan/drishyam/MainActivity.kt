@@ -432,8 +432,13 @@ class MainActivity : AppCompatActivity() {
         val targetHeight = (target.height - target.paddingTop - target.paddingBottom).coerceAtLeast(1)
         val scale = minOf(targetWidth.toFloat() / logo.width.coerceAtLeast(1),
             targetHeight.toFloat() / logo.height.coerceAtLeast(1))
-        val endX = targetPos[0] - hostPos[0] + target.paddingLeft - (logo.width * scale - targetWidth) / 2f
-        val endY = targetPos[1] - hostPos[1] + target.paddingTop - (logo.height * scale - targetHeight) / 2f
+        // Android scales the overlay around its centre. Compensate for the
+        // unscaled-to-scaled size difference so the logo's visual bounds land
+        // exactly on the header icon instead of snapping at the end.
+        val endX = targetPos[0] - hostPos[0] + target.paddingLeft -
+            (logo.width - logo.width * scale) / 2f
+        val endY = targetPos[1] - hostPos[1] + target.paddingTop -
+            (logo.height - logo.height * scale) / 2f
         overlay.layoutParams = FrameLayout.LayoutParams(logo.width, logo.height)
         host.addView(overlay)
         overlay.x = startX
@@ -443,8 +448,8 @@ class MainActivity : AppCompatActivity() {
 
         overlay.animate()
             .x(endX).y(endY).scaleX(scale).scaleY(scale).rotation(360f)
-            .setDuration(1050L)
-            .setInterpolator(android.view.animation.PathInterpolator(0.7f, 0f, 0.2f, 1f))
+            .setDuration(1350L)
+            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
             .withEndAction {
                 target.visibility = View.VISIBLE
                 host.removeView(overlay)
