@@ -583,7 +583,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun pulseEdgeFade() {
-        listOf(edgeTop, edgeBottom).forEach { edge ->
+        listOf(edgeTop).forEach { edge ->
             edge.animate().cancel()
             edge.visibility = View.VISIBLE
             edge.alpha = 1f
