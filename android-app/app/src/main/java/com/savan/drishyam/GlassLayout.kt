@@ -141,7 +141,7 @@ class GlassLayout @JvmOverloads constructor(
         
 val s = shader
 if (solid) {
-    tintPaint.color = ContextCompat.getColor(context, R.color.accent)
+    tintPaint.color = ContextCompat.getColor(context, R.color.glassFill)
     tintPaint.shader = null
     bodyPaint.shader = null
     bodyPaint.colorFilter = null

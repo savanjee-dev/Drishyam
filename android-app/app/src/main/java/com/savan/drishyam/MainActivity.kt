@@ -1,6 +1,16 @@
 package com.savan.drishyam
 
 import android.animation.ValueAnimator
+import androidx.core.content.res.ResourcesCompat
+import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
+import android.text.style.StyleSpan
+import android.text.Spanned
+import android.text.SpannableString
+import android.graphics.Typeface
+import android.animation.ObjectAnimator
+import android.animation.AnimatorListenerAdapter
+import android.animation.Animator
 import android.content.Context
 import android.content.Intent
 import android.graphics.LinearGradient
@@ -22,7 +32,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
-import android.widget.HorizontalScrollView
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -32,6 +42,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
@@ -71,11 +82,16 @@ class MainActivity : AppCompatActivity() {
         // Curated photography categories only; no Reddit/photo topic sources are exposed in the UI.
         val PHOTO_CATEGORIES = listOf(
             "For You" to "cinematic nature landscape photography",
-            "Forest" to "forest woodland trees",
             "Nature" to "nature photography",
+            "Forest" to "forest woodland trees",
+            "Portrait" to "portrait photography",
+            "Photography" to "photography",
+            "Mountains" to "mountain landscape",
+            "Clouds" to "clouds sky",
+            "Landscape" to "landscape photography",
+            "Beach" to "beach sea sand",
             "Earth" to "planet earth landscape",
             "Hiking" to "hiking trail outdoors",
-            "Mountains" to "mountain landscape",
             "Wildlife" to "wildlife animals",
             "Architecture" to "modern architecture",
             "Abstract" to "abstract photography",
@@ -99,9 +115,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rv: RecyclerView
     private lateinit var status: TextView
     private lateinit var statusPill: GlassLayout
-    private lateinit var chips: LinearLayout
-    private lateinit var chipScroll: HorizontalScrollView
-    private lateinit var sortBar: View
     private lateinit var savedBar: View
     private lateinit var swipe: SwipeRefreshLayout
     private lateinit var aboutScroll: ScrollView
@@ -109,11 +122,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var glassTop: GlassLayout
     private lateinit var glassNav: GlassLayout
     private lateinit var overlay: View
+    private lateinit var navIndicator: View
+    private lateinit var navItemsRow: LinearLayout
+    private lateinit var edgeTop: View
+    private lateinit var edgeBottom: View
     private lateinit var segFav: TextView
     private lateinit var segBook: TextView
-    private lateinit var sortHot: TextView
-    private lateinit var sortNew: TextView
-    private lateinit var sortTop: TextView
+    private lateinit var homeHeaderAdapter: HomeHeaderAdapter
     private val adapter = PhotoAdapter()
     private val sources = ArrayList<Source>() // Category definitions used by the chip row.
     private val feedSessions = HashMap<String, Source>() // Independent category + sort sessions.
@@ -129,6 +144,8 @@ class MainActivity : AppCompatActivity() {
     private var statusBarInsetTop = 0
     private var transientStatus: String? = null
     private var statusGeneration = 0
+    private val splashAnimators = mutableListOf<ValueAnimator>()
+    private var splashFinished = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         applyTheme(this)
@@ -136,7 +153,6 @@ class MainActivity : AppCompatActivity() {
         applyActivityTransitionPreference(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
-        if (savedInstanceState == null) SplashOverlay.show(this)
         // Let Android own predictive Back when this is the task's launcher/home instance.
         // That allows the real launcher (wallpaper and icons) to be previewed on exit.
         // A MainActivity opened from Our Story keeps the existing in-app back gesture.
@@ -160,13 +176,6 @@ class MainActivity : AppCompatActivity() {
         rv.isVerticalScrollBarEnabled = false
         status = findViewById(R.id.status)
         statusPill = findViewById(R.id.statusPill)
-        chips = findViewById(R.id.chips)
-        chipScroll = findViewById(R.id.chipScroll)
-        chipScroll.isHorizontalFadingEdgeEnabled = true
-        chipScroll.setFadingEdgeLength(24.dp())
-        chipScroll.clipChildren = true
-        chipScroll.clipToPadding = true
-        sortBar = findViewById(R.id.sortBar)
         savedBar = findViewById(R.id.savedBar)
         swipe = findViewById(R.id.swipe)
         aboutScroll = findViewById(R.id.about)
@@ -175,6 +184,10 @@ class MainActivity : AppCompatActivity() {
         glassTop = findViewById(R.id.glassTop)
         glassNav = findViewById(R.id.glassNav)
         overlay = findViewById(R.id.overlay)
+        navIndicator = findViewById(R.id.navIndicator)
+        navItemsRow = findViewById(R.id.navItemsRow)
+        edgeTop = findViewById(R.id.edgeTop)
+        edgeBottom = findViewById(R.id.edgeBottom)
 
         // Keep the glass header below status-bar icons while the animated page background
         // remains visible behind the transparent system bar.
@@ -198,9 +211,6 @@ class MainActivity : AppCompatActivity() {
         androidx.core.view.ViewCompat.requestApplyInsets(root)
         segFav = findViewById(R.id.segFav)
         segBook = findViewById(R.id.segBook)
-        sortHot = findViewById(R.id.sortHot)
-        sortNew = findViewById(R.id.sortNew)
-        sortTop = findViewById(R.id.sortTop)
 
         bindGlass(overlay, glassSource, 70)
 
@@ -215,40 +225,32 @@ class MainActivity : AppCompatActivity() {
         swipe.setProgressBackgroundColorSchemeColor(ContextCompat.getColor(this, R.color.surface))
         swipe.setOnRefreshListener { refreshCurrent() }
 
-        animateTitle()
         animateAbout()
         setupAbout()
 
-        findViewById<ImageView>(R.id.sortButton).apply {
-            imageTintList = android.content.res.ColorStateList.valueOf(ContextCompat.getColor(this@MainActivity, R.color.fg))
-            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.glass_pill)
-            pressFx()
-            contentDescription = "Sort photos"
-            setOnClickListener { showSortPopup() }
-        }
 
         for ((name, query) in PHOTO_CATEGORIES) sources.add(Source(name, query))
         cur = sessionFor(sources.first(), currentSort())
 
         rv.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
         installScrollBounce(aboutScroll)
-        installScrollBounce(chipScroll)
-        rv.adapter = adapter
+        homeHeaderAdapter = HomeHeaderAdapter()
+        rv.adapter = ConcatAdapter(homeHeaderAdapter, adapter)
         rv.setHasFixedSize(true)
         rv.setItemViewCacheSize(8)
         rv.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(r: RecyclerView, dx: Int, dy: Int) {
                 pokeGlass()
+                pulseEdgeFade()
                 if (tab == 0 && dy > 3) {
                     setNavVisible(false)
-                    setTopVisible(true)
                 } else if (dy < -1) {
                     setNavVisible(true)
-                    setTopVisible(true)
                 }
                 val lm = r.layoutManager as LinearLayoutManager
                 if (dy > 0) {
-                    val remaining = adapter.itemCount - lm.findLastVisibleItemPosition() - 1
+                    val totalFeedRows = adapter.itemCount + if (tab == 0) 1 else 0
+                    val remaining = totalFeedRows - lm.findLastVisibleItemPosition() - 1
                     if (remaining <= 7 || remaining <= backgroundPrefetchThreshold()) loadMore()
                 }
             }
@@ -256,7 +258,6 @@ class MainActivity : AppCompatActivity() {
 
         status.setOnClickListener { if (tab == 0 && cur.err != null) { cur.err = null; loadMore() } }
 
-        buildChips()
 
         findViewById<View>(R.id.navItem0).apply { pressFx(); setOnClickListener { showTab(0) } }
         findViewById<View>(R.id.navItem1).apply { pressFx(); setOnClickListener { showSearch() } }
@@ -275,16 +276,211 @@ class MainActivity : AppCompatActivity() {
         }
         segFav.apply { pressFx(); setOnClickListener { setSaved(0) } }
         segBook.apply { pressFx(); setOnClickListener { setSaved(1) } }
-        sortHot.apply { pressFx(); setOnClickListener { setSort("hot") } }
-        sortNew.apply { pressFx(); setOnClickListener { setSort("new") } }
-        sortTop.apply { pressFx(); setOnClickListener { setSort("top") } }
 
-        shownSort = currentSort()
+        shownSort = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort_display", currentSort()) ?: currentSort()
         styleSort()
         showTab(0)
         if (intent.getBooleanExtra("open_about", false)) showTab(2)
-        glassSource.postDelayed({ if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, glassSource) }, 1800L)
         if (!PortalTransition.hasOpeningOrigin(this)) animatePageEntrance(findViewById(android.R.id.content))
+        if (savedInstanceState == null) {
+            startLaunchSplash()
+        } else {
+            findViewById<View>(R.id.splashRoot).visibility = View.GONE
+            rv.post {
+                homeHeaderAdapter.logoView?.visibility = View.VISIBLE
+                finishSplashAndContinue()
+            }
+        }
+    }
+
+    /** Phase H2: seamless splash-to-home logo hand-off and a logo hand-off into the existing Home header. */
+    private fun startLaunchSplash() {
+        val splash = findViewById<View>(R.id.splashRoot)
+        val logo = findViewById<ImageView>(R.id.splashLogo)
+        val target = homeHeaderAdapter.logoView
+        if (target == null) {
+            rv.post { if (!isFinishing && !isDestroyed) startLaunchSplash() }
+            return
+        }
+        if (!motionEnabled(this)) {
+            splash.visibility = View.GONE
+            target.visibility = View.VISIBLE
+            finishSplashAndContinue()
+            return
+        }
+
+        // Keep the destination logo hidden while the splash logo is in flight.
+        // Revealing both at once creates a visible duplicate in the Home header.
+        target.visibility = View.INVISIBLE
+        val nameRow = findViewById<LinearLayout>(R.id.splashName)
+        nameRow.removeAllViews()
+        val name = "Drishyam"
+        nameRow.contentDescription = name
+        val nameColor = ContextCompat.getColor(this, R.color.fg)
+        name.forEachIndexed { index, letter ->
+            val tv = TextView(this).apply {
+                text = letter.toString()
+                textSize = 42f
+                typeface = ResourcesCompat.getFont(this@MainActivity, R.font.ericaone)
+                setTextColor(nameColor)
+                alpha = 0f
+                translationY = 20.dp().toFloat()
+                includeFontPadding = false
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            nameRow.addView(tv, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            tv.postDelayed({
+                if (!isFinishing && splash.visibility == View.VISIBLE) {
+                    tv.animate().alpha(1f).translationY(0f).setStartDelay(0L).setDuration(620L)
+                        .setInterpolator(DecelerateInterpolator()).start()
+                }
+            }, 1050L + index * 80L)
+        }
+
+        logo.scaleX = 0.55f
+        logo.scaleY = 0.55f
+        logo.rotation = -14f
+        logo.alpha = 0f
+        logo.animate().alpha(1f).scaleX(1f).scaleY(1f)
+            .setStartDelay(200L).setDuration(1100L).setInterpolator(OvershootInterpolator(1.15f)).start()
+        ObjectAnimator.ofFloat(logo, View.ROTATION, -14f, 346f).apply {
+            duration = 2600L
+            startDelay = 200L
+            repeatCount = ObjectAnimator.INFINITE
+            interpolator = LinearInterpolator()
+            start()
+            splashAnimators.add(this)
+        }
+
+        val byline = findViewById<TextView>(R.id.splashByline)
+        val tagline = findViewById<TextView>(R.id.splashTagline)
+        val caption = findViewById<TextView>(R.id.splashCaption)
+        byline.alpha = 0f; byline.translationY = 8.dp().toFloat()
+        byline.postDelayed({ if (splash.visibility == View.VISIBLE) byline.animate().alpha(1f).translationY(0f).setDuration(500L).setInterpolator(DecelerateInterpolator()).start() }, 2100L)
+        val taglineText = SpannableString("See the world a little slower.")
+        val slowerStart = taglineText.indexOf("slower.")
+        if (slowerStart >= 0) taglineText.setSpan(StyleSpan(Typeface.BOLD), slowerStart, taglineText.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        tagline.text = taglineText
+        tagline.alpha = 0f; tagline.translationY = 8.dp().toFloat()
+        tagline.postDelayed({ if (splash.visibility == View.VISIBLE) tagline.animate().alpha(1f).translationY(0f).setDuration(500L).setInterpolator(DecelerateInterpolator()).start() }, 2700L)
+        caption.alpha = 0f
+        caption.postDelayed({ if (splash.visibility == View.VISIBLE) caption.animate().alpha(1f).setDuration(350L).start() }, 3000L)
+
+        val fill = findViewById<View>(R.id.splashProgressFill)
+        fill.scaleX = 0f
+        fill.postDelayed({
+            if (splash.visibility == View.VISIBLE) ObjectAnimator.ofFloat(fill, View.SCALE_X, 0f, 1f).apply {
+                duration = 3500L
+                interpolator = LinearInterpolator()
+                start()
+            }
+        }, 350L)
+
+        val glow = findViewById<View>(R.id.splashAmbientGlow)
+        val glowPulse = ValueAnimator.ofFloat(0.72f, 1f, 0.78f).apply {
+            duration = 4800L; repeatCount = ValueAnimator.INFINITE; repeatMode = ValueAnimator.RESTART
+            addUpdateListener { glow.alpha = it.animatedValue as Float }
+        }
+        splashAnimators.add(glowPulse); glowPulse.start()
+
+        val ring = findViewById<View>(R.id.splashRing)
+        ring.postDelayed({
+            if (splash.visibility == View.VISIBLE) {
+                val ringPulse = ValueAnimator.ofFloat(0.92f, 1.22f).apply {
+                    duration = 2600L; repeatCount = ValueAnimator.INFINITE; interpolator = LinearInterpolator()
+                    addUpdateListener {
+                        val fraction = it.animatedFraction
+                        ring.scaleX = it.animatedValue as Float
+                        ring.scaleY = it.animatedValue as Float
+                        ring.alpha = 0.7f * (1f - fraction)
+                    }
+                }
+                splashAnimators.add(ringPulse); ringPulse.start()
+            }
+        }, 1100L)
+
+        splash.postDelayed({ handOffSplashLogo(splash, logo, target) }, 4500L)
+    }
+
+    private fun handOffSplashLogo(splash: View, logo: ImageView, target: ImageView) {
+        if (splashFinished || isFinishing || isDestroyed) return
+        if (!motionEnabled(this)) {
+            splash.visibility = View.GONE
+            target.visibility = View.VISIBLE
+            finishSplashAndContinue()
+            return
+        }
+        // A separate travelling copy lets the splash dissolve without fading the logo itself.
+        val host = splash.parent as? ViewGroup ?: return
+        val overlay = ImageView(this).apply {
+            setImageDrawable(logo.drawable)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Drishyam"
+            rotation = logo.rotation
+            elevation = 100.dp().toFloat()
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val hostPos = IntArray(2)
+        val logoPos = IntArray(2)
+        val targetPos = IntArray(2)
+        host.getLocationOnScreen(hostPos)
+        logo.getLocationOnScreen(logoPos)
+        target.getLocationOnScreen(targetPos)
+        val startX = (logoPos[0] - hostPos[0]).toFloat()
+        val startY = (logoPos[1] - hostPos[1]).toFloat()
+        val targetWidth = (target.width - target.paddingLeft - target.paddingRight).coerceAtLeast(1)
+        val targetHeight = (target.height - target.paddingTop - target.paddingBottom).coerceAtLeast(1)
+        val scale = minOf(targetWidth.toFloat() / logo.width.coerceAtLeast(1),
+            targetHeight.toFloat() / logo.height.coerceAtLeast(1))
+        // Android scales the overlay around its centre. Compensate for the
+        // unscaled-to-scaled size difference so the logo's visual bounds land
+        // exactly on the header icon instead of snapping at the end.
+        val endX = targetPos[0] - hostPos[0] + target.paddingLeft -
+            (logo.width - logo.width * scale) / 2f
+        val endY = targetPos[1] - hostPos[1] + target.paddingTop -
+            (logo.height - logo.height * scale) / 2f
+        overlay.layoutParams = FrameLayout.LayoutParams(logo.width, logo.height)
+        host.addView(overlay)
+        overlay.x = startX
+        overlay.y = startY
+        logo.alpha = 0f
+        target.visibility = View.INVISIBLE
+
+        overlay.animate()
+            .x(endX).y(endY).scaleX(scale).scaleY(scale).rotation(360f)
+            .setDuration(1850L)
+            .setInterpolator(android.view.animation.PathInterpolator(0.18f, 0.72f, 0.22f, 1f))
+            .withEndAction {
+                target.visibility = View.VISIBLE
+                host.removeView(overlay)
+                splash.visibility = View.GONE
+                splash.alpha = 1f
+                splash.scaleX = 1f
+                splash.scaleY = 1f
+                finishSplashAndContinue()
+            }.start()
+        splash.animate().alpha(0f).scaleX(1.025f).scaleY(1.025f)
+            .setStartDelay(80L).setDuration(1250L)
+            .setInterpolator(android.view.animation.PathInterpolator(0.32f, 0f, 0.18f, 1f)).start()
+    }
+
+    private fun finishSplashAndContinue() {
+        if (splashFinished) return
+        splashFinished = true
+        splashAnimators.forEach { it.cancel() }
+        splashAnimators.clear()
+        val source = findViewById<View>(R.id.glassSource)
+        source.postDelayed({
+            if (!isFinishing && !isDestroyed) {
+                if (!showPendingWhatsNewIfNeeded()) UpdateManager.check(this, source)
+            }
+        }, 250L)
+    }
+
+    override fun onDestroy() {
+        splashAnimators.forEach { it.cancel() }
+        splashAnimators.clear()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -343,9 +539,11 @@ class MainActivity : AppCompatActivity() {
         var shouldResetFeed = previousSourcesSignature != null && sourcesSignature != previousSourcesSignature
         // Settings may have changed the default sort while this screen was paused.
         val s = currentSort()
-        if (s != shownSort) {
-            shownSort = s
+        val displaySort = getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort_display", s) ?: s
+        if (displaySort != shownSort) {
+            shownSort = displaySort
             styleSort()
+            if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.placeSelectedIndicator(false)
             val category = sources.firstOrNull { it.name == cur.name } ?: cur
             cur = sessionFor(category, s)
             adapter.data = cur.items
@@ -365,6 +563,36 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- Floating glass bars ----------
 
+    private fun moveNavIndicator(index: Int, animate: Boolean) {
+        if (index !in 0 until navItemsRow.childCount) {
+            navIndicator.animate().cancel()
+            navIndicator.alpha = 0f
+            return
+        }
+        val target = navItemsRow.getChildAt(index)
+        val left = navItemsRow.left + target.left
+        val width = target.width
+        if (width <= 0) return
+        navIndicator.alpha = 1f
+        if (animate && navIndicator.width > 0) {
+            SegmentStretch.animate(navIndicator, Pair(left.toFloat(), width.toFloat()),
+                resources.displayMetrics.density, !motionEnabled(this))
+        } else {
+            SegmentStretch.place(navIndicator, left.toFloat(), width.toFloat())
+        }
+    }
+
+    private fun pulseEdgeFade() {
+        listOf(edgeTop).forEach { edge ->
+            edge.animate().cancel()
+            edge.visibility = View.VISIBLE
+            edge.alpha = 1f
+            edge.animate().alpha(0f).setStartDelay(180L).setDuration(350L)
+                .withEndAction { edge.visibility = View.GONE }
+                .start()
+        }
+    }
+
     private fun pokeGlass() {
         glassTop.poke()
         glassNav.poke()
@@ -372,12 +600,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyInsets() {
-        val top = glassTop.bottom + 8.dp()
+        val top = if (tab == 0) statusBarInsetTop + 12.dp() else glassTop.bottom + 8.dp()
         val bottom = if (navShown && glassNav.visibility == View.VISIBLE) (overlay.height - glassNav.top) + 8.dp() else 20.dp()
         if (top != lastTopPad || bottom != lastBottomPad) {
             lastTopPad = top
             lastBottomPad = bottom
-            rv.setPadding(14.dp(), top, 14.dp(), bottom)
+            rv.setPadding(16.dp(), top, 16.dp(), bottom)
             swipe.setProgressViewOffset(false, top, top + 60.dp())
         }
         // Our Story hides the floating header, so its top gap must come from the actual
@@ -470,7 +698,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun animateTitle() {
         if (!visualEffectsEnabled(this) || !motionEnabled(this)) return
-        val t = findViewById<TextView>(R.id.title)
+        val t = if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.titleView else null
+        if (t == null) return
         t.post {
             val w = t.paint.measureText(t.text.toString()).coerceAtLeast(100f) * 2
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
@@ -499,9 +728,11 @@ class MainActivity : AppCompatActivity() {
         navShown = true
         topShown = true
         glassTop.animate().cancel()
-        glassTop.visibility = View.VISIBLE
+        glassTop.visibility = if (n == 1) View.VISIBLE else View.GONE
         glassTop.translationY = 0f
         glassTop.alpha = 1f
+        homeHeaderAdapter.visible = n == 0
+        homeHeaderAdapter.notifyDataSetChanged()
         glassNav.animate().cancel()
         glassNav.visibility = View.VISIBLE
         glassNav.translationY = 0f
@@ -510,7 +741,7 @@ class MainActivity : AppCompatActivity() {
         listOf(R.id.n0, R.id.n1, R.id.n2, R.id.n3).forEachIndexed { i, id ->
             val v = findViewById<ImageView>(id)
             val on = i == selectedNav
-            v.background = if (on) ContextCompat.getDrawable(this, R.drawable.accent_pill) else null
+            v.background = null
             val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             val iconColor = when {
                 on && night -> 0xFF0A0D08.toInt()
@@ -534,17 +765,14 @@ class MainActivity : AppCompatActivity() {
                 2 -> R.id.navItem2
                 else -> R.id.navItem3
             }
-            findViewById<View>(itemId).setBackgroundResource(
-                if (on) R.drawable.glass_pill else android.R.color.transparent
-            )
+            findViewById<View>(itemId).setBackgroundResource(android.R.color.transparent)
         }
+        navItemsRow.post { moveNavIndicator(selectedNav, true) }
         findViewById<View>(R.id.home).visibility = if (n < 2) View.VISIBLE else View.GONE
         findViewById<View>(R.id.about).visibility = if (n == 2) View.VISIBLE else View.GONE
         glassNav.visibility = if (n == 2) View.GONE else View.VISIBLE
         if (n == 2) { glassNav.animate().cancel(); glassNav.translationY = glassNav.height.toFloat() + 28.dp(); glassNav.alpha = 0f }
-        glassTop.visibility = if (n == 2) View.GONE else View.VISIBLE
-        chipScroll.visibility = if (n == 0) View.VISIBLE else View.GONE
-        sortBar.visibility = View.GONE
+        glassTop.visibility = if (n == 1) View.VISIBLE else View.GONE
         savedBar.visibility = if (n == 1) View.VISIBLE else View.GONE
 
         if (n == 1) {
@@ -561,57 +789,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------- Chips ----------
-
-    private fun buildChips() {
-        chips.removeAllViews()
-        for (s in sources) chips.addView(chip(s.name, s) { select(s) })
-        chips.addView(chip(getString(R.string.shuffle), "shuffle") { shuffleCurrent() })
-        styleChips()
-    }
-
-    private fun chip(label: String, key: Any, onTap: () -> Unit): Chip = Chip(this).apply {
-        text = label
-        tag = key
-        isCheckable = false
-        isClickable = true
-        isFocusable = true
-        chipMinHeight = 42.dp().toFloat()
-        chipCornerRadius = 21.dp().toFloat()
-        textSize = 13f
-        setEnsureMinTouchTargetSize(false)
-        setPadding(4.dp(), 0, 4.dp(), 0)
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, 42.dp()).apply {
-            marginEnd = 8.dp()
-        }
-        pressFx()
-        setOnClickListener { onTap() }
-    }
-
-    private fun styleChips() {
-        val night = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
-        val selected = if (night) 0xFFD0C79A.toInt() else 0xFF414D2D.toInt()
-        val onSelected = if (night) 0xFF0A0D08.toInt() else 0xFFF3F1E7.toInt()
-        val surface = if (night) 0xFF293022.toInt() else 0xFFE8E6DA.toInt()
-        val onSurface = if (night) 0xFFE5E7D8.toInt() else 0xFF41483A.toInt()
-        for (i in 0 until chips.childCount) {
-            val item = chips.getChildAt(i) as? Chip ?: continue
-            val active = (item.tag as? Source)?.name == cur.name
-            item.chipBackgroundColor = ColorStateList.valueOf(if (active) selected else surface)
-            item.setTextColor(if (active) onSelected else onSurface)
-            item.chipStrokeWidth = if (active) 0f else 1.dp().toFloat()
-            item.chipStrokeColor = ColorStateList.valueOf(if (night) 0xFF59634A.toInt() else 0xFFC8CCB9.toInt())
-            item.elevation = if (active) 2.dp().toFloat() else 0f
-            item.animate().cancel()
-            if (motionEnabled(this)) {
-                item.animate().scaleX(if (active) 1.02f else 1f).scaleY(if (active) 1.02f else 1f)
-                    .setDuration(180L).setInterpolator(AccelerateDecelerateInterpolator()).start()
-            } else {
-                item.scaleX = 1f
-                item.scaleY = 1f
-            }
-        }
-    }
 
     private fun feedCacheKey(source: Source): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
@@ -666,7 +843,6 @@ class MainActivity : AppCompatActivity() {
     private fun select(s: Source) {
         cur = sessionFor(s, currentSort())
         restoreCachedFeed(cur)
-        styleChips()
         rv.scrollToPosition(0)
         showTab(0)
     }
@@ -685,13 +861,11 @@ class MainActivity : AppCompatActivity() {
         getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).getString("sort", "hot") ?: "hot"
 
     private fun setSort(s: String) {
-        if (s == currentSort()) {
-            refreshCurrent()
-            return
-        }
-        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit().putString("sort", s).apply()
+        val previous = currentSort()
         shownSort = s
-        styleSort()
+        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
+            .putString("sort", s).putString("sort_display", s).apply()
+        if (s == previous) { refreshCurrent(); return }
         val category = sources.firstOrNull { it.name == cur.name } ?: cur
         cur = sessionFor(category, s)
         restoreCachedFeed(cur)
@@ -702,10 +876,23 @@ class MainActivity : AppCompatActivity() {
         if (cur.items.isEmpty()) loadMore()
     }
 
+    // India intentionally mirrors Hot: same feed and ordering, with its own selected segment.
+    private fun setIndiaSort() {
+        shownSort = "india"
+        getSharedPreferences(PREFS_SETTINGS, Context.MODE_PRIVATE).edit()
+            .putString("sort", "hot").putString("sort_display", "india").apply()
+        val category = sources.firstOrNull { it.name == cur.name } ?: cur
+        cur = sessionFor(category, "hot")
+        restoreCachedFeed(cur)
+        adapter.data = cur.items
+        adapter.notifyDataSetChanged()
+        rv.scrollToPosition(0)
+        updateStatus()
+        if (cur.items.isEmpty()) loadMore()
+    }
+
     private fun styleSort() {
-        sortHot.styleSeg(shownSort == "hot")
-        sortNew.styleSeg(shownSort == "new")
-        sortTop.styleSeg(shownSort == "top")
+        if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.styleSort()
     }
 
     private fun showSortPopup() {
@@ -729,7 +916,12 @@ class MainActivity : AppCompatActivity() {
                     isClickable = true
                     isFocusable = true
                     pressFx()
-                    setOnClickListener { close(); setSort(key) }
+                    setOnClickListener {
+                        close()
+                        setSort(key)
+                        styleSort()
+                        if (::homeHeaderAdapter.isInitialized) homeHeaderAdapter.placeSelectedIndicator(false)
+                    }
                 }, LinearLayout.LayoutParams(-1, 44.dp()).apply { topMargin = 5.dp() })
             }
         }
@@ -765,36 +957,16 @@ class MainActivity : AppCompatActivity() {
     // ---------- Search ----------
 
     private fun showSearch() {
-        showGlassPopup(this, glassSource, topOffsetDp = 110) { box, close ->
-            val view = LayoutInflater.from(this).inflate(R.layout.dialog_search, box, false)
-            box.addView(view)
-            val input = view.findViewById<EditText>(R.id.searchInput)
-            val go = view.findViewById<View>(R.id.searchGo)
-            view.findViewById<View>(R.id.searchCancel).apply { pressFx(); setOnClickListener { close() } }
-            go.apply {
-                pressFx()
-                setOnClickListener {
-                    val q = input.text.toString().trim()
-                    close()
-                    if (q.isBlank()) toast(getString(R.string.search_empty)) else runSearch(q)
-                }
-            }
-            input.setOnEditorActionListener { _, _, _ -> go.performClick(); true }
-            input.postDelayed({
-                input.requestFocus()
-                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
-            }, 250)
-        }
+        startActivityForResult(Intent(this, SearchActivity::class.java), 721)
     }
 
-    private fun runSearch(q: String) {
-        // Free-text search uses the enabled image providers; photo topic names are not interpreted.
-        sources.removeAll { it.extra || it.searchOnly || it.name == "Search" }
-        val src = Source("Search", q, false, currentSort()).apply { extra = true }
-        sources.add(0, src)
-        buildChips()
-        select(src)
+    @Deprecated("Deprecated in Android, retained for SearchActivity category hand-off")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 721 && resultCode == RESULT_OK) {
+            val category = data?.getStringExtra("category") ?: return
+            sources.firstOrNull { it.name == category }?.let { select(it) }
+        }
     }
 
     // ---------- Feed ----------
@@ -875,7 +1047,8 @@ class MainActivity : AppCompatActivity() {
         if (threshold <= 0) return
         val lm = rv.layoutManager as? LinearLayoutManager ?: return
         val lastVisible = lm.findLastVisibleItemPosition()
-        val remaining = adapter.itemCount - lastVisible - 1
+        val totalFeedRows = adapter.itemCount + if (tab == 0) 1 else 0
+        val remaining = totalFeedRows - lastVisible - 1
         if (remaining <= threshold) loadMore()
     }
 
@@ -1078,83 +1251,195 @@ class MainActivity : AppCompatActivity() {
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
 
-    // ---------- Adapter ----------
+    // ---------- Home header + photo feed adapters ----------
 
-    inner class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.VH>() {
-        var data: List<Photo> = ArrayList()
+    inner class HomeHeaderAdapter : RecyclerView.Adapter<HomeHeaderAdapter.VH>() {
+        var visible = true
+        var logoView: ImageView? = null
+            private set
+        var titleView: TextView? = null
+            private set
+        private var sortContainer: FrameLayout? = null
+        private var sortButtons: LinearLayout? = null
+        private var indicator: View? = null
+        private var hot: TextView? = null
+        private var latest: TextView? = null
+        private var top: TextView? = null
+        private var india: TextView? = null
 
-        inner class VH(val root: View) : RecyclerView.ViewHolder(root) {
-            val img: ImageView = root.findViewById(R.id.img)
-            val lbl: TextView = root.findViewById(R.id.lbl)
-            val heart: ImageView = root.findViewById(R.id.heart)
-            init { heart.pressFx() }
-        }
+        inner class VH(val root: View) : RecyclerView.ViewHolder(root)
+
+        override fun getItemCount() = if (visible) 1 else 0
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_photo, parent, false)
-            v.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, 0, 14.dp())
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_home_header, parent, false)
+            logoView = v.findViewById(R.id.headerLogo)
+            titleView = v.findViewById(R.id.title)
+            titleView?.post { animateTitle() }
+            sortContainer = v.findViewById(R.id.sortBar)
+            sortButtons = v.findViewById(R.id.sortButtons)
+            indicator = v.findViewById(R.id.sortIndicator)
+            hot = v.findViewById(R.id.sortHot)
+            latest = v.findViewById(R.id.sortNew)
+            top = v.findViewById(R.id.sortTop)
+            india = v.findViewById(R.id.sortIndia)
+
+            v.findViewById<View>(R.id.searchBar).apply {
+                pressFx()
+                setOnClickListener { showSearch() }
+            }
+            v.findViewById<View>(R.id.settingsButton).apply {
+                pressFx()
+                setOnClickListener {
+                    PortalTransition.launch(this@MainActivity, this, Intent(this@MainActivity, SettingsHubActivity::class.java))
+                }
+            }
+            listOf(
+                (hot to "hot"), (latest to "new"), (top to "top"), (india to "india")
+            ).forEach { (view, key) ->
+                view?.apply {
+                    pressFx()
+                    setOnClickListener {
+                        if (key == "india") setIndiaSort() else setSort(key)
+                        this@MainActivity.styleSort()
+                        moveIndicator(true)
+                    }
+                }
             }
             return VH(v)
         }
 
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            styleSort()
+            holder.root.post { moveIndicator(false) }
+        }
+
+        fun styleSort() {
+            val selected = when (shownSort) {
+                "new" -> latest
+                "top" -> top
+                "india" -> india
+                else -> hot
+            }
+            listOf(hot, latest, top, india).forEach { button ->
+                button?.setTextColor(ContextCompat.getColor(this@MainActivity,
+                    if (button === selected) R.color.bg else R.color.mute))
+                button?.background = android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            }
+        }
+
+        fun placeSelectedIndicator(animate: Boolean) = moveIndicator(animate)
+
+        private fun moveIndicator(animate: Boolean) {
+            val frame = sortContainer ?: return
+            val row = sortButtons ?: return
+            val pill = indicator ?: return
+            val selected = when (shownSort) {
+                "new" -> latest
+                "top" -> top
+                "india" -> india
+                else -> hot
+            } ?: return
+            frame.post {
+                if (selected.width <= 0) return@post
+                // selected.left is relative to the row; the indicator is relative
+                // to the outer FrameLayout. Include the row's left padding and keep
+                // a 2dp inset so the pill tracks the prototype's segment geometry.
+                val inset = 2.dp().toFloat()
+                val target = Pair(
+                    (row.left + selected.left).toFloat() + inset,
+                    (selected.width - inset * 2f).coerceAtLeast(1f)
+                )
+                val lp = pill.layoutParams as FrameLayout.LayoutParams
+                lp.topMargin = 2.dp()
+                lp.bottomMargin = 2.dp()
+                pill.layoutParams = lp
+                if (animate && pill.width > 0) {
+                    SegmentStretch.animate(pill, target, resources.displayMetrics.density, !motionEnabled(this@MainActivity))
+                } else {
+                    SegmentStretch.place(pill, target.first, target.second)
+                }
+            }
+        }
+    }
+
+    inner class PhotoAdapter : RecyclerView.Adapter<PhotoAdapter.VH>() {
+        var data: List<Photo> = ArrayList()
         private val animatedPhotoIds = HashSet<String>()
+
+        private val TYPE_PHOTO = 0
+        private val TYPE_FEATURED = 1
+
+        inner class VH(val root: View) : RecyclerView.ViewHolder(root) {
+            val img: ImageView = root.findViewById(R.id.img)
+            val lbl: TextView = root.findViewById(R.id.lbl)
+            val tag: TextView = root.findViewById(R.id.tag)
+            val heart: ImageView = root.findViewById(R.id.heart)
+            val featuredCredit: TextView? = root.findViewById(R.id.featuredCredit)
+            init { heart.pressFx() }
+        }
+
+        private fun hasFeatured() = tab == 0 && data.isNotEmpty()
 
         override fun getItemCount() = data.size
 
-        override fun onBindViewHolder(h: VH, pos: Int) {
-            val p = data[pos]
+        override fun getItemViewType(position: Int) =
+            if (hasFeatured() && position == 0) TYPE_FEATURED else TYPE_PHOTO
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+            val layout = if (viewType == TYPE_FEATURED) R.layout.item_featured_photo else R.layout.item_photo
+            val v = LayoutInflater.from(parent.context).inflate(layout, parent, false)
+            v.layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(0, 0, 0, if (viewType == TYPE_FEATURED) 18.dp() else 18.dp())
+            }
+            return VH(v)
+        }
+
+        override fun onBindViewHolder(h: VH, position: Int) {
+            val featured = getItemViewType(position) == TYPE_FEATURED
+            val p = data[position]
             val boundSession = cur
             h.root.postDelayed({
                 val rect = android.graphics.Rect()
-                val position = h.bindingAdapterPosition
-                val visibleThreshold = minOf(h.root.height * 0.5f, resources.displayMetrics.heightPixels * 0.35f)
-                if (position != RecyclerView.NO_POSITION &&
-                    data.getOrNull(position)?.id == p.id &&
+                val adapterPosition = h.bindingAdapterPosition
+                val threshold = minOf(h.root.height * 0.5f, resources.displayMetrics.heightPixels * 0.35f)
+                if (adapterPosition != RecyclerView.NO_POSITION &&
+                    data.getOrNull(adapterPosition)?.id == p.id &&
                     h.root.height > 0 && h.root.getGlobalVisibleRect(rect) &&
-                    rect.height() >= visibleThreshold) {
+                    rect.height() >= threshold) {
                     if (boundSession.seenIds.add(p.id)) persistSeen(boundSession)
                 }
             }, 900L)
-            h.lbl.text = "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
+
+            h.tag.text = if (featured) "FEATURED" else p.title
+            h.lbl.text = if (featured) p.title
+                else "Photo by " + p.credit.ifBlank { getString(R.string.unknown_photographer) }
+            h.featuredCredit?.text = if (featured) p.credit.ifBlank { getString(R.string.unknown_photographer) } + " · Tap to open" else ""
             h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
             h.heart.contentDescription = getString(R.string.like_desc)
-            val screenWidth = resources.displayMetrics.widthPixels - 28.dp()
-            val ratio = if (p.width > 0 && p.height > 0) p.height.toFloat() / p.width.toFloat() else 1.18f
-            h.img.layoutParams.height = (screenWidth * ratio).toInt().coerceIn(200.dp(), 650.dp())
-            h.img.setBackgroundColor(p.color)
-            // Animate each photo only on its first bind. RecyclerView rebinds happen during
-            // scrolling and state updates; replaying the entrance there causes distracting flicker.
-            if (visualEffectsEnabled(this@MainActivity) && motionEnabled(this@MainActivity) && animatedPhotoIds.add(p.id)) {
-                h.root.animate().cancel()
-                h.root.alpha = 0.78f
-                h.root.translationY = 18.dp().toFloat()
-                h.root.scaleX = 0.985f
-                h.root.scaleY = 0.985f
-                h.root.animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(420L)
-                    .setInterpolator(android.view.animation.DecelerateInterpolator(1.5f))
-                    .start()
+
+            if (featured) {
+                h.img.layoutParams.height = 236.dp()
             } else {
-                h.root.animate().cancel()
-                h.root.alpha = 1f
-                h.root.translationY = 0f
-                h.root.scaleX = 1f
-                h.root.scaleY = 1f
+                val screenWidth = resources.displayMetrics.widthPixels - 32.dp()
+                val ratio = if (p.width > 0 && p.height > 0) p.height.toFloat() / p.width.toFloat() else 1.18f
+                val screenHeight = resources.displayMetrics.heightPixels
+                // Prototype v10 cards occupy roughly 74–86% of the locked screen height.
+                val immersiveHeight = (screenHeight * 0.82f).toInt()
+                h.img.layoutParams.height = maxOf(immersiveHeight, (screenWidth * ratio).toInt()).coerceIn(430.dp(), 720.dp())
             }
-            // Software bitmaps only: the glass bars copy what is behind them, and cannot read hardware ones.
-            // Some remote thumbnail URLs can fail independently of the original photo.
-            // Retry with the full image URL so a transient thumbnail failure does not leave a blank tile.
-            Glide.with(h.img)
-                .load(p.thumb)
-                .disallowHardwareConfig()
-                .centerCrop()
-                .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop())
-                .into(h.img)
+            h.img.setBackgroundColor(p.color)
+
+            // H2: remove floating/staggered feed entrance effect; Home cards appear in place.
+            h.root.animate().cancel()
+            h.root.alpha = 1f
+            h.root.translationY = 0f
+            h.root.scaleX = 1f
+            h.root.scaleY = 1f
+
+            Glide.with(h.img).load(p.thumb).disallowHardwareConfig().centerCrop()
+                .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop()).into(h.img)
+
             h.heart.setOnClickListener {
                 Store.toggle(this@MainActivity, p)
                 if (tab == 1) refreshSaved() else h.heart.setHeart(Store.isFav(this@MainActivity, p.id))
