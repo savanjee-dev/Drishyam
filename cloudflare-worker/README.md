@@ -26,3 +26,28 @@ The Worker source and automated tests live in this directory. The project owner 
 8. Keep the successful in-place upgrade/data-preservation result recorded; do not ask the owner to repeat it unless the candidate changes materially.
 
 Do not publish the next Android release until the unresolved download-tracking issue and rate-limit protection have been addressed and live failure-handling checks completed.
+
+## Pixabay provider
+
+Pixabay is a secondary fallback after Unsplash and before Wikimedia Commons. Android
+never contains the Pixabay API key. Configure the Cloudflare Worker secret:
+
+```sh
+npx wrangler secret put PIXABAY_API_KEY
+```
+
+Create the R2 bucket named `drishyam-pixabay-images` before deploying (the binding is
+in `wrangler.toml`). The Worker stores Pixabay image metadata and downloads image
+bytes into R2 on first display, then serves app-facing image URLs from R2. This avoids
+permanent hotlinking of Pixabay CDN URLs. Pixabay search responses are cached for at
+least 24 hours, as required by its API documentation.
+
+Pixabay attribution is shown in photo credits and each photo links to its Pixabay page.
+The app requests portrait photos, safe-search results, and supports Pixabay's
+`popular` and `latest` ordering. Pixabay's API limit is 100 requests per 60 seconds;
+the Worker cache and 20-photo page size help control request volume.
+
+After setting the secret and bucket, deploy the Worker and verify:
+- `/pixabay/search?q=forest&page=1&per_page=20&order=popular`
+- returned `previewURL` and `largeImageURL` Worker paths return image bytes
+- image objects persist in R2 and subsequent reads do not contact Pixabay
