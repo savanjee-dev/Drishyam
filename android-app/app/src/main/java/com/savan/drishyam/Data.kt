@@ -304,13 +304,14 @@ object Api {
 
 
     /** Pixabay provider routed through the Cloudflare Worker and its R2 image store. */
-    fun pixabay(query: String, page: Int, order: String = "popular"): Pair<List<Photo>, Boolean> {
+    fun pixabay(query: String, page: Int, order: String = "popular", orientation: String = "Portrait"): Pair<List<Photo>, Boolean> {
         require(query.isNotBlank() && query.length <= 100) { "Invalid Pixabay search query." }
         require(page >= 1) { "Invalid Pixabay page." }
         if (page > 25) return Pair(emptyList(), true)
         val base = Config.PIXABAY_PROXY_BASE_URL.trimEnd('/')
         val url = "$base/pixabay/search?q=" + java.net.URLEncoder.encode(query, "UTF-8") +
-            "&page=$page&per_page=20&order=" + (if (order == "latest") "latest" else "popular")
+            "&page=$page&per_page=20&order=" + (if (order == "latest") "latest" else "popular") +
+            "&orientation=" + when (orientation) { "Landscape" -> "horizontal"; "Random", "Square" -> "all"; else -> "vertical" }
         val root = JSONObject(get(url, emptyMap()))
         val hits = root.optJSONArray("hits") ?: JSONArray()
         val totalHits = root.optInt("totalHits", 0).coerceAtMost(500)
