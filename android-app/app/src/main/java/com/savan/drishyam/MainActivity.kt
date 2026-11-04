@@ -1342,7 +1342,18 @@ class MainActivity : AppCompatActivity() {
             } ?: return
             frame.post {
                 if (selected.width <= 0) return@post
-                val target = Pair(selected.left.toFloat(), selected.width.toFloat())
+                // selected.left is relative to the row; the indicator is relative
+                // to the outer FrameLayout. Include the row's left padding and keep
+                // a 2dp inset so the pill tracks the prototype's segment geometry.
+                val inset = 2.dp().toFloat()
+                val target = Pair(
+                    (row.left + selected.left).toFloat() + inset,
+                    (selected.width - inset * 2f).coerceAtLeast(1f)
+                )
+                val lp = pill.layoutParams as FrameLayout.LayoutParams
+                lp.topMargin = 2.dp()
+                lp.bottomMargin = 2.dp()
+                pill.layoutParams = lp
                 if (animate && pill.width > 0) {
                     SegmentStretch.animate(pill, target, resources.displayMetrics.density, !motionEnabled(this@MainActivity))
                 } else {
