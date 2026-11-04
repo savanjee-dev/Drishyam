@@ -448,8 +448,8 @@ class MainActivity : AppCompatActivity() {
 
         overlay.animate()
             .x(endX).y(endY).scaleX(scale).scaleY(scale).rotation(360f)
-            .setDuration(1350L)
-            .setInterpolator(android.view.animation.PathInterpolator(0.22f, 1f, 0.36f, 1f))
+            .setDuration(1850L)
+            .setInterpolator(android.view.animation.PathInterpolator(0.18f, 0.72f, 0.22f, 1f))
             .withEndAction {
                 target.visibility = View.VISIBLE
                 host.removeView(overlay)
@@ -460,8 +460,8 @@ class MainActivity : AppCompatActivity() {
                 finishSplashAndContinue()
             }.start()
         splash.animate().alpha(0f).scaleX(1.025f).scaleY(1.025f)
-            .setStartDelay(120L).setDuration(820L)
-            .setInterpolator(DecelerateInterpolator(1.3f)).start()
+            .setStartDelay(80L).setDuration(1250L)
+            .setInterpolator(android.view.animation.PathInterpolator(0.32f, 0f, 0.18f, 1f)).start()
     }
 
     private fun finishSplashAndContinue() {
