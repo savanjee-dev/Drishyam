@@ -55,7 +55,8 @@ async function pixabaySearch(url, env, ctx) {
   const page = positiveInt(url.searchParams.get("page"), 1, 25);
   const per = positiveInt(url.searchParams.get("per_page"), 20, 30);
   const order = url.searchParams.get("order") || "popular";
-  if (!q || page === null || per === null || !["popular", "latest"].includes(order)) {
+  const orientation = url.searchParams.get("orientation") || "vertical";
+  if (!q || page === null || per === null || !["popular", "latest"].includes(order) || !["vertical", "horizontal", "all"].includes(orientation)) {
     return fail(400, "Invalid Pixabay search parameters.");
   }
   const cacheUrl = new URL(url.toString());
@@ -63,6 +64,7 @@ async function pixabaySearch(url, env, ctx) {
   cacheUrl.searchParams.set("page", String(page));
   cacheUrl.searchParams.set("per_page", String(per));
   cacheUrl.searchParams.set("order", order);
+  cacheUrl.searchParams.set("orientation", orientation);
   const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
   const cached = await caches.default.match(cacheKey);
   if (cached) {
@@ -78,7 +80,7 @@ async function pixabaySearch(url, env, ctx) {
   target.searchParams.set("per_page", String(per));
   target.searchParams.set("order", order);
   target.searchParams.set("image_type", "photo");
-  target.searchParams.set("orientation", "vertical");
+  target.searchParams.set("orientation", orientation);
   target.searchParams.set("safesearch", "true");
   target.searchParams.set("lang", "en");
 
