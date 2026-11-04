@@ -159,6 +159,8 @@ class BrowsingActivity : AppCompatActivity() {
         addSourceSwitch(sourcesCard, "Wikimedia Commons", "Openly licensed photographs from Wikimedia Commons.", "source_wikimedia", true, "Primary")
         addDivider(sourcesCard)
         addSourceSwitch(sourcesCard, "NexWall", "Curated wallpaper photography from the NexWall image library.", "source_nexwall", true, "Secondary")
+        addDivider(sourcesCard)
+        addSourceSwitch(sourcesCard, "Pixabay", "Portrait photography via your Cloudflare-secured Pixabay API integration.", "source_pixabay", false, "Optional")
         content.addView(sourcesCard, match())
 
         content.addView(sectionTitle("Quick Preferences"))
@@ -237,7 +239,7 @@ class BrowsingActivity : AppCompatActivity() {
         addDivider(advancedBody)
         addPreferenceSwitch(advancedBody, "Load more automatically", "Continue pagination as you approach the end of the feed.", "auto_pagination", true)
         addDivider(advancedBody)
-        addInfoRow(advancedBody, "Provider fallback", "Drishyam tries enabled sources in order: Wikimedia Commons, then NexWall. If both fail, it shows a retry message.")
+        addInfoRow(advancedBody, "Provider fallback", "Drishyam tries enabled sources in order: Wikimedia Commons, NexWall, then Pixabay. Pixabay requires its Cloudflare Worker secret and R2 bucket to be configured.")
         addDivider(advancedBody)
         addInfoRow(advancedBody, "Licences and attribution", "Each photograph should retain its source, creator and licence details. Open the photo details to review attribution before reuse.")
         content.addView(advancedCard, match())
