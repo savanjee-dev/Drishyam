@@ -1201,7 +1201,7 @@ class MainActivity : AppCompatActivity() {
                 if (usePixabay && added.isEmpty()) {
                     try {
                         val pixabaySort = if (sort == "new" || sort == "india") "latest" else "popular"
-                        val (photos, last) = Api.pixabay(fallbackQuery, nextPixabayPage, pixabaySort)
+                        val (photos, last) = Api.pixabay(fallbackQuery, nextPixabayPage, pixabaySort, preferredOrientation)
                         val unseen = photos.filter { it.id !in s.seenIds && s.ids.add(it.id) }
                         s.fetchedIds.addAll(photos.map { it.id })
                         if (unseen.isNotEmpty()) added.addAll(unseen)
