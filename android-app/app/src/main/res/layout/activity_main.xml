@@ -140,9 +140,12 @@
                 android:id="@+id/glassNav"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
                 android:layout_marginBottom="10dp"
                 android:padding="6dp"
-                app:glassRadius="100dp">
+                app:glassRadius="100dp"
+                app:glassSolid="true">
 
                 <View
                     android:id="@+id/navIndicator"
