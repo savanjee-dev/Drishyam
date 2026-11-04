@@ -728,7 +728,23 @@ class MainActivity : AppCompatActivity() {
                 unsplashError = e.message ?: "Photo service unavailable."
             }
 
-            // Try Wikimedia Commons both when Unsplash errors and when it returns an empty feed.
+            // Pixabay is the second provider. Its Worker stores image assets in R2
+            // before exposing app-facing URLs, avoiding permanent Pixabay hotlinks.
+            var pixabayError: String? = null
+            if (added.isEmpty()) {
+                try {
+                    val (pixabayPhotos, pixabayLast) = Api.pixabay(
+                        fallbackQuery, page, order = if (sort == "new") "latest" else "popular"
+                    )
+                    if (pixabayPhotos.isEmpty()) throw Exception("Pixabay returned no photos.")
+                    added.addAll(if (sort == "top") pixabayPhotos.sortedByDescending { it.likes } else pixabayPhotos)
+                    finished = pixabayLast
+                } catch (e: Exception) {
+                    pixabayError = e.message ?: "Pixabay unavailable."
+                }
+            }
+
+            // Wikimedia Commons remains the final fallback if both API providers fail.
             if (added.isEmpty()) {
                 try {
                     val (fallbackPhotos, fallbackLast) = Api.commons(fallbackQuery, page)
@@ -736,13 +752,14 @@ class MainActivity : AppCompatActivity() {
                     added.addAll(fallbackPhotos)
                     finished = fallbackLast
                 } catch (fallbackError: Exception) {
-                    val m = unsplashError ?: "Unsplash returned no photos."
+                    val m = listOfNotNull(unsplashError, pixabayError).joinToString("; ")
+                        .ifBlank { "Photo services returned no photos." }
                     error = when {
-                        m.contains("429") -> "Unsplash is temporarily rate-limiting requests and backup photos are unavailable. Please retry."
-                        m.contains("403") || m.contains("Forbidden", true) -> "Unsplash denied the request and backup photos could not load. Check the connection and retry."
-                        m.contains("404") -> "This feed was not found and backup photos could not load."
+                        m.contains("429") -> "Photo services are temporarily rate-limiting requests. Please retry."
+                        m.contains("403") || m.contains("Forbidden", true) -> "A photo provider denied the request. Check the connection and retry."
+                        m.contains("404") -> "The photo feed was not found and backup photos could not load."
                         m.contains("UnknownHost") || m.contains("timeout", true) || m.contains("Unable to resolve", true) -> "Network unavailable. Check your internet and retry."
-                        else -> "Photo services are temporarily unavailable ($m). Please retry."
+                        else -> "Photo services are temporarily unavailable. Please retry."
                     }
                 }
             }
