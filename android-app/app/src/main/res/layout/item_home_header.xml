@@ -16,7 +16,7 @@
         android:layout_marginEnd="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:background="@drawable/glass_pill"
+        android:background="@drawable/header_prototype_surface"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="4dp"
@@ -32,8 +32,8 @@
 
         <FrameLayout
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
-            android:layout_marginStart="12dp">
+            android:layout_height="64dp"
+            android:layout_marginStart="10dp">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -42,11 +42,12 @@
                 android:includeFontPadding="false"
                 android:text="Drishyam"
                 android:textColor="?attr/colorOnSurface"
-                android:textSize="30sp" />
+                android:textSize="28sp" />
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
+                android:layout_marginBottom="1dp"
                 android:fontFamily="@font/pacifico_regular"
                 android:text="by Savan"
                 android:textColor="?attr/colorPrimary"
