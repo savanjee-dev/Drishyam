@@ -3,3 +3,9 @@ main = "src/index.js"
 compatibility_date = "2026-10-22"
 
 [previews]
+
+# Create this R2 bucket in Cloudflare before deploying:
+#   npx wrangler r2 bucket create drishyam-pixabay-images
+[[r2_buckets]]
+binding = "PIXABAY_IMAGES"
+bucket_name = "drishyam-pixabay-images"

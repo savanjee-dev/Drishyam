@@ -180,3 +180,76 @@ test("successful photo search forwards validated parameters and returns CORS JSO
   assert.equal(capturedHeaders.Authorization, "Client-ID test-only-key");
   assert.deepEqual(await response.json(), { results: [{ id: "photo-1" }], total: 1 });
 });
+test("Pixabay search requires server-side key and R2 storage", async () => {
+  const response = await worker.fetch(
+    new Request("https://worker.example/pixabay/search?q=forest"),
+    {},
+    context()
+  );
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error: "Pixabay image service is not configured."
+  });
+});
+
+test("Pixabay search uses server-side key, portrait-safe filters, and rewrites media URLs", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const originalCaches = globalThis.caches;
+  let capturedUrl;
+  const objects = new Map();
+  const bucket = {
+    async put(key, value, options) { objects.set(key, { value, options }); },
+    async get(key) {
+      const entry = objects.get(key);
+      if (!entry) return null;
+      return {
+        async text() { return String(entry.value); },
+        body: new Response(String(entry.value)).body,
+        httpEtag: '"test-etag"',
+        writeHttpMetadata(headers) {
+          if (entry.options?.httpMetadata?.contentType) headers.set("content-type", entry.options.httpMetadata.contentType);
+        }
+      };
+    }
+  };
+  globalThis.caches = { default: {
+    async match() { return undefined; },
+    async put() {}
+  }};
+  globalThis.fetch = async (url) => {
+    capturedUrl = String(url);
+    return new Response(JSON.stringify({
+      total: 1, totalHits: 1,
+      hits: [{
+        id: 123, pageURL: "https://pixabay.com/photos/forest-123/",
+        previewURL: "https://cdn.pixabay.com/photo/test_150.jpg",
+        webformatURL: "https://pixabay.com/get/test_640.jpg",
+        largeImageURL: "https://pixabay.com/get/test_1280.jpg",
+        imageWidth: 1200, imageHeight: 1800, user: "sample", tags: "forest"
+      }]
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+    if (originalCaches === undefined) delete globalThis.caches;
+    else globalThis.caches = originalCaches;
+  });
+
+  const response = await worker.fetch(
+    new Request("https://worker.example/pixabay/search?q=forest&page=2&per_page=20&order=latest"),
+    { PIXABAY_API_KEY: "test-secret", PIXABAY_IMAGES: bucket },
+    context()
+  );
+  assert.equal(response.status, 200);
+  const requestUrl = new URL(capturedUrl);
+  assert.equal(requestUrl.origin, "https://pixabay.com");
+  assert.equal(requestUrl.searchParams.get("key"), "test-secret");
+  assert.equal(requestUrl.searchParams.get("orientation"), "vertical");
+  assert.equal(requestUrl.searchParams.get("safesearch"), "true");
+  assert.equal(requestUrl.searchParams.get("order"), "latest");
+  const json = await response.json();
+  assert.equal(json.hits[0].previewURL, "https://worker.example/pixabay/media/123?size=thumb");
+  assert.equal(json.hits[0].largeImageURL, "https://worker.example/pixabay/media/123?size=full");
+  assert.equal(json.hits[0].pageURL, "https://pixabay.com/photos/forest-123/");
+  assert.ok(objects.has("pixabay-meta/123.json"));
+});

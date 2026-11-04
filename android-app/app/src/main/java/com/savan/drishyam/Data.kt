@@ -10,6 +10,8 @@ import java.net.URL
 object Config {
     const val NEXWALL_API_BASE_URL = "https://nexwall.kodnextech.com/api/developer/v1"
     const val NEXWALL_API_KEY = "207|zOUljlzUpzFU6uGK1l9lCcTIbiYvCsEN7xkOnSyJ899d1e12"
+    // Pixabay credentials stay in the Cloudflare Worker, never in the Android app.
+    const val PIXABAY_PROXY_BASE_URL = "https://drishyam-unsplash-proxy.savansingh8147.workers.dev"
     const val UA = "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Drishyam/2.4.3"
 }
 
@@ -298,6 +300,49 @@ object Api {
             ))
         }
         return Pair(out, currentPage >= lastPage || items.length() == 0)
+    }
+
+
+    /** Pixabay provider routed through the Cloudflare Worker and its R2 image store. */
+    fun pixabay(query: String, page: Int, order: String = "popular", orientation: String = "Portrait"): Pair<List<Photo>, Boolean> {
+        require(query.isNotBlank() && query.length <= 100) { "Invalid Pixabay search query." }
+        require(page >= 1) { "Invalid Pixabay page." }
+        if (page > 25) return Pair(emptyList(), true)
+        val base = Config.PIXABAY_PROXY_BASE_URL.trimEnd('/')
+        val url = "$base/pixabay/search?q=" + java.net.URLEncoder.encode(query, "UTF-8") +
+            "&page=$page&per_page=20&order=" + (if (order == "latest") "latest" else "popular") +
+            "&orientation=" + when (orientation) { "Landscape" -> "horizontal"; "Random", "Square" -> "all"; else -> "vertical" }
+        val root = JSONObject(get(url, emptyMap()))
+        val hits = root.optJSONArray("hits") ?: JSONArray()
+        val totalHits = root.optInt("totalHits", 0).coerceAtMost(500)
+        val out = ArrayList<Photo>()
+        for (i in 0 until hits.length()) {
+            val hit = hits.optJSONObject(i) ?: continue
+            val id = hit.optLong("id", 0L)
+            if (id <= 0L) continue
+            val thumb = hit.optString("previewURL", "")
+            val full = hit.optString("largeImageURL", hit.optString("webformatURL", ""))
+            val pageUrl = hit.optString("pageURL", "")
+            if (!thumb.startsWith("https://") || !full.startsWith("https://") ||
+                !pageUrl.startsWith("https://pixabay.com/")) continue
+            val user = hit.optString("user", "Pixabay contributor")
+            val userId = hit.optLong("user_id", 0L)
+            val creatorUrl = if (userId > 0L) {
+                "https://pixabay.com/users/" + java.net.URLEncoder.encode(user, "UTF-8").replace("+", "%20") + "-$userId/"
+            } else ""
+            out.add(Photo(
+                id = "pixabay:$id", thumb = thumb, full = full,
+                title = hit.optString("tags", "Photo").take(160),
+                credit = "Pixabay · $user", link = pageUrl, dl = "", color = 0xFF222222.toInt(),
+                width = hit.optInt("imageWidth", hit.optInt("webformatWidth", 0)),
+                height = hit.optInt("imageHeight", hit.optInt("webformatHeight", 0)),
+                likes = hit.optInt("likes", 0), downloads = hit.optString("downloads", ""),
+                license = "Pixabay Content License",
+                licenseUrl = "https://pixabay.com/service/license-summary/",
+                creatorUrl = creatorUrl, source = "Pixabay"
+            ))
+        }
+        return Pair(out, hits.length() == 0 || page * 20 >= totalHits)
     }
 
 }

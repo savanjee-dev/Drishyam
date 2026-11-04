@@ -522,8 +522,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun browsingSourcesSignature(): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
-        val sources = listOf("source_wikimedia", "source_nexwall")
-            .joinToString("|") { key -> prefs.getBoolean(key, true).toString() }
+        val sources = listOf("source_wikimedia", "source_nexwall", "source_pixabay")
+            .joinToString("|") { key -> prefs.getBoolean(key, key != "source_pixabay").toString() }
         return sources + "|" + (prefs.getString("image_quality", "High") ?: "High")
     }
 
@@ -792,8 +792,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun feedCacheKey(source: Source): String {
         val prefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
-        val signature = listOf("source_wikimedia", "source_nexwall")
-            .joinToString("_") { prefs.getBoolean(it, true).toString() }
+        val signature = listOf("source_wikimedia", "source_nexwall", "source_pixabay")
+            .joinToString("_") { prefs.getBoolean(it, it != "source_pixabay").toString() }
         return "feed_cache_" + source.name.lowercase().replace(Regex("[^a-z0-9]+"), "_") + "_" + source.sort + "_" + signature
     }
 
@@ -1076,12 +1076,15 @@ class MainActivity : AppCompatActivity() {
             val browsingPrefs = getSharedPreferences("drishyam_browsing", Context.MODE_PRIVATE)
             val useWikimedia = browsingPrefs.getBoolean("source_wikimedia", true)
             val useNexwall = browsingPrefs.getBoolean("source_nexwall", true)
+            val usePixabay = browsingPrefs.getBoolean("source_pixabay", false)
             val imageQuality = browsingPrefs.getString("image_quality", "High") ?: "High"
             val preferredOrientation = browsingPrefs.getString("orientation", "Portrait") ?: "Portrait"
             var usedNexwall = false
             var nextNexwallPage = page
-            if (!useWikimedia && !useNexwall) {
-                error = "No photo sources are enabled. Enable Wikimedia Commons or NexWall in Settings → Browsing."
+            var usedPixabay = false
+            var nextPixabayPage = page
+            if (!useWikimedia && !useNexwall && !usePixabay) {
+                error = "No photo sources are enabled. Enable Wikimedia Commons, NexWall, or Pixabay in Settings → Browsing."
             } else {
                 if (useWikimedia && added.isEmpty()) {
                     try {
@@ -1195,10 +1198,24 @@ class MainActivity : AppCompatActivity() {
                         } else providerErrors.add("NexWall: " + detail.take(120))
                     }
                 }
+                if (usePixabay && added.isEmpty()) {
+                    try {
+                        val pixabaySort = if (sort == "new" || sort == "india") "latest" else "popular"
+                        val (photos, last) = Api.pixabay(fallbackQuery, nextPixabayPage, pixabaySort, preferredOrientation)
+                        val unseen = photos.filter { it.id !in s.seenIds && s.ids.add(it.id) }
+                        s.fetchedIds.addAll(photos.map { it.id })
+                        if (unseen.isNotEmpty()) added.addAll(unseen)
+                        finished = last
+                        usedPixabay = true
+                        nextPixabayPage++
+                    } catch (e: Exception) {
+                        providerErrors.add("Pixabay: " + (e.message ?: "request failed").take(120))
+                    }
+                }
                 if (added.isEmpty() && s.items.isEmpty()) {
                     error = if (providerErrors.isNotEmpty()) {
                         "Home feed couldn't load. " + providerErrors.joinToString(" · ")
-                    } else if (useWikimedia && !useNexwall) {
+                    } else if (useWikimedia && !useNexwall && !usePixabay) {
                         "Wikimedia Commons has no more unseen photos for this category. Try another category or refresh later."
                     } else {
                         "Enabled photo sources returned no matching photos. Try another category or refresh."
@@ -1210,7 +1227,7 @@ class MainActivity : AppCompatActivity() {
                 s.loading = false
                 s.refreshing = false
                 swipe.isRefreshing = false
-                s.page = if (usedNexwall) nextNexwallPage else if (useWikimedia) nextCommonsPage else page + 1
+                s.page = if (usedPixabay) nextPixabayPage else if (usedNexwall) nextNexwallPage else if (useWikimedia) nextCommonsPage else page + 1
                 s.refreshPage = maxOf(s.refreshPage, s.page)
                 if (error != null) {
                     s.err = error
