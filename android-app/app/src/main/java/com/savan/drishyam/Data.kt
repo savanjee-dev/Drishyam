@@ -267,4 +267,40 @@ object Api {
         }
         return Pair(out, (totalPages != Int.MAX_VALUE && page >= totalPages) || arr.length() == 0 || (popular && arr.length() < 20))
     }
+
+    /**
+     * Pixabay backup provider. The Worker keeps the API key server-side and
+     * stores image assets in R2 so the app does not permanently hotlink Pixabay.
+     */
+    fun pixabay(query: String, page: Int, order: String = "popular"): Pair<List<Photo>, Boolean> {
+        require(query.isNotBlank() && query.length <= 100) { "Invalid Pixabay search query." }
+        require(page in 1..25) { "Pixabay pagination limit reached." }
+        val base = Config.UNSPLASH_PROXY_BASE_URL.trimEnd('/')
+        val url = "$base/pixabay/search?q=" + java.net.URLEncoder.encode(query, "UTF-8") +
+            "&page=$page&per_page=20&order=" + (if (order == "latest") "latest" else "popular")
+        val root = JSONObject(get(url, emptyMap()))
+        val hits = root.optJSONArray("hits") ?: JSONArray()
+        val totalHits = root.optInt("totalHits", 0).coerceAtMost(500)
+        val out = ArrayList<Photo>()
+        for (i in 0 until hits.length()) {
+            val hit = hits.optJSONObject(i) ?: continue
+            val id = hit.optLong("id", 0L)
+            if (id <= 0L) continue
+            val thumb = hit.optString("previewURL", "")
+            val full = hit.optString("largeImageURL", hit.optString("webformatURL", ""))
+            val pageUrl = hit.optString("pageURL", "")
+            if (!thumb.startsWith("https://") || !full.startsWith("https://") || !pageUrl.startsWith("https://pixabay.com/")) continue
+            val width = hit.optInt("imageWidth", hit.optInt("webformatWidth", 0))
+            val height = hit.optInt("imageHeight", hit.optInt("webformatHeight", 0))
+            out.add(Photo(
+                "pixabay-$id", thumb, full,
+                hit.optString("tags", "Photo").take(160),
+                "Pixabay · " + hit.optString("user", "Contributor"),
+                pageUrl, "", 0xFF222222.toInt(), width, height,
+                "", 0L, hit.optInt("likes", 0), downloads = hit.optString("downloads", "")
+            ))
+        }
+        return Pair(out, hits.length() == 0 || page * 20 >= totalHits)
+    }
+
 }
