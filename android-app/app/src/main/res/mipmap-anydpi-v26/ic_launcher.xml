@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/launcher_olive"/>
-    <foreground android:drawable="@drawable/drishyam_emblem"/>
-    <monochrome android:drawable="@drawable/drishyam_emblem"/>
+    <background android:drawable="@color/launcher_white"/>
+    <foreground android:drawable="@drawable/drishyam_emblem_launcher"/>
+    <monochrome android:drawable="@drawable/drishyam_emblem_launcher"/>
 </adaptive-icon>
