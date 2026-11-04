@@ -1337,7 +1337,7 @@ class MainActivity : AppCompatActivity() {
             } ?: return
             frame.post {
                 if (selected.width <= 0) return@post
-                val target = Pair((row.left + selected.left).toFloat(), selected.width.toFloat())
+                val target = Pair(selected.left.toFloat(), selected.width.toFloat())
                 if (animate && pill.width > 0) {
                     SegmentStretch.animate(pill, target, resources.displayMetrics.density, !motionEnabled(this@MainActivity))
                 } else {
@@ -1414,18 +1414,12 @@ class MainActivity : AppCompatActivity() {
             }
             h.img.setBackgroundColor(p.color)
 
-            if (visualEffectsEnabled(this@MainActivity) && motionEnabled(this@MainActivity) && animatedPhotoIds.add(p.id)) {
-                h.root.animate().cancel()
-                h.root.alpha = 0.78f
-                h.root.translationY = 18.dp().toFloat()
-                h.root.scaleX = 0.985f
-                h.root.scaleY = 0.985f
-                h.root.animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f)
-                    .setDuration(420L).setInterpolator(DecelerateInterpolator(1.5f)).start()
-            } else {
-                h.root.animate().cancel()
-                h.root.alpha = 1f; h.root.translationY = 0f; h.root.scaleX = 1f; h.root.scaleY = 1f
-            }
+            // H2: remove floating/staggered feed entrance effect; Home cards appear in place.
+            h.root.animate().cancel()
+            h.root.alpha = 1f
+            h.root.translationY = 0f
+            h.root.scaleX = 1f
+            h.root.scaleY = 1f
 
             Glide.with(h.img).load(p.thumb).disallowHardwareConfig().centerCrop()
                 .error(Glide.with(h.img).load(p.full).disallowHardwareConfig().centerCrop()).into(h.img)
