@@ -43,9 +43,11 @@ permanent hotlinking of Pixabay CDN URLs. Pixabay search responses are cached fo
 least 24 hours, as required by its API documentation.
 
 Pixabay attribution is shown in photo credits and each photo links to its Pixabay page.
-The app requests portrait photos, safe-search results, and supports Pixabay's
-`popular` and `latest` ordering. Pixabay's API limit is 100 requests per 60 seconds;
-the Worker cache and 20-photo page size help control request volume.
+The app requests safe-search results and supports Pixabay's `popular` and `latest` ordering.
+The app's Browsing orientation setting maps to Pixabay `vertical`, `horizontal`, or `all`. Pixabay's API limit is 100 requests per 60 seconds;
+the Worker cache and 20-photo page size help control request volume. Add a Cloudflare
+rate-limiting rule for `/pixabay/search` (per client IP) before public rollout; CORS is
+not access control and this public endpoint can otherwise be queried by third parties.
 
 After setting the secret and bucket, deploy the Worker and verify:
 - `/pixabay/search?q=forest&page=1&per_page=20&order=popular`
